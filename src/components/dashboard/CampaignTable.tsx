@@ -40,7 +40,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
           <TableHead className="w-[300px]">Campaign</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Communities</TableHead>
-          <TableHead>Impressions</TableHead>
+          <TableHead>Views</TableHead>
           <TableHead className="text-right">Spent</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -55,7 +55,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
               </Badge>
             </TableCell>
             <TableCell>{campaign.communities?.length || 0}</TableCell>
-            <TableCell>{campaign.impressions?.toLocaleString() || 0}</TableCell>
+            <TableCell>{campaign.views?.toLocaleString() || 0}</TableCell>
             <TableCell className="text-right">${campaign.spent.toLocaleString()}</TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end space-x-1">
