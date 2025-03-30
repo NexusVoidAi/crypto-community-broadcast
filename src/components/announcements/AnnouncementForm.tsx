@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { validateAnnouncementWithAI } from '@/services/validation';
 
 type ValidationResult = {
   isValid: boolean;
@@ -130,30 +130,23 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
         announcement = data;
       }
       
-      // Simulate AI validation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock validation result - in a real app this would come from the AI service
-      const mockResult: ValidationResult = {
-        isValid: true,
-        score: 0.95,
-        issues: [],
-      };
+      // Call OpenAI validation service
+      const validationResult = await validateAnnouncementWithAI(title, content);
       
       // Update announcement with validation result
       const { error: updateError } = await supabase
         .from('announcements')
         .update({
-          validation_result: mockResult,
-          status: mockResult.isValid ? 'PENDING_VALIDATION' : 'VALIDATION_FAILED'
+          validation_result: validationResult,
+          status: validationResult.isValid ? 'PENDING_VALIDATION' : 'VALIDATION_FAILED'
         })
         .eq('id', announcement.id);
         
       if (updateError) throw updateError;
       
-      setValidationResult(mockResult);
+      setValidationResult(validationResult);
       
-      if (mockResult.isValid) {
+      if (validationResult.isValid) {
         toast.success('Announcement validated successfully!');
         setStep(2);
       } else {
@@ -213,15 +206,28 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
         
       if (linkError) throw linkError;
       
+      // Get platform fee from settings
+      const { data: settings } = await supabase
+        .from('platform_settings')
+        .select('platform_fee')
+        .single();
+      
+      const platformFee = settings?.platform_fee || 1;
+      
+      // Calculate total with platform fee
+      const communityTotal = calculateTotalCost();
+      const totalWithFee = communityTotal + platformFee;
+      
       // Create a payment record
       const { error: paymentError } = await supabase
         .from('payments')
         .insert({
-          amount: calculateTotalCost(),
+          amount: totalWithFee,
           currency: 'USDT',
           user_id: user?.id,
           announcement_id: announcementId,
-          status: 'PENDING'
+          status: 'PENDING',
+          platform_fee: platformFee
         });
         
       if (paymentError) throw paymentError;

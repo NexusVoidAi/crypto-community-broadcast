@@ -26,6 +26,9 @@ import CommunityCreate from "./pages/communities/CommunityCreate";
 // Profile page
 import Profile from "./pages/Profile";
 
+// Admin Dashboard
+import AdminDashboard from "./pages/AdminDashboard";
+
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -70,6 +73,9 @@ const AppRoutes = () => (
     <Route path="/communities" element={<ProtectedRoute><CommunityList /></ProtectedRoute>} />
     <Route path="/communities/create" element={<ProtectedRoute><CommunityCreate /></ProtectedRoute>} />
     <Route path="/communities/:id" element={<ProtectedRoute><CommunityDetail /></ProtectedRoute>} />
+    
+    {/* Admin Routes */}
+    <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
     
     {/* Auth Routes */}
     <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />

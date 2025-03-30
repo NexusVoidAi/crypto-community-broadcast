@@ -1,6 +1,6 @@
 
 export interface ActivityItem {
-  id: number;
+  id: string;
   type: string;
   title: string;
   time: string;

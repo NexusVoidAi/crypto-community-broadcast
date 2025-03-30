@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
@@ -27,10 +26,10 @@ import CampaignTable from '@/components/dashboard/CampaignTable';
 import DashboardNav from '@/components/dashboard/DashboardNav';
 import { ActivityItem } from '@/components/dashboard/types';
 
-// Sample activities for ActivityFeed
+// Sample activities for ActivityFeed with string IDs
 const sampleActivities: ActivityItem[] = [
   {
-    id: 1,
+    id: "1",
     type: 'announcement',
     title: 'New announcement published',
     time: 'Just now',
@@ -39,7 +38,7 @@ const sampleActivities: ActivityItem[] = [
     timestamp: new Date().toISOString()
   },
   {
-    id: 2,
+    id: "2",
     type: 'payment',
     title: 'Payment received',
     time: '2 hours ago',
@@ -48,7 +47,7 @@ const sampleActivities: ActivityItem[] = [
     timestamp: new Date(Date.now() - 7200000).toISOString()
   },
   {
-    id: 3,
+    id: "3",
     type: 'community',
     title: 'Joined new community',
     time: 'Yesterday',
@@ -57,7 +56,7 @@ const sampleActivities: ActivityItem[] = [
     timestamp: new Date(Date.now() - 86400000).toISOString()
   },
   {
-    id: 4,
+    id: "4",
     type: 'announcement',
     title: 'Announcement validation failed',
     time: 'Yesterday',
@@ -66,7 +65,7 @@ const sampleActivities: ActivityItem[] = [
     timestamp: new Date(Date.now() - 90000000).toISOString()
   },
   {
-    id: 5,
+    id: "5",
     type: 'payment',
     title: 'Payment processing',
     time: '3 days ago',
