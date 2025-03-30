@@ -55,46 +55,48 @@ import {
   TableCell
 } from '@/components/ui/table';
 
+// Sample activities data
 const sampleActivities: ActivityItem[] = [
   {
     id: '1',
     timestamp: "2023-09-01T10:00:00Z",
     title: 'New announcement created',
     description: 'Your announcement "Summer Sale" has been created.',
-    icon: 'megaphone',
-    variant: 'success',
+    type: "announcement",
+    status: "success",
   },
   {
     id: '2',
     timestamp: "2023-09-01T09:30:00Z",
     title: 'Payment received',
     description: 'You received a payment of $100 for your community.',
-    icon: 'creditCard',
-    variant: 'success',
+    type: "payment",
+    status: "success",
   },
   {
     id: '3',
     timestamp: "2023-09-01T09:00:00Z",
     title: 'Announcement validation failed',
     description: 'Your announcement "Winter Sale" failed validation.',
-    icon: 'alertTriangle',
-    variant: 'warning',
+    type: "validation",
+    status: "warning",
   },
   {
     id: '4',
     timestamp: "2023-09-01T08:30:00Z",
     title: 'New community joined',
     description: 'A new community joined your network.',
-    icon: 'users',
-    variant: 'info',
+    type: "community",
+    status: "info",
   },
 ];
 
+// Sample campaigns data
 const sampleCampaigns: Campaign[] = [
   {
     id: '1',
     name: 'Summer Sale',
-    status: 'active',
+    status: 'ACTIVE',
     reach: 1000,
     clicks: 100,
     conversionRate: 0.1,
@@ -107,7 +109,7 @@ const sampleCampaigns: Campaign[] = [
   {
     id: '2',
     name: 'Winter Sale',
-    status: 'paused',
+    status: 'PENDING',
     reach: 500,
     clicks: 50,
     conversionRate: 0.05,
@@ -120,7 +122,7 @@ const sampleCampaigns: Campaign[] = [
   {
     id: '3',
     name: 'Spring Sale',
-    status: 'draft',
+    status: 'REJECTED',
     reach: 0,
     clicks: 0,
     conversionRate: 0,
