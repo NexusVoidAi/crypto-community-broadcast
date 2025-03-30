@@ -1,10 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Check, ArrowRight } from 'lucide-react';
+import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCopperX } from '@/hooks/useCopperX';
@@ -15,6 +15,7 @@ const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
   const [isVerifying, setIsVerifying] = useState(true);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [announcement, setAnnouncement] = useState<any>(null);
   
   const sessionId = searchParams.get('session_id');
   const announcementId = searchParams.get('announcement_id');
@@ -23,14 +24,27 @@ const PaymentSuccess: React.FC = () => {
   
   useEffect(() => {
     const verifyAndUpdatePayment = async () => {
-      if (!sessionId) return;
+      if (!sessionId || !announcementId) {
+        setIsVerifying(false);
+        return;
+      }
       
       try {
         // Verify payment with CopperX
         const sessionDetails = await verifyPayment(sessionId);
         setPaymentDetails(sessionDetails);
         
-        if (sessionDetails?.status === 'complete' && announcementId) {
+        // Get announcement details
+        const { data: announcementData, error: announcementFetchError } = await supabase
+          .from('announcements')
+          .select('*')
+          .eq('id', announcementId)
+          .single();
+          
+        if (announcementFetchError) throw announcementFetchError;
+        setAnnouncement(announcementData);
+        
+        if (sessionDetails?.status === 'complete') {
           // Update payment status in database
           const { error: paymentError } = await supabase
             .from('payments')
@@ -66,6 +80,21 @@ const PaymentSuccess: React.FC = () => {
     verifyAndUpdatePayment();
   }, [sessionId, announcementId, verifyPayment]);
   
+  if (isVerifying) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto max-w-md px-4 py-16">
+          <Card className="border border-border/50 bg-crypto-darkgray/50">
+            <CardContent className="flex flex-col items-center justify-center pt-6">
+              <Loader2 className="h-12 w-12 animate-spin text-crypto-blue mb-4" />
+              <p className="text-center">Verifying payment...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+  
   return (
     <AppLayout>
       <div className="container mx-auto max-w-md px-4 py-16">
@@ -94,7 +123,15 @@ const PaymentSuccess: React.FC = () => {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Amount:</span>
                     <span>
-                      {paymentDetails.amountTotal / 100000000} {paymentDetails.currency.toUpperCase()}
+                      {paymentDetails.amountTotal / 100000000} {paymentDetails.currency?.toUpperCase() || 'USDT'}
+                    </span>
+                  </div>
+                )}
+                {announcement && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Announcement:</span>
+                    <span className="truncate max-w-[200px]">
+                      {announcement.title}
                     </span>
                   </div>
                 )}
@@ -103,18 +140,21 @@ const PaymentSuccess: React.FC = () => {
             
             <Separator />
             
-            <div className="space-y-2 text-center">
+            <div className="space-y-4 text-center">
               <p className="text-sm text-muted-foreground">
                 Your announcement is now being processed and will be published soon.
+                You'll get notified once it's live in the selected communities.
               </p>
-              <Button 
-                onClick={() => navigate('/')}
-                className="w-full bg-crypto-blue hover:bg-crypto-blue/90 mt-2"
-              >
-                Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
             </div>
           </CardContent>
+          <CardFooter>
+            <Button 
+              onClick={() => navigate('/')}
+              className="w-full bg-crypto-blue hover:bg-crypto-blue/90"
+            >
+              Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardFooter>
         </Card>
       </div>
     </AppLayout>

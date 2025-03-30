@@ -112,7 +112,7 @@ const CopperXPayment: React.FC<CopperXPaymentProps> = ({
           .from('announcements')
           .update({
             payment_status: 'PAID',
-            status: 'PENDING_VALIDATION'
+            status: 'PUBLISHED'
           })
           .eq('id', announcementId);
           

@@ -4,8 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 export interface ValidationResult {
   isValid: boolean;
   suggestions: string[];
-  score: number; // Changed from optional to required
-  issues: string[]; // Changed from optional to required
+  score: number;
+  issues: string[];
   feedback?: string;
 }
 
@@ -16,10 +16,17 @@ export const validateAnnouncement = async (title: string, content: string): Prom
     });
 
     if (error) {
+      console.error('Validation function error:', error);
       throw error;
     }
 
-    return data;
+    return {
+      isValid: data.isValid,
+      suggestions: data.suggestions || [],
+      score: data.score || 0.6,
+      issues: data.issues || [],
+      feedback: data.feedback
+    };
   } catch (error) {
     console.error('Error validating announcement:', error);
     
@@ -32,8 +39,8 @@ export const validateAnnouncement = async (title: string, content: string): Prom
         'Avoid excessive use of promotional language.',
         'Check for spelling and grammar errors.'
       ],
-      score: 0.6, // Added default score
-      issues: [] // Added default empty issues array
+      score: 0.6,
+      issues: []
     };
   }
 };
@@ -45,6 +52,7 @@ export const validateAnnouncementWithAI = async (title: string, content: string)
     });
 
     if (error) {
+      console.error('AI Validation function error:', error);
       throw error;
     }
 
@@ -75,10 +83,13 @@ export const validateAnnouncementWithAI = async (title: string, content: string)
 };
 
 export const serializeValidationResult = (result: ValidationResult): any => {
-  // Convert any non-serializable data to a serializable format if needed
+  // Ensure the validation result is serializable for storing in Supabase
   return {
-    ...result,
-    // Add any conversions if necessary
+    isValid: result.isValid,
+    suggestions: result.suggestions || [],
+    score: result.score || 0,
+    issues: result.issues || [],
+    feedback: result.feedback || '',
   };
 };
 
@@ -111,6 +122,7 @@ export const enhanceAnnouncementWithAI = async (title: string, content: string):
     });
 
     if (error) {
+      console.error('AI Enhancement function error:', error);
       throw error;
     }
 
