@@ -56,7 +56,28 @@ serve(async (req) => {
     });
 
     const result = await response.json();
-    const validationResult = JSON.parse(result.choices[0].message.content);
+    
+    // Check if we have a valid response with choices
+    if (!result || !result.choices || !result.choices[0] || !result.choices[0].message) {
+      console.error("Invalid response from OpenAI:", result);
+      throw new Error("Invalid response from OpenAI API");
+    }
+    
+    let validationResult;
+    try {
+      validationResult = JSON.parse(result.choices[0].message.content);
+    } catch (parseError) {
+      console.error("Error parsing OpenAI response:", parseError);
+      console.log("Raw content:", result.choices[0].message.content);
+      
+      // Provide a fallback response if parsing fails
+      validationResult = {
+        isValid: title.length > 3 && content.length > 10, // Basic validation
+        score: 0.7,
+        issues: parseError.message ? [parseError.message] : [],
+        feedback: "Content appears valid based on basic checks, but detailed validation failed."
+      };
+    }
     
     return new Response(JSON.stringify(validationResult), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }

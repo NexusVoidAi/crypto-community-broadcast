@@ -34,7 +34,13 @@ export const validateAnnouncementWithAI = async (
   }
 }
 
-// This type ensures the validation result is compatible with Json type
+// This function ensures the validation result is compatible with Json type
 export const serializeValidationResult = (result: ValidationResult): Json => {
-  return result as unknown as Json;
+  // Convert the ValidationResult object to a plain object that's compatible with Json
+  return {
+    isValid: result.isValid,
+    score: result.score,
+    issues: result.issues,
+    feedback: result.feedback
+  } as unknown as Json;
 }

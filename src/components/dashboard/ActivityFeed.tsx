@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, MessageSquare, Zap, Bell, RefreshCw } from 'lucide-react';
+import { Check, MessageSquare, Zap, Bell, RefreshCw, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ActivityItem } from './types';
 
@@ -21,6 +21,8 @@ const getIcon = (type: ActivityItem['type'], status?: ActivityItem['status']) =>
       return <Check className="h-4 w-4" />;
     case 'notification':
       return <Bell className="h-4 w-4" />;
+    case 'community':
+      return <Users className="h-4 w-4" />;
     default:
       return null;
   }
