@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
@@ -12,6 +11,45 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Megaphone, Users, CreditCard, TrendingUp, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+
+// Sample activities for ActivityFeed
+const sampleActivities = [
+  {
+    id: 1,
+    type: 'announcement',
+    title: 'New announcement published',
+    time: 'Just now',
+    status: 'success'
+  },
+  {
+    id: 2,
+    type: 'payment',
+    title: 'Payment received',
+    time: '2 hours ago',
+    status: 'success'
+  },
+  {
+    id: 3,
+    type: 'community',
+    title: 'Joined new community',
+    time: 'Yesterday',
+    status: 'info'
+  },
+  {
+    id: 4,
+    type: 'announcement',
+    title: 'Announcement validation failed',
+    time: 'Yesterday',
+    status: 'error'
+  },
+  {
+    id: 5,
+    type: 'payment',
+    title: 'Payment processing',
+    time: '3 days ago',
+    status: 'warning'
+  }
+];
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -146,32 +184,28 @@ const Dashboard = () => {
               value={announcements.length} 
               description="All time" 
               icon={<Megaphone className="h-5 w-5" />} 
-              trend="+12%" 
-              positive={true}
+              trend={{ value: 12, isPositive: true }}
             />
             <StatCard 
               title="Communities Reached" 
               value={communities.length} 
               description="All time" 
               icon={<Users className="h-5 w-5" />} 
-              trend="+5%" 
-              positive={true}
+              trend={{ value: 5, isPositive: true }}
             />
             <StatCard 
               title="Total Spent" 
               value={`$${payments.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)}`} 
               description="All time" 
               icon={<CreditCard className="h-5 w-5" />} 
-              trend="+18%" 
-              positive={true}
+              trend={{ value: 18, isPositive: true }}
             />
             <StatCard 
               title="Engagement Rate" 
               value="24.8%" 
               description="Last 30 days" 
               icon={<TrendingUp className="h-5 w-5" />} 
-              trend="+7%" 
-              positive={true}
+              trend={{ value: 7, isPositive: true }}
             />
           </div>
         )}
@@ -261,7 +295,7 @@ const Dashboard = () => {
           </div>
 
           <div>
-            <ActivityFeed />
+            <ActivityFeed activities={sampleActivities} />
           </div>
         </div>
 
