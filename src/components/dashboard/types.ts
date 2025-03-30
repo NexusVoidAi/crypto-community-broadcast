@@ -1,14 +1,16 @@
 
 export interface ActivityItem {
   id: string;
-  timestamp: Date | string;
+  timestamp: string;
   title: string;
   description: string;
-  icon?: string;
-  variant?: string;
-  type?: "announcement" | "payment" | "validation" | "notification" | "community";
-  time?: string;
-  status?: string;
+  type: 'announcement' | 'payment' | 'validation' | 'community' | string;
+  status: 'success' | 'warning' | 'error' | 'info' | string;
+}
+
+export interface TrendProps {
+  value: string;
+  positive: boolean;
 }
 
 export interface Campaign {
@@ -20,12 +22,7 @@ export interface Campaign {
   conversionRate: number;
   budget: number;
   spent: number;
-  title?: string;
-  communities?: any[];
-  impressions?: number;
-}
-
-export interface TrendProps {
-  value: string | number;
-  positive?: boolean;
+  title: string;
+  communities: any[];
+  impressions: number;
 }

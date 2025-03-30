@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -25,26 +26,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LineChart, BarChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
 
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarInset
-} from '@/components/ui/sidebar';
-
 import StatCard from '@/components/dashboard/StatCard';
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
 import CreateAnnouncementButton from '@/components/dashboard/CreateAnnouncementButton';
 import CampaignTable from '@/components/dashboard/CampaignTable';
-import { ActivityItem, Campaign, TrendProps } from '@/components/dashboard/types';
+import { ActivityItem, Campaign } from '@/components/dashboard/types';
 import { Loader2 } from 'lucide-react';
 import { 
   Table,
@@ -534,70 +520,100 @@ const Dashboard = () => {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex h-screen overflow-hidden">
-        <Sidebar className="border-r border-border/50">
-          <SidebarHeader className="h-14 flex items-center border-b border-border/50 px-4">
-            <h2 className="text-lg font-bold">Dashboard</h2>
-          </SidebarHeader>
-          <SidebarContent className="pb-4">
-            <SidebarMenu>
-              <SidebarMenuItem 
-                onClick={() => setActiveTab("overview")}
-                className={cn("hover:bg-crypto-darkgray/50", activeTab === "overview" && "bg-crypto-darkgray/30")}
+    <div className="flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex overflow-hidden">
+        <div className="w-64 border-r border-border/10 p-4 bg-crypto-darkgray hidden md:block overflow-auto">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold">Dashboard</h2>
+          </div>
+          
+          <nav className="space-y-1">
+            <Link
+              to="#"
+              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                activeTab === "overview" ? 
+                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+              }`}
+              onClick={() => setActiveTab("overview")}
+            >
+              <LayoutDashboard className="h-5 w-5 mr-3" />
+              Overview
+            </Link>
+            <Link
+              to="#"
+              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                activeTab === "campaigns" ? 
+                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+              }`}
+              onClick={() => setActiveTab("campaigns")}
+            >
+              <Megaphone className="h-5 w-5 mr-3" />
+              Campaigns
+            </Link>
+            <Link
+              to="#"
+              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                activeTab === "validation" ? 
+                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+              }`}
+              onClick={() => setActiveTab("validation")}
+            >
+              <BrainCircuit className="h-5 w-5 mr-3" />
+              AI Validation
+            </Link>
+            <Link
+              to="#"
+              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                activeTab === "marketplace" ? 
+                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+              }`}
+              onClick={() => setActiveTab("marketplace")}
+            >
+              <ShoppingBag className="h-5 w-5 mr-3" />
+              Community Marketplace
+            </Link>
+            <Link
+              to="#"
+              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                activeTab === "payments" ? 
+                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+              }`}
+              onClick={() => setActiveTab("payments")}
+            >
+              <CreditCard className="h-5 w-5 mr-3" />
+              Payments
+            </Link>
+            <Link
+              to="#"
+              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                activeTab === "settings" ? 
+                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+              }`}
+              onClick={() => setActiveTab("settings")}
+            >
+              <Settings className="h-5 w-5 mr-3" />
+              Settings
+            </Link>
+            
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="flex items-center px-4 py-2 mt-4 rounded-md text-muted-foreground hover:bg-crypto-darkgray/60 hover:text-white"
               >
-                <LayoutDashboard className="h-5 w-5 mr-3" />
-                Overview
-              </SidebarMenuItem>
-              <SidebarMenuItem 
-                onClick={() => setActiveTab("campaigns")}
-                className={cn("hover:bg-crypto-darkgray/50", activeTab === "campaigns" && "bg-crypto-darkgray/30")}
-              >
-                <Megaphone className="h-5 w-5 mr-3" />
-                Campaigns
-              </SidebarMenuItem>
-              <SidebarMenuItem 
-                onClick={() => setActiveTab("validation")}
-                className={cn("hover:bg-crypto-darkgray/50", activeTab === "validation" && "bg-crypto-darkgray/30")}
-              >
-                <BrainCircuit className="h-5 w-5 mr-3" />
-                AI Validation
-              </SidebarMenuItem>
-              <SidebarMenuItem 
-                onClick={() => setActiveTab("marketplace")}
-                className={cn("hover:bg-crypto-darkgray/50", activeTab === "marketplace" && "bg-crypto-darkgray/30")}
-              >
-                <ShoppingBag className="h-5 w-5 mr-3" />
-                Community Marketplace
-              </SidebarMenuItem>
-              <SidebarMenuItem 
-                onClick={() => setActiveTab("payments")}
-                className={cn("hover:bg-crypto-darkgray/50", activeTab === "payments" && "bg-crypto-darkgray/30")}
-              >
-                <CreditCard className="h-5 w-5 mr-3" />
-                Payments
-              </SidebarMenuItem>
-              <SidebarMenuItem 
-                onClick={() => setActiveTab("settings")}
-                className={cn("hover:bg-crypto-darkgray/50", activeTab === "settings" && "bg-crypto-darkgray/30")}
-              >
-                <Settings className="h-5 w-5 mr-3" />
-                Settings
-              </SidebarMenuItem>
-              
-              {isAdmin && (
-                <SidebarMenuItem 
-                  onClick={() => navigate('/admin')}
-                  className="mt-4 border-t border-border/50 pt-4 hover:bg-crypto-darkgray/50"
-                >
-                  <Shield className="h-5 w-5 mr-3" />
-                  Admin Dashboard
-                </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </SidebarContent>
-          <SidebarFooter className="p-4 border-t border-border/50">
-            <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5 mr-3" />
+                Admin Dashboard
+              </Link>
+            )}
+          </nav>
+          
+          <div className="absolute bottom-4 left-4 right-4 p-4 border-t border-border/10">
+            <div className="flex items-center space-x-3">
               <div className="h-8 w-8 rounded-full bg-crypto-blue flex items-center justify-center text-white font-bold">
                 {profile?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
               </div>
@@ -605,29 +621,102 @@ const Dashboard = () => {
                 <p className="font-medium truncate">{profile?.name || 'User'}</p>
                 <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
               </div>
-              <Link to="/profile">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </Link>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/profile')}>
+                <Settings className="h-4 w-4" />
+              </Button>
             </div>
-          </SidebarFooter>
-        </Sidebar>
-        <div className="flex-1 overflow-auto p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
-              <div className="flex items-center gap-2">
-                {activeTab === "campaigns" && (
-                  <CreateAnnouncementButton />
-                )}
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-auto">
+          <div className="p-6">
+            <div className="mb-6">
+              <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+                <div className="flex space-x-2">
+                  {activeTab === "campaigns" && (
+                    <CreateAnnouncementButton />
+                  )}
+                </div>
+              </div>
+              
+              <div className="mt-4 overflow-x-auto pb-2">
+                <div className="inline-flex space-x-1 border-b border-border/10 pb-3 min-w-full">
+                  <button 
+                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
+                      activeTab === "overview" ? 
+                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+                    }`}
+                    onClick={() => setActiveTab("overview")}
+                  >
+                    <LayoutDashboard className="h-4 w-4 mr-2" />
+                    Overview
+                  </button>
+                  <button 
+                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
+                      activeTab === "campaigns" ? 
+                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+                    }`}
+                    onClick={() => setActiveTab("campaigns")}
+                  >
+                    <Megaphone className="h-4 w-4 mr-2" />
+                    Campaigns
+                  </button>
+                  <button 
+                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
+                      activeTab === "validation" ? 
+                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+                    }`}
+                    onClick={() => setActiveTab("validation")}
+                  >
+                    <BrainCircuit className="h-4 w-4 mr-2" />
+                    AI Validation
+                  </button>
+                  <button 
+                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
+                      activeTab === "marketplace" ? 
+                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+                    }`}
+                    onClick={() => setActiveTab("marketplace")}
+                  >
+                    <ShoppingBag className="h-4 w-4 mr-2" />
+                    Community Marketplace
+                  </button>
+                  <button 
+                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
+                      activeTab === "payments" ? 
+                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+                    }`}
+                    onClick={() => setActiveTab("payments")}
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Payments
+                  </button>
+                  <button 
+                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
+                      activeTab === "settings" ? 
+                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
+                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
+                    }`}
+                    onClick={() => setActiveTab("settings")}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </button>
+                </div>
               </div>
             </div>
+            
             {renderContent()}
           </div>
         </div>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 
