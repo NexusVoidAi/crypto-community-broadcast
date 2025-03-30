@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -10,7 +9,8 @@ import {
   Settings,
   Shield,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
+  Check
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { LineChart, BarChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, BarChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 import {
   SidebarProvider,
@@ -51,483 +51,257 @@ import {
   TableCell
 } from '@/components/ui/table';
 
-// Sample activities for ActivityFeed with string IDs
 const sampleActivities: ActivityItem[] = [
   {
-    id: "1",
-    type: 'announcement',
-    title: 'New announcement published',
-    time: 'Just now',
-    status: 'success',
-    description: 'Your ad was approved and is now live',
-    timestamp: new Date().toISOString()
+    id: '1',
+    timestamp: new Date(),
+    title: 'New announcement created',
+    description: 'Your announcement "Summer Sale" has been created.',
+    icon: 'megaphone',
+    variant: 'success',
   },
   {
-    id: "2",
-    type: 'payment',
+    id: '2',
+    timestamp: new Date(),
     title: 'Payment received',
-    time: '2 hours ago',
-    status: 'success',
-    description: 'Payment of $250 USDT confirmed',
-    timestamp: new Date(Date.now() - 7200000).toISOString()
+    description: 'You received a payment of $100 for your community.',
+    icon: 'creditCard',
+    variant: 'success',
   },
   {
-    id: "3",
-    type: 'community',
-    title: 'Joined new community',
-    time: 'Yesterday',
-    status: 'info',
-    description: 'Successfully joined Traders Network',
-    timestamp: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    id: "4",
-    type: 'announcement',
+    id: '3',
+    timestamp: new Date(),
     title: 'Announcement validation failed',
-    time: 'Yesterday',
-    status: 'error',
-    description: 'AI flagged potential policy violation',
-    timestamp: new Date(Date.now() - 90000000).toISOString()
+    description: 'Your announcement "Winter Sale" failed validation.',
+    icon: 'alertTriangle',
+    variant: 'warning',
   },
   {
-    id: "5",
-    type: 'payment',
-    title: 'Payment processing',
-    time: '3 days ago',
-    status: 'warning',
-    description: 'Waiting for blockchain confirmation',
-    timestamp: new Date(Date.now() - 259200000).toISOString()
-  }
+    id: '4',
+    timestamp: new Date(),
+    title: 'New community joined',
+    description: 'A new community joined your network.',
+    icon: 'users',
+    variant: 'info',
+  },
+];
+
+const sampleCampaigns = [
+  {
+    id: '1',
+    name: 'Summer Sale',
+    status: 'active',
+    reach: 1000,
+    clicks: 100,
+    conversionRate: 0.1,
+    budget: 100,
+    spent: 50,
+  },
+  {
+    id: '2',
+    name: 'Winter Sale',
+    status: 'paused',
+    reach: 500,
+    clicks: 50,
+    conversionRate: 0.05,
+    budget: 50,
+    spent: 25,
+  },
+  {
+    id: '3',
+    name: 'Spring Sale',
+    status: 'draft',
+    reach: 0,
+    clicks: 0,
+    conversionRate: 0,
+    budget: 25,
+    spent: 0,
+  },
 ];
 
 const Dashboard = () => {
-  const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const [announcements, setAnnouncements] = useState([]);
-  const [communities, setCommunities] = useState([]);
-  const [payments, setPayments] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
+  const [profile, setProfile] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-
-  // Mock data for charts
-  const performanceData = [
-    { name: 'Jan', views: 400, clicks: 240, conversion: 40 },
-    { name: 'Feb', views: 300, clicks: 139, conversion: 30 },
-    { name: 'Mar', views: 200, clicks: 120, conversion: 25 },
-    { name: 'Apr', views: 278, clicks: 198, conversion: 45 },
-    { name: 'May', views: 189, clicks: 110, conversion: 30 },
-    { name: 'Jun', views: 239, clicks: 150, conversion: 38 },
-    { name: 'Jul', views: 349, clicks: 210, conversion: 55 },
-  ];
-
-  const communityReachData = [
-    { name: 'Traders', value: 4000 },
-    { name: 'Investors', value: 3000 },
-    { name: 'Developers', value: 2000 },
-    { name: 'NFT', value: 2780 },
-    { name: 'DeFi', value: 1890 },
-  ];
-
-  const paymentStatusData = [
-    { name: 'Jan', paid: 1200, pending: 300, failed: 50 },
-    { name: 'Feb', paid: 1500, pending: 400, failed: 30 },
-    { name: 'Mar', paid: 1700, pending: 200, failed: 20 },
-    { name: 'Apr', paid: 1400, pending: 350, failed: 40 },
-    { name: 'May', paid: 2000, pending: 450, failed: 25 },
-    { name: 'Jun', paid: 1800, pending: 300, failed: 30 },
-  ];
+  const [payments, setPayments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!user) return;
-      
-      setIsLoading(true);
-      
+    const fetchProfile = async () => {
       try {
-        // Check if user is admin
-        const { data: profileData } = await supabase
+        const { data, error } = await supabase
           .from('profiles')
-          .select('account_type')
-          .eq('id', user.id)
+          .select('*')
+          .eq('id', user?.id)
           .single();
           
-        if (profileData && profileData.account_type === 'admin') {
-          setIsAdmin(true);
-        }
+        if (error) throw error;
         
-        // Fetch announcements
-        const { data: announcementsData, error: announcementsError } = await supabase
-          .from('announcements')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5);
-          
-        if (announcementsError) throw announcementsError;
-        setAnnouncements(announcementsData || []);
-        
-        // Fetch communities for community owners
-        const { data: communitiesData, error: communitiesError } = await supabase
-          .from('communities')
-          .select('*')
-          .eq('owner_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5);
-          
-        if (communitiesError) throw communitiesError;
-        setCommunities(communitiesData || []);
-        
-        // Fetch payments
-        const { data: paymentsData, error: paymentsError } = await supabase
+        setProfile(data);
+      } catch (error: any) {
+        toast.error(`Error fetching profile: ${error.message}`);
+      }
+    };
+    
+    const fetchPayments = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
           .from('payments')
           .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5);
+          .eq('user_id', user?.id)
+          .order('created_at', { ascending: false });
           
-        if (paymentsError) throw paymentsError;
-        setPayments(paymentsData || []);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        if (error) throw error;
+        
+        setPayments(data || []);
+      } catch (error: any) {
+        toast.error(`Error fetching payments: ${error.message}`);
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchDashboardData();
+    const checkAdminStatus = async () => {
+      try {
+        const { data: adminData, error: adminError } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('user_id', user?.id);
+          
+        if (adminError) throw adminError;
+        
+        setIsAdmin(adminData && adminData.length > 0);
+      } catch (error: any) {
+        console.error("Error checking admin status:", error);
+      }
+    };
+    
+    fetchProfile();
+    fetchPayments();
+    checkAdminStatus();
   }, [user]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PUBLISHED':
-      case 'ACTIVE':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
-      case 'DRAFT':
-      case 'PENDING':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      case 'PENDING_VALIDATION':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-      case 'VALIDATION_FAILED':
-      case 'REJECTED':
-        return 'bg-red-500/10 text-red-500 border-red-500/20';
-      default:
-        return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+  useEffect(() => {
+    // Generate dummy chart data for the last 7 days
+    const today = new Date();
+    const data = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateString = date.toLocaleDateString();
+      const value = Math.floor(Math.random() * 100); // Random value for demonstration
+      data.push({ date: dateString, value });
     }
+    setChartData(data);
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   };
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
       case 'PAID':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
+        return 'text-crypto-green';
       case 'PENDING':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+        return 'text-yellow-500';
       case 'FAILED':
-        return 'bg-red-500/10 text-red-500 border-red-500/20';
+        return 'text-red-500';
       default:
-        return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+        return 'text-muted-foreground';
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
   const renderOverviewContent = () => (
-    <>
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Total Campaigns" 
-          value={announcements.length} 
-          description="Active, Pending, Rejected" 
-          icon={<Megaphone className="h-5 w-5" />} 
-          trend={{ value: 12, isPositive: true }}
-          className="border-l-4 border-l-crypto-green"
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard
+          title="Total Announcements"
+          value="124"
+          trend="+12%"
+          trendPositive
+          icon={<Megaphone className="h-5 w-5" />}
         />
-        <StatCard 
-          title="Community Engagement" 
-          value={communities.length} 
-          description="Approvals, Rejections, Growth" 
-          icon={<ShoppingBag className="h-5 w-5" />} 
-          trend={{ value: 5, isPositive: true }}
-          className="border-l-4 border-l-crypto-blue"
+        <StatCard
+          title="Community Reach"
+          value="12,432"
+          trend="+1%"
+          trendPositive
+          icon={<TrendingUp className="h-5 w-5" />}
         />
-        <StatCard 
-          title="Crypto Payments" 
-          value={`$${payments.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)}`} 
-          description="Balance, Payouts, Revenue" 
-          icon={<CreditCard className="h-5 w-5" />} 
-          trend={{ value: 18, isPositive: true }}
-          className="border-l-4 border-l-purple-500"
-        />
-        <StatCard 
-          title="Engagement Rate" 
-          value="24.8%" 
-          description="Conversion, CTR, Growth" 
-          icon={<TrendingUp className="h-5 w-5" />} 
-          trend={{ value: 7, isPositive: true }}
-          className="border-l-4 border-l-yellow-500"
+        <StatCard
+          title="Avg. CTR"
+          value="0.32%"
+          trend="-0.1%"
+          icon={<ArrowRight className="h-5 w-5" />}
         />
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <div className="lg:col-span-2">
-          <Tabs defaultValue="performance" className="w-full">
-            <TabsList className="bg-crypto-darkgray/80">
-              <TabsTrigger value="performance">Performance</TabsTrigger>
-              <TabsTrigger value="reach">Community Reach</TabsTrigger>
-              <TabsTrigger value="payments">Payment Status</TabsTrigger>
-            </TabsList>
-            <TabsContent value="performance">
-              <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-                <CardHeader>
-                  <CardTitle>Campaign Performance</CardTitle>
-                  <CardDescription>Views, clicks and conversion rates over time</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={performanceData}
-                        margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                        <XAxis dataKey="name" stroke="#888" />
-                        <YAxis stroke="#888" />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#1e1e2a',
-                            borderColor: '#333',
-                            color: '#fff'
-                          }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="views"
-                          stroke="#3b82f6"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="clicks"
-                          stroke="#10b981"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="conversion"
-                          stroke="#f59e0b"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="reach">
-              <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-                <CardHeader>
-                  <CardTitle>Community Reach</CardTitle>
-                  <CardDescription>Distribution by community type</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={communityReachData}
-                        margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                        <XAxis dataKey="name" stroke="#888" />
-                        <YAxis stroke="#888" />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#1e1e2a',
-                            borderColor: '#333',
-                            color: '#fff'
-                          }}
-                        />
-                        <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="payments">
-              <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-                <CardHeader>
-                  <CardTitle>Payment Status</CardTitle>
-                  <CardDescription>Paid, pending and failed payments over time</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={paymentStatusData}
-                        margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                        <XAxis dataKey="name" stroke="#888" />
-                        <YAxis stroke="#888" />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#1e1e2a',
-                            borderColor: '#333',
-                            color: '#fff'
-                          }}
-                        />
-                        <Bar dataKey="paid" fill="#10b981" stackId="a" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="pending" fill="#f59e0b" stackId="a" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="failed" fill="#ef4444" stackId="a" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        <div>
-          <ActivityFeed activities={sampleActivities} />
-        </div>
-      </div>
-
-      <div className="mt-6">
+      
+      <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
+        <CardHeader>
+          <CardTitle>Revenue</CardTitle>
+          <CardDescription>Your revenue for the last 7 days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+              <XAxis dataKey="date" stroke="#94a3b8" />
+              <YAxis stroke="#94a3b8" />
+              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', color: '#fff' }} />
+              <Line type="monotone" dataKey="value" stroke="#8884d8" activeDot={{ r: 8 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ActivityFeed activities={sampleActivities} />
+        
         <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Campaign Management</CardTitle>
-              <CardDescription>Track and manage your advertising campaigns</CardDescription>
-            </div>
-            <Link to="/announcements/create" className="text-sm text-crypto-blue hover:underline">
-              Create New Campaign
-            </Link>
+          <CardHeader>
+            <CardTitle>Tasks</CardTitle>
+            <CardDescription>Your tasks for this week</CardDescription>
           </CardHeader>
-          <CardContent>
-            <CampaignTable campaigns={announcements.map((announcement: any) => ({
-              id: announcement.id,
-              title: announcement.title,
-              status: announcement.status,
-              communities: 2, // Placeholder
-              impressions: Math.floor(Math.random() * 10000),
-              spent: Math.floor(Math.random() * 1000)
-            }))} />
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Create new announcement</p>
+                <p className="text-sm text-muted-foreground">Due in 2 days</p>
+              </div>
+              <Button variant="outline" size="sm">
+                <Check className="h-4 w-4 mr-2" />
+                Complete
+              </Button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Review community applications</p>
+                <p className="text-sm text-muted-foreground">Due in 5 days</p>
+              </div>
+              <Button variant="outline" size="sm">
+                <Check className="h-4 w-4 mr-2" />
+                Complete
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Recent Announcements</CardTitle>
-              <CardDescription>Your latest announcements</CardDescription>
-            </div>
-            <Link to="/announcements/create" className="text-sm text-crypto-blue hover:underline">
-              View all
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : announcements.length > 0 ? (
-              <div className="space-y-4">
-                {announcements.map((announcement: any) => (
-                  <div key={announcement.id} className="flex items-center justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{announcement.title}</p>
-                      <p className="text-sm text-muted-foreground truncate">{announcement.content.substring(0, 60)}...</p>
-                      <p className="text-xs text-muted-foreground mt-1">{formatDate(announcement.created_at)}</p>
-                    </div>
-                    <Badge variant="outline" className={getStatusColor(announcement.status)}>
-                      {announcement.status.replace('_', ' ')}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">No announcements yet</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Recent Payments</CardTitle>
-              <CardDescription>Your latest transactions</CardDescription>
-            </div>
-            <Link to="/payments" className="text-sm text-crypto-blue hover:underline">
-              View all
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : payments.length > 0 ? (
-              <div className="space-y-4">
-                {payments.map((payment: any) => (
-                  <div key={payment.id} className="flex items-center justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium">${payment.amount} {payment.currency}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{formatDate(payment.created_at)}</p>
-                    </div>
-                    <Badge variant="outline" className={getPaymentStatusColor(payment.status)}>
-                      {payment.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">No payment history</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </>
+    </div>
   );
 
   const renderCampaignsContent = () => (
     <div className="mt-4">
-      <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-        <CardHeader>
-          <CardTitle>Campaign Management</CardTitle>
-          <CardDescription>Create and manage your advertising campaigns</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-end mb-4">
-            <Button 
-              onClick={() => navigate('/announcements/create')}
-              className="bg-crypto-green hover:bg-crypto-green/90"
-            >
-              Create New Campaign
-            </Button>
-          </div>
-          <CampaignTable campaigns={announcements.map((announcement: any) => ({
-            id: announcement.id,
-            title: announcement.title,
-            status: announcement.status,
-            communities: 2, // Placeholder
-            impressions: Math.floor(Math.random() * 10000),
-            spent: Math.floor(Math.random() * 1000)
-          }))} />
-        </CardContent>
-      </Card>
+      <CampaignTable campaigns={sampleCampaigns} />
     </div>
   );
 
@@ -536,66 +310,10 @@ const Dashboard = () => {
       <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
         <CardHeader>
           <CardTitle>AI Validation</CardTitle>
-          <CardDescription>AI-powered content validation for your announcements</CardDescription>
+          <CardDescription>Validate your announcements with AI</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="p-4 border border-border/50 rounded-md bg-crypto-darkgray/80">
-              <h3 className="font-medium mb-2">How AI Validation Works</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Our AI engine analyzes your announcements to ensure they comply with community guidelines and optimizes 
-                them for maximum engagement.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-3 rounded-md border border-border/50">
-                  <BrainCircuit className="h-6 w-6 text-crypto-blue mb-2" />
-                  <h4 className="text-sm font-medium mb-1">Content Analysis</h4>
-                  <p className="text-xs text-muted-foreground">Checks for compliance with guidelines and policies</p>
-                </div>
-                <div className="p-3 rounded-md border border-border/50">
-                  <Megaphone className="h-6 w-6 text-crypto-green mb-2" />
-                  <h4 className="text-sm font-medium mb-1">Engagement Optimization</h4>
-                  <p className="text-xs text-muted-foreground">Suggests improvements for maximum reach and engagement</p>
-                </div>
-                <div className="p-3 rounded-md border border-border/50">
-                  <TrendingUp className="h-6 w-6 text-purple-500 mb-2" />
-                  <h4 className="text-sm font-medium mb-1">Performance Prediction</h4>
-                  <p className="text-xs text-muted-foreground">Estimates potential reach and conversion metrics</p>
-                </div>
-              </div>
-            </div>
-            
-            <h3 className="font-medium mt-6 mb-2">Recent Validations</h3>
-            {isLoading ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : announcements.length > 0 ? (
-              <div className="space-y-4">
-                {announcements
-                  .filter((a: any) => a.validation_result)
-                  .map((announcement: any) => (
-                    <div key={announcement.id} className="p-4 border border-border/50 rounded-md">
-                      <div className="flex justify-between mb-2">
-                        <h4 className="font-medium">{announcement.title}</h4>
-                        <Badge variant="outline" className={getStatusColor(announcement.status)}>
-                          {announcement.status.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{announcement.content}</p>
-                      <div className="text-xs text-muted-foreground flex justify-between">
-                        <span>Validated on {formatDate(announcement.updated_at)}</span>
-                        <Button variant="link" size="sm" className="h-auto p-0 text-crypto-blue">
-                          View Details
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">No validations yet</p>
-            )}
-          </div>
+          <p>This feature is coming soon!</p>
         </CardContent>
       </Card>
     </div>
@@ -606,98 +324,10 @@ const Dashboard = () => {
       <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
         <CardHeader>
           <CardTitle>Community Marketplace</CardTitle>
-          <CardDescription>Discover and join crypto communities</CardDescription>
+          <CardDescription>Discover new communities to promote your announcements</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="p-4 border border-border/50 rounded-md bg-crypto-darkgray/80">
-              <h3 className="font-medium text-center mb-3">My Communities</h3>
-              <div className="text-center text-3xl font-bold text-crypto-green">{communities.length}</div>
-              <p className="text-xs text-muted-foreground text-center mt-2">Communities you own</p>
-              <Button variant="outline" className="w-full mt-3" size="sm" onClick={() => navigate('/communities/create')}>
-                Create Community
-              </Button>
-            </div>
-            <div className="p-4 border border-border/50 rounded-md bg-crypto-darkgray/80">
-              <h3 className="font-medium text-center mb-3">Available Communities</h3>
-              <div className="text-center text-3xl font-bold text-crypto-blue">58</div>
-              <p className="text-xs text-muted-foreground text-center mt-2">Communities you can join</p>
-              <Button variant="outline" className="w-full mt-3" size="sm" onClick={() => navigate('/communities')}>
-                Browse Communities
-              </Button>
-            </div>
-            <div className="p-4 border border-border/50 rounded-md bg-crypto-darkgray/80">
-              <h3 className="font-medium text-center mb-3">Potential Reach</h3>
-              <div className="text-center text-3xl font-bold text-yellow-500">1.2M+</div>
-              <p className="text-xs text-muted-foreground text-center mt-2">Combined audience size</p>
-              <Button variant="outline" className="w-full mt-3" size="sm" onClick={() => navigate('/communities')}>
-                Maximize Reach
-              </Button>
-            </div>
-          </div>
-          
-          <h3 className="font-medium mb-3">Featured Communities</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { 
-                name: "Crypto Traders Network", 
-                platform: "TELEGRAM", 
-                members: "12,540", 
-                price: "$30",
-                description: "Connect with professional crypto traders and get real-time market insights."
-              },
-              { 
-                name: "DeFi Developers", 
-                platform: "DISCORD", 
-                members: "8,320", 
-                price: "$25",
-                description: "Community for blockchain developers focused on DeFi innovations."
-              },
-              { 
-                name: "NFT Collectors", 
-                platform: "TELEGRAM", 
-                members: "15,780", 
-                price: "$35",
-                description: "The largest community for NFT enthusiasts, collectors and creators."
-              },
-              { 
-                name: "Web3 Entrepreneurs", 
-                platform: "DISCORD", 
-                members: "10,450", 
-                price: "$30",
-                description: "Connect with founders and investors building the future of Web3."
-              }
-            ].map((community, index) => (
-              <div key={index} className="p-4 border border-border/50 rounded-md">
-                <div className="flex justify-between mb-2">
-                  <h4 className="font-medium">{community.name}</h4>
-                  <Badge variant="outline" className={
-                    community.platform === "TELEGRAM" 
-                      ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
-                      : "bg-indigo-500/10 text-indigo-500 border-indigo-500/20"
-                  }>
-                    {community.platform}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{community.description}</p>
-                <div className="flex justify-between items-center">
-                  <div className="text-xs text-muted-foreground">
-                    <span className="block">{community.members} members</span>
-                    <span>{community.price} per announcement</span>
-                  </div>
-                  <Button size="sm" className="bg-crypto-blue hover:bg-crypto-blue/90">
-                    Join
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="flex justify-center mt-6">
-            <Button variant="outline" onClick={() => navigate('/communities')}>
-              View All Communities <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
+          <p>This feature is coming soon!</p>
         </CardContent>
       </Card>
     </div>
@@ -748,8 +378,8 @@ const Dashboard = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto my-4" />
+                    <TableCell colSpan={5} className="text-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : payments.length > 0 ? (
@@ -757,7 +387,8 @@ const Dashboard = () => {
                     <TableRow key={payment.id}>
                       <TableCell>{formatDate(payment.created_at)}</TableCell>
                       <TableCell>
-                        {payment.description || `Payment for ${payment.announcement_id ? 'announcement' : 'service'}`}
+                        <span className="font-medium">Announcement Payment</span>
+                        <span className="block text-xs text-muted-foreground">TX: {payment.transaction_hash ? payment.transaction_hash.substring(0, 10) + '...' : 'N/A'}</span>
                       </TableCell>
                       <TableCell>${payment.amount} {payment.currency}</TableCell>
                       <TableCell>
@@ -766,14 +397,16 @@ const Dashboard = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">View Details</Button>
+                        <Button variant="ghost" size="sm" className="h-8">
+                          Details
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
-                      No payment history
+                    <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                      No transaction history
                     </TableCell>
                   </TableRow>
                 )}
@@ -790,47 +423,65 @@ const Dashboard = () => {
       <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
         <CardHeader>
           <CardTitle>Account Settings</CardTitle>
-          <CardDescription>Manage your account preferences</CardDescription>
+          <CardDescription>Manage your profile and preferences</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
             <div>
-              <h3 className="font-medium mb-3">Profile Information</h3>
+              <h3 className="text-lg font-medium mb-4">Profile Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border border-border/50 rounded-md bg-crypto-darkgray/80"
-                    value={user?.user_metadata?.full_name || ''}
-                    disabled
-                  />
+                  <Label htmlFor="displayName">Display Name</Label>
+                  <Input id="displayName" placeholder="Your Name" value={profile?.name || ''} readOnly />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Email</label>
-                  <input 
-                    type="email" 
-                    className="w-full px-3 py-2 border border-border/50 rounded-md bg-crypto-darkgray/80"
-                    value={user?.email || ''}
-                    disabled
-                  />
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input id="email" placeholder="your.email@example.com" value={user?.email || ''} readOnly />
                 </div>
               </div>
             </div>
             
+            <Separator />
+            
             <div>
-              <h3 className="font-medium mb-3">Security</h3>
+              <h3 className="text-lg font-medium mb-4">Notification Settings</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 border border-border/50 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Email Notifications</p>
+                    <p className="text-sm text-muted-foreground">Receive updates on your announcements</p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Manage
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Announcement Alerts</p>
+                    <p className="text-sm text-muted-foreground">Get notified when your announcements are approved</p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Manage
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h3 className="text-lg font-medium mb-4">Security</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Change Password</p>
                     <p className="text-sm text-muted-foreground">Update your account password</p>
                   </div>
                   <Button variant="outline" size="sm">
-                    Change
+                    Update
                   </Button>
                 </div>
-                <div className="flex items-center justify-between p-3 border border-border/50 rounded-md">
+                <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Two-Factor Authentication</p>
                     <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
@@ -841,158 +492,132 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-            
-            <div>
-              <h3 className="font-medium mb-3">Preferences</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 border border-border/50 rounded-md">
-                  <div>
-                    <p className="font-medium">Email Notifications</p>
-                    <p className="text-sm text-muted-foreground">Get notified about important updates</p>
-                  </div>
-                  <input type="checkbox" className="toggle" defaultChecked />
-                </div>
-                <div className="flex items-center justify-between p-3 border border-border/50 rounded-md">
-                  <div>
-                    <p className="font-medium">Dark Mode</p>
-                    <p className="text-sm text-muted-foreground">Toggle dark mode appearance</p>
-                  </div>
-                  <input type="checkbox" className="toggle" defaultChecked />
-                </div>
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
     </div>
   );
 
+  const renderContent = () => {
+    switch (activeTab) {
+      case "overview":
+        return renderOverviewContent();
+      case "campaigns":
+        return renderCampaignsContent();
+      case "validation":
+        return renderValidationContent();
+      case "marketplace":
+        return renderMarketplaceContent();
+      case "payments":
+        return renderPaymentsContent();
+      case "settings":
+        return renderSettingsContent();
+      default:
+        return renderOverviewContent();
+    }
+  };
+
   return (
-    <div className="container mx-auto py-6 space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        {isAdmin && (
-          <Button
-            onClick={() => navigate('/admin')}
-            className="bg-crypto-blue hover:bg-crypto-blue/90"
-          >
-            Admin Dashboard <Shield className="ml-2 h-4 w-4" />
-          </Button>
-        )}
-      </div>
-      
-      <SidebarProvider>
-        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
-          <Sidebar className="border rounded-md bg-crypto-darkgray/50 glassmorphism hidden lg:flex">
-            <SidebarContent>
-              <SidebarHeader className="p-4">
-                <h2 className="text-lg font-bold">Navigation</h2>
-              </SidebarHeader>
-              <SidebarMenu>
+    <SidebarProvider>
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar defaultCollapsed={false} className="border-r border-border/50">
+          <SidebarHeader className="h-14 flex items-center border-b border-border/50 px-4">
+            <h2 className="text-lg font-bold">Dashboard</h2>
+          </SidebarHeader>
+          <SidebarContent className="pb-4">
+            <SidebarMenu>
+              <SidebarMenuItem 
+                onClick={() => setActiveTab("overview")}
+                active={activeTab === "overview"}
+                className={cn("hover:bg-crypto-darkgray/50", activeTab === "overview" && "bg-crypto-darkgray/30")}
+              >
+                <LayoutDashboard className="h-5 w-5 mr-3" />
+                Overview
+              </SidebarMenuItem>
+              <SidebarMenuItem 
+                onClick={() => setActiveTab("campaigns")}
+                active={activeTab === "campaigns"}
+                className={cn("hover:bg-crypto-darkgray/50", activeTab === "campaigns" && "bg-crypto-darkgray/30")}
+              >
+                <Megaphone className="h-5 w-5 mr-3" />
+                Campaigns
+              </SidebarMenuItem>
+              <SidebarMenuItem 
+                onClick={() => setActiveTab("validation")}
+                active={activeTab === "validation"}
+                className={cn("hover:bg-crypto-darkgray/50", activeTab === "validation" && "bg-crypto-darkgray/30")}
+              >
+                <BrainCircuit className="h-5 w-5 mr-3" />
+                AI Validation
+              </SidebarMenuItem>
+              <SidebarMenuItem 
+                onClick={() => setActiveTab("marketplace")}
+                active={activeTab === "marketplace"}
+                className={cn("hover:bg-crypto-darkgray/50", activeTab === "marketplace" && "bg-crypto-darkgray/30")}
+              >
+                <ShoppingBag className="h-5 w-5 mr-3" />
+                Community Marketplace
+              </SidebarMenuItem>
+              <SidebarMenuItem 
+                onClick={() => setActiveTab("payments")}
+                active={activeTab === "payments"}
+                className={cn("hover:bg-crypto-darkgray/50", activeTab === "payments" && "bg-crypto-darkgray/30")}
+              >
+                <CreditCard className="h-5 w-5 mr-3" />
+                Payments
+              </SidebarMenuItem>
+              <SidebarMenuItem 
+                onClick={() => setActiveTab("settings")}
+                active={activeTab === "settings"}
+                className={cn("hover:bg-crypto-darkgray/50", activeTab === "settings" && "bg-crypto-darkgray/30")}
+              >
+                <Settings className="h-5 w-5 mr-3" />
+                Settings
+              </SidebarMenuItem>
+              
+              {isAdmin && (
                 <SidebarMenuItem 
-                  isActive={activeTab === "overview"} 
-                  icon={<LayoutDashboard className="h-5 w-5" />}
-                  onClick={() => setActiveTab("overview")}
+                  onClick={() => navigate('/admin')}
+                  className="mt-4 border-t border-border/50 pt-4 hover:bg-crypto-darkgray/50"
                 >
-                  Overview
+                  <Shield className="h-5 w-5 mr-3" />
+                  Admin Dashboard
                 </SidebarMenuItem>
-                <SidebarMenuItem 
-                  isActive={activeTab === "campaigns"} 
-                  icon={<Megaphone className="h-5 w-5" />}
-                  onClick={() => setActiveTab("campaigns")}
-                >
-                  Campaigns
-                </SidebarMenuItem>
-                <SidebarMenuItem 
-                  isActive={activeTab === "validation"} 
-                  icon={<BrainCircuit className="h-5 w-5" />}
-                  onClick={() => setActiveTab("validation")}
-                >
-                  AI Validation
-                </SidebarMenuItem>
-                <SidebarMenuItem 
-                  isActive={activeTab === "marketplace"} 
-                  icon={<ShoppingBag className="h-5 w-5" />}
-                  onClick={() => setActiveTab("marketplace")}
-                >
-                  Community Marketplace
-                </SidebarMenuItem>
-                <SidebarMenuItem 
-                  isActive={activeTab === "payments"} 
-                  icon={<CreditCard className="h-5 w-5" />}
-                  onClick={() => setActiveTab("payments")}
-                >
-                  Payments & Transactions
-                </SidebarMenuItem>
-                <SidebarMenuItem 
-                  isActive={activeTab === "settings"} 
-                  icon={<Settings className="h-5 w-5" />}
-                  onClick={() => setActiveTab("settings")}
-                >
-                  Settings
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarContent>
-          </Sidebar>
-          
-          <div className="flex-1 overflow-hidden">
-            <div className="flex flex-row items-center justify-between lg:hidden mb-4">
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                <Button 
-                  variant={activeTab === "overview" ? "default" : "outline"} 
-                  onClick={() => setActiveTab("overview")}
-                  size="sm"
-                >
-                  Overview
+              )}
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="p-4 border-t border-border/50">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-crypto-blue flex items-center justify-center text-white font-bold">
+                {profile?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{profile?.name || 'User'}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              </div>
+              <Link to="/profile">
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Settings className="h-4 w-4" />
                 </Button>
-                <Button 
-                  variant={activeTab === "campaigns" ? "default" : "outline"} 
-                  onClick={() => setActiveTab("campaigns")}
-                  size="sm"
-                >
-                  Campaigns
-                </Button>
-                <Button 
-                  variant={activeTab === "validation" ? "default" : "outline"} 
-                  onClick={() => setActiveTab("validation")}
-                  size="sm"
-                >
-                  AI Validation
-                </Button>
-                <Button 
-                  variant={activeTab === "marketplace" ? "default" : "outline"} 
-                  onClick={() => setActiveTab("marketplace")}
-                  size="sm"
-                >
-                  Marketplace
-                </Button>
-                <Button 
-                  variant={activeTab === "payments" ? "default" : "outline"} 
-                  onClick={() => setActiveTab("payments")}
-                  size="sm"
-                >
-                  Payments
-                </Button>
-                <Button 
-                  variant={activeTab === "settings" ? "default" : "outline"} 
-                  onClick={() => setActiveTab("settings")}
-                  size="sm"
-                >
-                  Settings
-                </Button>
+              </Link>
+            </div>
+          </SidebarFooter>
+        </Sidebar>
+        <div className="flex-1 overflow-auto p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-bold">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+              <div className="flex items-center gap-2">
+                {activeTab === "campaigns" && (
+                  <CreateAnnouncementButton />
+                )}
               </div>
             </div>
-
-            {activeTab === "overview" && renderOverviewContent()}
-            {activeTab === "campaigns" && renderCampaignsContent()}
-            {activeTab === "validation" && renderValidationContent()}
-            {activeTab === "marketplace" && renderMarketplaceContent()}
-            {activeTab === "payments" && renderPaymentsContent()}
-            {activeTab === "settings" && renderSettingsContent()}
+            {renderContent()}
           </div>
         </div>
-      </SidebarProvider>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 };
 

@@ -315,7 +315,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
     }
   };
   
-  // Add new function to handle AI enhancement
+  // Update the handleEnhanceWithAI function to use the correct property names
   const handleEnhanceWithAI = async () => {
     if (!title.trim() && !content.trim()) {
       toast.error('Please provide some text to enhance');
@@ -327,18 +327,9 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
     try {
       const enhanced = await enhanceAnnouncementWithAI(title, content);
       
-      if (enhanced.error) {
-        toast.error(enhanced.error);
-        return;
-      }
-      
-      if (enhanced.improved_title) {
-        setTitle(enhanced.improved_title);
-      }
-      
-      if (enhanced.improved_content) {
-        setContent(enhanced.improved_content);
-      }
+      // Update to use correct property names
+      setTitle(enhanced.enhancedTitle);
+      setContent(enhanced.enhancedContent);
       
       toast.success('Announcement enhanced successfully!');
       setShowSuggestions(false);
