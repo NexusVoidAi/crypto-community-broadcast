@@ -13,7 +13,9 @@ import {
   Send,
   MessageSquare,
   Hash,
-  BotMessageSquare
+  BotMessageSquare,
+  ShieldCheck,
+  Shield
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -92,6 +94,7 @@ const CommunityApproval = () => {
       const { data: settings, error: settingsError } = await supabase
         .from('platform_settings')
         .select('telegram_bot_token')
+        .limit(1)
         .single();
         
       if (settingsError) throw settingsError;
@@ -186,14 +189,17 @@ const CommunityApproval = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="border border-border/50 bg-crypto-darkgray/50">
+      <Card className="border border-border/50 bg-crypto-darkgray/50 backdrop-blur-md glassmorphic-card">
         <CardHeader>
-          <CardTitle className="text-xl">Pending Communities</CardTitle>
+          <CardTitle className="text-xl flex items-center">
+            <ShieldCheck className="mr-2 h-5 w-5 text-crypto-green" />
+            <span className="text-gradient">Pending Communities</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {communities.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <div className="text-center py-8 glassmorphism rounded-lg">
+              <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">No pending communities to review</p>
             </div>
           ) : (
@@ -201,7 +207,7 @@ const CommunityApproval = () => {
               {communities.map((community) => (
                 <div 
                   key={community.id} 
-                  className="border border-border rounded-md p-4 bg-crypto-dark/50"
+                  className="border border-border rounded-md p-4 bg-crypto-dark/50 glassmorphism hover:glow-blue transition-all duration-300"
                 >
                   <div className="flex flex-col md:flex-row justify-between mb-2">
                     <div className="flex items-center">
@@ -226,7 +232,7 @@ const CommunityApproval = () => {
                   </div>
                   
                   {community.description && (
-                    <div className="my-4 p-3 bg-crypto-darkgray/50 rounded-md">
+                    <div className="my-4 p-3 bg-crypto-darkgray/50 rounded-md backdrop-blur-sm">
                       <p className="text-sm">{community.description}</p>
                     </div>
                   )}
@@ -260,6 +266,7 @@ const CommunityApproval = () => {
                         variant="outline"
                         onClick={() => checkTelegramBot(community)}
                         disabled={checkingBot === community.id}
+                        className="hover:bg-crypto-blue/10 hover:text-crypto-blue transition-colors"
                       >
                         {checkingBot === community.id ? (
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -286,7 +293,7 @@ const CommunityApproval = () => {
                     <Button
                       onClick={() => handleApproval(community.id, true)}
                       disabled={isProcessing === community.id}
-                      className="bg-crypto-green hover:bg-crypto-green/90"
+                      className="bg-crypto-green hover:bg-crypto-green/90 animate-pulse-glow"
                     >
                       {isProcessing === community.id ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />

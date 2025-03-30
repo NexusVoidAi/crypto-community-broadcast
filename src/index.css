@@ -72,6 +72,27 @@
   @apply bg-opacity-20 backdrop-blur-md border border-white/10 shadow-lg;
 }
 
+.text-gradient {
+  @apply bg-gradient-to-br from-white via-white/90 to-white/70 bg-clip-text text-transparent;
+}
+
+.card-hover {
+  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+}
+
+.glassmorphic-card {
+  @apply bg-crypto-darkgray/30 backdrop-blur-md border border-white/5 shadow-xl;
+}
+
+/* Adding glow effects */
+.glow-green {
+  @apply shadow-[0_0_15px_rgba(20,241,149,0.5)];
+}
+
+.glow-blue {
+  @apply shadow-[0_0_15px_rgba(54,113,233,0.5)];
+}
+
 /* Custom scrollbar for webkit browsers */
 ::-webkit-scrollbar {
   width: 8px;
@@ -87,4 +108,28 @@
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-muted/80;
+}
+
+/* For hiding scrollbars but keeping functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Animation for glowing elements */
+@keyframes pulse-glow {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(20, 241, 149, 0.3), 0 0 10px rgba(20, 241, 149, 0.2); 
+  }
+  50% { 
+    box-shadow: 0 0 15px rgba(20, 241, 149, 0.6), 0 0 20px rgba(20, 241, 149, 0.4); 
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
 }
