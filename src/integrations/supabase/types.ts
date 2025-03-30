@@ -104,6 +104,7 @@ export type Database = {
       }
       communities: {
         Row: {
+          approval_status: string
           created_at: string
           description: string | null
           id: string
@@ -117,6 +118,7 @@ export type Database = {
           wallet_address: string | null
         }
         Insert: {
+          approval_status?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -130,6 +132,7 @@ export type Database = {
           wallet_address?: string | null
         }
         Update: {
+          approval_status?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -229,6 +232,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_settings: {
+        Row: {
+          created_at: string
+          id: number
+          platform_fee: number
+          telegram_bot_token: string | null
+          telegram_bot_username: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          platform_fee?: number
+          telegram_bot_token?: string | null
+          telegram_bot_username?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          platform_fee?: number
+          telegram_bot_token?: string | null
+          telegram_bot_username?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
