@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +6,7 @@ import DashboardNav from '@/components/dashboard/DashboardNav';
 import StatCards from '@/components/dashboard/StatCards';
 import CampaignTable from '@/components/dashboard/CampaignTable';
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
-import { useUser } from '@/context/UserContext'; // Fixed import path
+import { useUser } from '@/context/UserContext';
 import { Campaign, StatCardData, ActivityItem } from '@/components/dashboard/types';
 import { 
   Eye, 
@@ -20,8 +19,6 @@ import {
   MessageSquare,
   TrendingUp
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Dashboard = () => {
   const { userId } = useUser();
@@ -174,128 +171,12 @@ const Dashboard = () => {
     }
   }, [userId, campaigns]);
 
-  const renderCampaignsTab = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Your Campaigns</h2>
-        <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90">
-          <Megaphone className="mr-2 h-4 w-4" />
-          Create New Campaign
-        </Button>
-      </div>
-      <CampaignTable campaigns={campaigns} />
-    </div>
-  );
-
-  const renderMarketplaceTab = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Community Marketplace</h2>
-        <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90">
-          <ShoppingBag className="mr-2 h-4 w-4" />
-          Browse Communities
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[1, 2, 3, 4, 5, 6].map((item) => (
-          <Card key={item} className="border border-border/20 bg-crypto-darkgray/20 hover:bg-crypto-darkgray/30 transition-all cursor-pointer">
-            <CardHeader>
-              <CardTitle>Community #{item}</CardTitle>
-              <CardDescription>Crypto enthusiasts with active engagement</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Members:</span>
-                <span className="font-medium">{(Math.floor(Math.random() * 10) + 1) * 1000}</span>
-              </div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Engagement:</span>
-                <span className="font-medium">{Math.floor(Math.random() * 30) + 70}%</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Cost:</span>
-                <span className="font-medium">${(Math.floor(Math.random() * 5) + 1) * 25}</span>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full border-crypto-green text-crypto-green hover:bg-crypto-green/10">
-                View Details
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderPaymentsTab = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Payment History</h2>
-        <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90">
-          <CreditCard className="mr-2 h-4 w-4" />
-          Make Payment
-        </Button>
-      </div>
-      
-      <Card className="border border-border/20 bg-crypto-darkgray/20">
-        <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>Your payment history for the last 30 days</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="flex justify-between items-center border-b border-border/10 pb-3 last:border-0 last:pb-0">
-                <div className="flex items-center">
-                  <div className="bg-crypto-darkgray mr-3 p-2 rounded">
-                    <CreditCard className="h-4 w-4 text-crypto-green" />
-                  </div>
-                  <div>
-                    <div className="font-medium">Campaign Payment</div>
-                    <div className="text-sm text-muted-foreground">Aug {10 + item}, 2024</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">${item * 25}</div>
-                  <div className="text-xs text-green-500">Completed</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button variant="outline" className="w-full">View All Transactions</Button>
-        </CardFooter>
-      </Card>
-      
-      <Card className="border border-border/20 bg-crypto-darkgray/20">
-        <CardHeader>
-          <CardTitle>Payment Methods</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center">
-                <div className="bg-crypto-darkgray mr-3 p-2 rounded">
-                  <CreditCard className="h-4 w-4 text-blue-500" />
-                </div>
-                <div>
-                  <div className="font-medium">Visa ending in 4242</div>
-                  <div className="text-sm text-muted-foreground">Expires 12/25</div>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm">Edit</Button>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button variant="outline" className="w-full">Add Payment Method</Button>
-        </CardFooter>
-      </Card>
-    </div>
-  );
+  const navItems = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/' },
+    { id: 'campaigns', label: 'Campaigns', icon: Megaphone, path: '/campaigns' },
+    { id: 'marketplace', label: 'Community Marketplace', icon: ShoppingBag, path: '/communities' },
+    { id: 'payments', label: 'Payments', icon: CreditCard, path: '/payments' },
+  ];
 
   return (
     <AppLayout>
@@ -311,12 +192,12 @@ const Dashboard = () => {
             <ActivityFeed activity={activity} />
           </>
         )}
-        
-        {activeTab === 'campaigns' && renderCampaignsTab()}
-        
-        {activeTab === 'marketplace' && renderMarketplaceTab()}
-        
-        {activeTab === 'payments' && renderPaymentsTab()}
+
+        {activeTab !== 'overview' && (
+          <div className="text-muted-foreground text-center py-12">
+            This section is under construction. Please check back later!
+          </div>
+        )}
       </div>
     </AppLayout>
   );
