@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -741,4 +742,258 @@ const Dashboard = () => {
                   <TableHead>Transaction</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto my-4" />
+                    </TableCell>
+                  </TableRow>
+                ) : payments.length > 0 ? (
+                  payments.map((payment: any) => (
+                    <TableRow key={payment.id}>
+                      <TableCell>{formatDate(payment.created_at)}</TableCell>
+                      <TableCell>
+                        {payment.description || `Payment for ${payment.announcement_id ? 'announcement' : 'service'}`}
+                      </TableCell>
+                      <TableCell>${payment.amount} {payment.currency}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={getPaymentStatusColor(payment.status)}>
+                          {payment.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm">View Details</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
+                      No payment history
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderSettingsContent = () => (
+    <div className="mt-4">
+      <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
+        <CardHeader>
+          <CardTitle>Account Settings</CardTitle>
+          <CardDescription>Manage your account preferences</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-medium mb-3">Profile Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Name</label>
+                  <input 
+                    type="text" 
+                    className="w-full px-3 py-2 border border-border/50 rounded-md bg-crypto-darkgray/80"
+                    value={user?.user_metadata?.full_name || ''}
+                    disabled
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email</label>
+                  <input 
+                    type="email" 
+                    className="w-full px-3 py-2 border border-border/50 rounded-md bg-crypto-darkgray/80"
+                    value={user?.email || ''}
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-3">Security</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 border border-border/50 rounded-md">
+                  <div>
+                    <p className="font-medium">Change Password</p>
+                    <p className="text-sm text-muted-foreground">Update your account password</p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Change
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between p-3 border border-border/50 rounded-md">
+                  <div>
+                    <p className="font-medium">Two-Factor Authentication</p>
+                    <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Enable
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-3">Preferences</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 border border-border/50 rounded-md">
+                  <div>
+                    <p className="font-medium">Email Notifications</p>
+                    <p className="text-sm text-muted-foreground">Get notified about important updates</p>
+                  </div>
+                  <input type="checkbox" className="toggle" defaultChecked />
+                </div>
+                <div className="flex items-center justify-between p-3 border border-border/50 rounded-md">
+                  <div>
+                    <p className="font-medium">Dark Mode</p>
+                    <p className="text-sm text-muted-foreground">Toggle dark mode appearance</p>
+                  </div>
+                  <input type="checkbox" className="toggle" defaultChecked />
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  return (
+    <div className="container mx-auto py-6 space-y-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        {isAdmin && (
+          <Button
+            onClick={() => navigate('/admin')}
+            className="bg-crypto-blue hover:bg-crypto-blue/90"
+          >
+            Admin Dashboard <Shield className="ml-2 h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      
+      <SidebarProvider>
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
+          <Sidebar className="border rounded-md bg-crypto-darkgray/50 glassmorphism hidden lg:flex">
+            <SidebarContent>
+              <SidebarHeader className="p-4">
+                <h2 className="text-lg font-bold">Navigation</h2>
+              </SidebarHeader>
+              <SidebarMenu>
+                <SidebarMenuItem 
+                  isActive={activeTab === "overview"} 
+                  icon={<LayoutDashboard className="h-5 w-5" />}
+                  onClick={() => setActiveTab("overview")}
+                >
+                  Overview
+                </SidebarMenuItem>
+                <SidebarMenuItem 
+                  isActive={activeTab === "campaigns"} 
+                  icon={<Megaphone className="h-5 w-5" />}
+                  onClick={() => setActiveTab("campaigns")}
+                >
+                  Campaigns
+                </SidebarMenuItem>
+                <SidebarMenuItem 
+                  isActive={activeTab === "validation"} 
+                  icon={<BrainCircuit className="h-5 w-5" />}
+                  onClick={() => setActiveTab("validation")}
+                >
+                  AI Validation
+                </SidebarMenuItem>
+                <SidebarMenuItem 
+                  isActive={activeTab === "marketplace"} 
+                  icon={<ShoppingBag className="h-5 w-5" />}
+                  onClick={() => setActiveTab("marketplace")}
+                >
+                  Community Marketplace
+                </SidebarMenuItem>
+                <SidebarMenuItem 
+                  isActive={activeTab === "payments"} 
+                  icon={<CreditCard className="h-5 w-5" />}
+                  onClick={() => setActiveTab("payments")}
+                >
+                  Payments & Transactions
+                </SidebarMenuItem>
+                <SidebarMenuItem 
+                  isActive={activeTab === "settings"} 
+                  icon={<Settings className="h-5 w-5" />}
+                  onClick={() => setActiveTab("settings")}
+                >
+                  Settings
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarContent>
+          </Sidebar>
+          
+          <div className="flex-1 overflow-hidden">
+            <div className="flex flex-row items-center justify-between lg:hidden mb-4">
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                <Button 
+                  variant={activeTab === "overview" ? "default" : "outline"} 
+                  onClick={() => setActiveTab("overview")}
+                  size="sm"
+                >
+                  Overview
+                </Button>
+                <Button 
+                  variant={activeTab === "campaigns" ? "default" : "outline"} 
+                  onClick={() => setActiveTab("campaigns")}
+                  size="sm"
+                >
+                  Campaigns
+                </Button>
+                <Button 
+                  variant={activeTab === "validation" ? "default" : "outline"} 
+                  onClick={() => setActiveTab("validation")}
+                  size="sm"
+                >
+                  AI Validation
+                </Button>
+                <Button 
+                  variant={activeTab === "marketplace" ? "default" : "outline"} 
+                  onClick={() => setActiveTab("marketplace")}
+                  size="sm"
+                >
+                  Marketplace
+                </Button>
+                <Button 
+                  variant={activeTab === "payments" ? "default" : "outline"} 
+                  onClick={() => setActiveTab("payments")}
+                  size="sm"
+                >
+                  Payments
+                </Button>
+                <Button 
+                  variant={activeTab === "settings" ? "default" : "outline"} 
+                  onClick={() => setActiveTab("settings")}
+                  size="sm"
+                >
+                  Settings
+                </Button>
+              </div>
+            </div>
+
+            {activeTab === "overview" && renderOverviewContent()}
+            {activeTab === "campaigns" && renderCampaignsContent()}
+            {activeTab === "validation" && renderValidationContent()}
+            {activeTab === "marketplace" && renderMarketplaceContent()}
+            {activeTab === "payments" && renderPaymentsContent()}
+            {activeTab === "settings" && renderSettingsContent()}
+          </div>
+        </div>
+      </SidebarProvider>
+    </div>
+  );
+};
+
+export default Dashboard;
