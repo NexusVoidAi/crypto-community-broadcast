@@ -16,11 +16,22 @@ serve(async (req) => {
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
   try {
-    const { communityId } = await req.json();
+    // Parse request body
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error("Error parsing request body:", e);
+      throw new Error('Invalid request body format');
+    }
+    
+    const { communityId } = body;
     
     if (!communityId) {
       throw new Error('Missing community ID');
     }
+    
+    console.log(`Checking Telegram bot for community ID: ${communityId}`);
     
     // Create a Supabase client
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
@@ -51,6 +62,8 @@ serve(async (req) => {
     if (community.platform !== 'TELEGRAM' || !community.platform_id) {
       throw new Error('Not a valid Telegram community or missing platform ID');
     }
+    
+    console.log(`Checking bot for Telegram chat: ${community.platform_id}`);
     
     // Check if bot is a member of the chat
     const telegramResponse = await fetch(

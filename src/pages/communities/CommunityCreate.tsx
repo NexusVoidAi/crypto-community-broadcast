@@ -8,10 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { MessagesSquare, Send, Users } from 'lucide-react';
+import { MessagesSquare, Send, Users, AlertTriangle, Bot, Check } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2 } from 'lucide-react';
 
 const CommunityCreate: React.FC = () => {
   const { user } = useAuth();
@@ -23,12 +25,136 @@ const CommunityCreate: React.FC = () => {
   const [reach, setReach] = useState('');
   const [price, setPrice] = useState('25');
   const [isLoading, setIsLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<{
+    isValid?: boolean;
+    botAdded?: boolean;
+    isAdmin?: boolean;
+    error?: string;
+  } | null>(null);
+
+  const handleTelegramVerification = async () => {
+    if (!platformId) {
+      toast.error('Please enter a Telegram group ID or username');
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerificationResult(null);
+
+    try {
+      // First, let's save a draft community to get an ID
+      const { data: communityData, error: communityError } = await supabase
+        .from('communities')
+        .insert({
+          name,
+          description,
+          platform: 'TELEGRAM',
+          platform_id: platformId,
+          reach: parseInt(reach) || 0,
+          price_per_announcement: parseFloat(price) || 25.00,
+          owner_id: user?.id,
+          approval_status: 'DRAFT'
+        })
+        .select()
+        .single();
+
+      if (communityError) throw communityError;
+
+      if (!communityData?.id) {
+        throw new Error('Failed to create temporary community record');
+      }
+
+      // Now check if bot is added to the group
+      const { data, error } = await supabase.functions.invoke('telegram-check-bot', {
+        body: { communityId: communityData.id },
+      });
+
+      if (error) throw error;
+
+      if (data.botAdded) {
+        setVerificationResult({
+          isValid: true,
+          botAdded: true,
+          isAdmin: data.isAdmin,
+        });
+        toast.success('Verification successful! The bot is in the group.');
+      } else {
+        setVerificationResult({
+          isValid: false,
+          botAdded: false,
+          error: data.error,
+        });
+        toast.error(`Bot is not in the group: ${data.error}`);
+      }
+
+      // If it was just a verification (not a final submission), clean up the draft
+      if (communityData.approval_status === 'DRAFT') {
+        await supabase
+          .from('communities')
+          .delete()
+          .eq('id', communityData.id);
+      }
+    } catch (error: any) {
+      console.error('Telegram verification error:', error);
+      setVerificationResult({
+        isValid: false,
+        error: error.message,
+      });
+      toast.error(`Verification failed: ${error.message}`);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const validateForm = () => {
+    if (!name) {
+      toast.error('Community name is required');
+      return false;
+    }
+    
+    if (!platform) {
+      toast.error('Platform selection is required');
+      return false;
+    }
+    
+    if (!platformId) {
+      toast.error('Platform ID or URL is required');
+      return false;
+    }
+    
+    if (platform === 'TELEGRAM' && !verificationResult?.botAdded) {
+      toast.error('Please verify that the bot is added to your Telegram group before creating the community');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const getBotInstructions = () => {
+    return (
+      <div className="mt-4 p-4 bg-blue-500/10 border border-blue-400/30 rounded-md">
+        <div className="flex items-start mb-2">
+          <Bot className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
+          <h4 className="text-sm font-medium text-blue-400">How to add our bot to your Telegram group:</h4>
+        </div>
+        <ol className="list-decimal pl-6 space-y-2 text-sm text-muted-foreground">
+          <li>Go to your Telegram group</li>
+          <li>Click on the group name to open the info panel</li>
+          <li>Select "Add members"</li>
+          <li>Search for "CryptoBlastBot" (or the actual bot username)</li>
+          <li>Add the bot to your group</li>
+          <li>Make the bot an administrator of the group (required for posting announcements)</li>
+          <li>Click "Verify" below to confirm the bot has been added successfully</li>
+        </ol>
+      </div>
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !platform) {
-      toast.error('Please fill in all required fields');
+    if (!validateForm()) {
       return;
     }
     
@@ -74,7 +200,9 @@ const CommunityCreate: React.FC = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="name">Community Name *</Label>
+                <Label htmlFor="name" className="flex items-center">
+                  Community Name <span className="text-red-500 ml-1">*</span>
+                </Label>
                 <Input
                   id="name"
                   value={name}
@@ -97,10 +225,16 @@ const CommunityCreate: React.FC = () => {
               </div>
               
               <div className="space-y-2">
-                <Label>Platform *</Label>
+                <Label className="flex items-center">
+                  Platform <span className="text-red-500 ml-1">*</span>
+                </Label>
                 <RadioGroup
                   value={platform}
-                  onValueChange={(value) => setPlatform(value as 'TELEGRAM' | 'DISCORD' | 'WHATSAPP')}
+                  onValueChange={(value) => {
+                    setPlatform(value as 'TELEGRAM' | 'DISCORD' | 'WHATSAPP');
+                    // Clear verification result when platform changes
+                    setVerificationResult(null);
+                  }}
                   className="grid grid-cols-1 md:grid-cols-3 gap-4"
                 >
                   <div className="flex items-center space-x-2 border border-border rounded-md px-4 py-3">
@@ -128,15 +262,77 @@ const CommunityCreate: React.FC = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="platformId">Channel/Group ID or URL</Label>
-                <Input
-                  id="platformId"
-                  value={platformId}
-                  onChange={(e) => setPlatformId(e.target.value)}
-                  placeholder="e.g., @crypto_traders or https://discord.gg/..."
-                  className="bg-crypto-dark border-border/50"
-                />
+                <Label htmlFor="platformId" className="flex items-center">
+                  Channel/Group ID or URL <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="platformId"
+                    value={platformId}
+                    onChange={(e) => setPlatformId(e.target.value)}
+                    placeholder={platform === 'TELEGRAM' ? "e.g., @crypto_traders or -1001234567890" : "e.g., https://discord.gg/..."}
+                    className="bg-crypto-dark border-border/50"
+                    required
+                  />
+                  {platform === 'TELEGRAM' && (
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      onClick={handleTelegramVerification}
+                      disabled={isVerifying || !platformId}
+                      className="whitespace-nowrap"
+                    >
+                      {isVerifying ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        <>
+                          <Bot className="h-4 w-4 mr-2" />
+                          Verify Bot
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {platform === 'TELEGRAM' && "Enter your Telegram group username starting with @ or group ID"}
+                  {platform === 'DISCORD' && "Enter your Discord channel invite link"}
+                  {platform === 'WHATSAPP' && "Enter your WhatsApp group invite link"}
+                </p>
               </div>
+              
+              {platform === 'TELEGRAM' && (
+                <>
+                  {getBotInstructions()}
+                  
+                  {verificationResult && (
+                    <Alert 
+                      variant={verificationResult.isValid ? "default" : "destructive"}
+                      className={verificationResult.isValid ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20"}
+                    >
+                      {verificationResult.isValid ? (
+                        <>
+                          <Check className="h-4 w-4 text-green-500 mr-2" />
+                          <AlertDescription className="text-green-400">
+                            {verificationResult.isAdmin 
+                              ? "Verification successful! The bot is in your group with admin rights."
+                              : "The bot is in your group, but doesn't have admin rights. Please make the bot an admin for full functionality."}
+                          </AlertDescription>
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="h-4 w-4 text-red-500 mr-2" />
+                          <AlertDescription className="text-red-400">
+                            {verificationResult.error || "Bot verification failed. Please ensure the bot is added to your group."}
+                          </AlertDescription>
+                        </>
+                      )}
+                    </Alert>
+                  )}
+                </>
+              )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -183,7 +379,7 @@ const CommunityCreate: React.FC = () => {
                 <Button
                   type="submit"
                   className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90"
-                  disabled={isLoading}
+                  disabled={isLoading || (platform === 'TELEGRAM' && !verificationResult?.botAdded)}
                 >
                   {isLoading ? 'Creating...' : 'Create Community'}
                 </Button>
