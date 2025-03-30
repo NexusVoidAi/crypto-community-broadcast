@@ -4,25 +4,34 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Loader2, CreditCard, Check, QrCode } from 'lucide-react';
+import { Loader2, CreditCard, Check, QrCode, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CopperXPaymentProps {
   amount: number;
   currency: string;
   onSuccess: (txHash: string) => void;
   onCancel: () => void;
+  announcementId?: string;
 }
 
 const CopperXPayment: React.FC<CopperXPaymentProps> = ({ 
   amount, 
   currency,
   onSuccess,
-  onCancel
+  onCancel,
+  announcementId
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [showQrCode, setShowQrCode] = useState(false);
+  const [walletAddress] = useState(`0xc0pp3rx${Math.random().toString(16).substring(2, 18)}`);
+  
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Address copied to clipboard');
+  };
   
   const handlePayment = async () => {
     setIsLoading(true);
@@ -33,7 +42,31 @@ const CopperXPayment: React.FC<CopperXPaymentProps> = ({
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Generate a mock transaction hash
-      const txHash = `0x${Math.random().toString(16).substring(2, 18)}`;
+      const txHash = `0x${Math.random().toString(16).substring(2, 42)}`;
+      
+      if (announcementId) {
+        // Update payment status in the database
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .update({
+            status: 'PAID',
+            transaction_hash: txHash
+          })
+          .eq('announcement_id', announcementId);
+          
+        if (paymentError) throw paymentError;
+        
+        // Update announcement status
+        const { error: announcementError } = await supabase
+          .from('announcements')
+          .update({
+            payment_status: 'PAID',
+            status: 'PENDING_VALIDATION'
+          })
+          .eq('id', announcementId);
+          
+        if (announcementError) throw announcementError;
+      }
       
       toast.success('Payment successful!');
       setPaymentComplete(true);
@@ -70,8 +103,14 @@ const CopperXPayment: React.FC<CopperXPaymentProps> = ({
               <p className="text-xs text-muted-foreground mb-4">
                 Send exactly {amount} {currency} to complete payment
               </p>
-              <div className="text-xs bg-crypto-darkgray p-2 rounded w-full break-all text-center font-mono">
-                0xc0pp3rx{Math.random().toString(16).substring(2, 18)}
+              <div className="relative text-xs bg-crypto-darkgray p-2 rounded w-full break-all text-center font-mono">
+                {walletAddress}
+                <button 
+                  onClick={() => copyToClipboard(walletAddress)}
+                  className="absolute right-2 top-2 text-muted-foreground hover:text-white"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
               </div>
             </div>
             

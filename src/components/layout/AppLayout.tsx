@@ -1,5 +1,5 @@
 
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -9,7 +9,8 @@ import {
   LogOut, 
   Menu, 
   X,
-  User
+  User,
+  Shield
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -24,6 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -35,12 +37,35 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const navItems = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
     { label: 'Announcements', icon: MessageSquare, path: '/announcements/create' },
     { label: 'Communities', icon: Users, path: '/communities' },
   ];
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) return;
+      
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('account_type')
+          .eq('id', user.id)
+          .single();
+          
+        if (data && data.account_type === 'admin') {
+          setIsAdmin(true);
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+      }
+    };
+    
+    checkAdminStatus();
+  }, [user]);
 
   const getInitials = () => {
     if (!profile?.name) return 'U';
@@ -116,6 +141,23 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 </Link>
               </li>
             ))}
+            
+            {isAdmin && (
+              <li>
+                <Link
+                  to="/admin"
+                  className={cn(
+                    "flex items-center p-2 rounded-md hover:bg-crypto-dark/20 transition-colors",
+                    location.pathname === '/admin' && 
+                    "bg-crypto-dark/30 text-crypto-green"
+                  )}
+                  onClick={closeSidebar}
+                >
+                  <Shield className="mr-3 h-5 w-5" />
+                  Admin Dashboard
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
 
