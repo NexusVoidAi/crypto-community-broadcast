@@ -15,7 +15,7 @@ import {
   Loader2, 
   MessageCircle, 
   CircleUser,
-  Discord, 
+  Hash, // Replaced Discord with Hash
   Send 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -95,7 +95,7 @@ const AnnouncementPreview: React.FC = () => {
                       Telegram
                     </TabsTrigger>
                     <TabsTrigger value="discord" className="flex items-center">
-                      <Discord className="h-4 w-4 mr-2" />
+                      <Hash className="h-4 w-4 mr-2" /> {/* Changed to Hash icon for Discord */}
                       Discord
                     </TabsTrigger>
                     <TabsTrigger value="whatsapp" className="flex items-center">
