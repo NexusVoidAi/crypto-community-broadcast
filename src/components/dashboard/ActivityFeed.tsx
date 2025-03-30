@@ -43,6 +43,14 @@ const getStatusClass = (status?: string) => {
   }
 };
 
+// Helper function to format timestamp
+const formatTimestamp = (timestamp: Date | string): string => {
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+  }
+  return timestamp;
+};
+
 const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, className }) => {
   return (
     <Card className={cn("border border-border/50 glassmorphism bg-crypto-darkgray/50", className)}>
@@ -69,7 +77,9 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, className }) =>
                 <p className="text-sm font-medium">{activity.title}</p>
                 <p className="text-xs text-muted-foreground">{activity.description}</p>
               </div>
-              <div className="text-xs text-muted-foreground">{activity.timestamp || activity.time}</div>
+              <div className="text-xs text-muted-foreground">
+                {activity.time || formatTimestamp(activity.timestamp)}
+              </div>
             </div>
           ))}
         </div>

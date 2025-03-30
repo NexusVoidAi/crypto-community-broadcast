@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -59,7 +58,7 @@ import {
 const sampleActivities: ActivityItem[] = [
   {
     id: '1',
-    timestamp: new Date().toISOString(),
+    timestamp: "2023-09-01T10:00:00Z",
     title: 'New announcement created',
     description: 'Your announcement "Summer Sale" has been created.',
     icon: 'megaphone',
@@ -67,7 +66,7 @@ const sampleActivities: ActivityItem[] = [
   },
   {
     id: '2',
-    timestamp: new Date().toISOString(),
+    timestamp: "2023-09-01T09:30:00Z",
     title: 'Payment received',
     description: 'You received a payment of $100 for your community.',
     icon: 'creditCard',
@@ -75,7 +74,7 @@ const sampleActivities: ActivityItem[] = [
   },
   {
     id: '3',
-    timestamp: new Date().toISOString(),
+    timestamp: "2023-09-01T09:00:00Z",
     title: 'Announcement validation failed',
     description: 'Your announcement "Winter Sale" failed validation.',
     icon: 'alertTriangle',
@@ -83,7 +82,7 @@ const sampleActivities: ActivityItem[] = [
   },
   {
     id: '4',
-    timestamp: new Date().toISOString(),
+    timestamp: "2023-09-01T08:30:00Z",
     title: 'New community joined',
     description: 'A new community joined your network.',
     icon: 'users',
@@ -181,8 +180,7 @@ const Dashboard = () => {
     
     const checkAdminStatus = async () => {
       try {
-        // Check if user has admin privileges - using a different approach
-        // since 'admins' table doesn't exist in the Supabase schema
+        // Check if user has admin privileges
         const { data: adminData, error: adminError } = await supabase
           .from('profiles')
           .select('*')

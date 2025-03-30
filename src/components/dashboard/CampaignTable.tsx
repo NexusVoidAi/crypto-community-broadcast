@@ -12,15 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye, Edit, BarChart2 } from 'lucide-react';
-
-interface Campaign {
-  id: number;
-  title: string;
-  status: string;
-  communities: number;
-  impressions: number;
-  spent: number;
-}
+import { Campaign } from './types';
 
 interface CampaignTableProps {
   campaigns: Campaign[];
@@ -56,14 +48,14 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
       <TableBody>
         {campaigns.map((campaign) => (
           <TableRow key={campaign.id} className="border-border/50 hover:bg-crypto-darkgray/30">
-            <TableCell className="font-medium">{campaign.title}</TableCell>
+            <TableCell className="font-medium">{campaign.title || campaign.name}</TableCell>
             <TableCell>
               <Badge variant="outline" className={getStatusColor(campaign.status)}>
                 {campaign.status}
               </Badge>
             </TableCell>
-            <TableCell>{campaign.communities}</TableCell>
-            <TableCell>{campaign.impressions.toLocaleString()}</TableCell>
+            <TableCell>{campaign.communities?.length || 0}</TableCell>
+            <TableCell>{campaign.impressions?.toLocaleString() || 0}</TableCell>
             <TableCell className="text-right">${campaign.spent.toLocaleString()}</TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end space-x-1">
