@@ -26,7 +26,9 @@ const StatCards: React.FC<StatCardsProps> = ({ cards, isLoading }) => {
         // Create icon element with the appropriate color class
         const IconComponent = card.icon;
         const iconElement = (
-          <IconComponent className={`h-5 w-5 ${card.iconColor || 'text-primary'}`} />
+          <div className={card.iconColor || 'text-primary'}>
+            <IconComponent className="h-5 w-5" />
+          </div>
         );
         
         return (
