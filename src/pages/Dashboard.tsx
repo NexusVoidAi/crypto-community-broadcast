@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -44,7 +45,7 @@ import StatCard from '@/components/dashboard/StatCard';
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
 import CreateAnnouncementButton from '@/components/dashboard/CreateAnnouncementButton';
 import CampaignTable from '@/components/dashboard/CampaignTable';
-import { ActivityItem } from '@/components/dashboard/types';
+import { ActivityItem, Campaign, TrendProps } from '@/components/dashboard/types';
 import { Loader2 } from 'lucide-react';
 import { 
   Table,
@@ -58,7 +59,7 @@ import {
 const sampleActivities: ActivityItem[] = [
   {
     id: '1',
-    timestamp: new Date(),
+    timestamp: new Date().toISOString(),
     title: 'New announcement created',
     description: 'Your announcement "Summer Sale" has been created.',
     icon: 'megaphone',
@@ -66,7 +67,7 @@ const sampleActivities: ActivityItem[] = [
   },
   {
     id: '2',
-    timestamp: new Date(),
+    timestamp: new Date().toISOString(),
     title: 'Payment received',
     description: 'You received a payment of $100 for your community.',
     icon: 'creditCard',
@@ -74,7 +75,7 @@ const sampleActivities: ActivityItem[] = [
   },
   {
     id: '3',
-    timestamp: new Date(),
+    timestamp: new Date().toISOString(),
     title: 'Announcement validation failed',
     description: 'Your announcement "Winter Sale" failed validation.',
     icon: 'alertTriangle',
@@ -82,7 +83,7 @@ const sampleActivities: ActivityItem[] = [
   },
   {
     id: '4',
-    timestamp: new Date(),
+    timestamp: new Date().toISOString(),
     title: 'New community joined',
     description: 'A new community joined your network.',
     icon: 'users',
@@ -90,7 +91,7 @@ const sampleActivities: ActivityItem[] = [
   },
 ];
 
-const sampleCampaigns = [
+const sampleCampaigns: Campaign[] = [
   {
     id: '1',
     name: 'Summer Sale',
@@ -100,6 +101,9 @@ const sampleCampaigns = [
     conversionRate: 0.1,
     budget: 100,
     spent: 50,
+    title: 'Summer Sale',
+    communities: [],
+    impressions: 1500
   },
   {
     id: '2',
@@ -110,6 +114,9 @@ const sampleCampaigns = [
     conversionRate: 0.05,
     budget: 50,
     spent: 25,
+    title: 'Winter Sale',
+    communities: [],
+    impressions: 800
   },
   {
     id: '3',
@@ -120,6 +127,9 @@ const sampleCampaigns = [
     conversionRate: 0,
     budget: 25,
     spent: 0,
+    title: 'Spring Sale',
+    communities: [],
+    impressions: 0
   },
 ];
 
@@ -171,14 +181,18 @@ const Dashboard = () => {
     
     const checkAdminStatus = async () => {
       try {
+        // Check if user has admin privileges - using a different approach
+        // since 'admins' table doesn't exist in the Supabase schema
         const { data: adminData, error: adminError } = await supabase
-          .from('admins')
+          .from('profiles')
           .select('*')
-          .eq('user_id', user?.id);
+          .eq('id', user?.id)
+          .eq('account_type', 'admin')
+          .single();
           
-        if (adminError) throw adminError;
+        if (adminError && adminError.code !== 'PGRST116') throw adminError;
         
-        setIsAdmin(adminData && adminData.length > 0);
+        setIsAdmin(!!adminData);
       } catch (error: any) {
         console.error("Error checking admin status:", error);
       }
@@ -231,21 +245,19 @@ const Dashboard = () => {
         <StatCard
           title="Total Announcements"
           value="124"
-          trend="+12%"
-          trendPositive
+          trend={{value: "+12%", positive: true}}
           icon={<Megaphone className="h-5 w-5" />}
         />
         <StatCard
           title="Community Reach"
           value="12,432"
-          trend="+1%"
-          trendPositive
+          trend={{value: "+1%", positive: true}}
           icon={<TrendingUp className="h-5 w-5" />}
         />
         <StatCard
           title="Avg. CTR"
           value="0.32%"
-          trend="-0.1%"
+          trend={{value: "-0.1%", positive: false}}
           icon={<ArrowRight className="h-5 w-5" />}
         />
       </div>
@@ -524,7 +536,7 @@ const Dashboard = () => {
   return (
     <SidebarProvider>
       <div className="flex h-screen overflow-hidden">
-        <Sidebar defaultCollapsed={false} className="border-r border-border/50">
+        <Sidebar className="border-r border-border/50">
           <SidebarHeader className="h-14 flex items-center border-b border-border/50 px-4">
             <h2 className="text-lg font-bold">Dashboard</h2>
           </SidebarHeader>
@@ -532,7 +544,6 @@ const Dashboard = () => {
             <SidebarMenu>
               <SidebarMenuItem 
                 onClick={() => setActiveTab("overview")}
-                active={activeTab === "overview"}
                 className={cn("hover:bg-crypto-darkgray/50", activeTab === "overview" && "bg-crypto-darkgray/30")}
               >
                 <LayoutDashboard className="h-5 w-5 mr-3" />
@@ -540,7 +551,6 @@ const Dashboard = () => {
               </SidebarMenuItem>
               <SidebarMenuItem 
                 onClick={() => setActiveTab("campaigns")}
-                active={activeTab === "campaigns"}
                 className={cn("hover:bg-crypto-darkgray/50", activeTab === "campaigns" && "bg-crypto-darkgray/30")}
               >
                 <Megaphone className="h-5 w-5 mr-3" />
@@ -548,7 +558,6 @@ const Dashboard = () => {
               </SidebarMenuItem>
               <SidebarMenuItem 
                 onClick={() => setActiveTab("validation")}
-                active={activeTab === "validation"}
                 className={cn("hover:bg-crypto-darkgray/50", activeTab === "validation" && "bg-crypto-darkgray/30")}
               >
                 <BrainCircuit className="h-5 w-5 mr-3" />
@@ -556,7 +565,6 @@ const Dashboard = () => {
               </SidebarMenuItem>
               <SidebarMenuItem 
                 onClick={() => setActiveTab("marketplace")}
-                active={activeTab === "marketplace"}
                 className={cn("hover:bg-crypto-darkgray/50", activeTab === "marketplace" && "bg-crypto-darkgray/30")}
               >
                 <ShoppingBag className="h-5 w-5 mr-3" />
@@ -564,7 +572,6 @@ const Dashboard = () => {
               </SidebarMenuItem>
               <SidebarMenuItem 
                 onClick={() => setActiveTab("payments")}
-                active={activeTab === "payments"}
                 className={cn("hover:bg-crypto-darkgray/50", activeTab === "payments" && "bg-crypto-darkgray/30")}
               >
                 <CreditCard className="h-5 w-5 mr-3" />
@@ -572,7 +579,6 @@ const Dashboard = () => {
               </SidebarMenuItem>
               <SidebarMenuItem 
                 onClick={() => setActiveTab("settings")}
-                active={activeTab === "settings"}
                 className={cn("hover:bg-crypto-darkgray/50", activeTab === "settings" && "bg-crypto-darkgray/30")}
               >
                 <Settings className="h-5 w-5 mr-3" />

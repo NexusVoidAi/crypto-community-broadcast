@@ -4,8 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 export interface ValidationResult {
   isValid: boolean;
   suggestions: string[];
-  score?: number;
-  issues?: string[];
+  score: number; // Changed from optional to required
+  issues: string[]; // Changed from optional to required
   feedback?: string;
 }
 
@@ -31,12 +31,13 @@ export const validateAnnouncement = async (title: string, content: string): Prom
         'Provide specific details in your content.',
         'Avoid excessive use of promotional language.',
         'Check for spelling and grammar errors.'
-      ]
+      ],
+      score: 0.6, // Added default score
+      issues: [] // Added default empty issues array
     };
   }
 };
 
-// Adding the missing functions
 export const validateAnnouncementWithAI = async (title: string, content: string): Promise<ValidationResult> => {
   try {
     const { data, error } = await supabase.functions.invoke('validate-announcement', {

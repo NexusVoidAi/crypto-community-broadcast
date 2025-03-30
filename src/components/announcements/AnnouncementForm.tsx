@@ -26,17 +26,11 @@ import {
   validateAnnouncementWithAI, 
   serializeValidationResult,
   getSuggestions,
-  enhanceAnnouncementWithAI
+  enhanceAnnouncementWithAI,
+  ValidationResult
 } from '@/services/validation';
 import SuggestionsList from './SuggestionsList';
 import CopperXPayment from '../payments/CopperXPayment';
-
-type ValidationResult = {
-  isValid: boolean;
-  score: number;
-  issues: string[];
-  feedback?: string;
-};
 
 type Community = {
   id: string;
