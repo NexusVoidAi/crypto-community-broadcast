@@ -24,12 +24,12 @@ const AnnouncementApproval = () => {
         .from('announcements')
         .select(`
           *,
-          profiles:user_id(name),
-          announcement_communities:announcement_communities(
+          profiles(name),
+          announcement_communities(
             community:communities(name, platform)
           )
         `)
-        .in('status', ['PENDING_VALIDATION'])
+        .eq('status', 'PENDING_VALIDATION')
         .order('created_at', { ascending: false });
         
       if (error) throw error;
