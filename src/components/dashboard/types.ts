@@ -24,5 +24,5 @@ export interface Campaign {
   spent: number;
   title: string;
   communities: any[];
-  views: number; // Changed from impressions to views
+  impressions: number;
 }
