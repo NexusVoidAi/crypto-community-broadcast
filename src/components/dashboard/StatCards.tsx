@@ -31,9 +31,8 @@ const StatCards: React.FC<StatCardsProps> = ({ cards, isLoading }) => {
       {cards.map((card, index) => {
         // Create the icon element with the appropriate color class
         const IconComponent = card.icon;
-        const iconElement = (
-          <IconComponent className={`h-5 w-5 ${card.iconColor || 'text-white'}`} />
-        );
+        // Wrap the icon in a div so we don't directly pass className to the icon component
+        const iconElement = <div><IconComponent className={`h-5 w-5 ${card.iconColor || 'text-white'}`} /></div>;
 
         return (
           <StatCard

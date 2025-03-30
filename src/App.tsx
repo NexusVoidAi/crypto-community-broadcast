@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +9,7 @@ import Web3Provider from "./contexts/Web3Provider";
 // Dashboard
 import Dashboard from "./pages/Dashboard";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { UserProvider } from "./context/UserContext";
 
 // Auth pages
 import Login from "./pages/auth/Login";
@@ -101,7 +101,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <AppRoutes />
+            <UserProvider>
+              <AppRoutes />
+            </UserProvider>
           </AuthProvider>
         </BrowserRouter>
       </Web3Provider>
