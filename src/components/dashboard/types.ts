@@ -1,7 +1,7 @@
 
 export interface ActivityItem {
   id: string;
-  type: string;
+  type: "announcement" | "payment" | "validation" | "notification";
   title: string;
   time: string;
   status: string;

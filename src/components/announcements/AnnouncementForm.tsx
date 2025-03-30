@@ -20,12 +20,13 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { validateAnnouncementWithAI } from '@/services/validation';
+import { validateAnnouncementWithAI, serializeValidationResult } from '@/services/validation';
 
 type ValidationResult = {
   isValid: boolean;
   score: number;
   issues: string[];
+  feedback?: string;
 };
 
 type Community = {
@@ -133,11 +134,11 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
       // Call OpenAI validation service
       const validationResult = await validateAnnouncementWithAI(title, content);
       
-      // Update announcement with validation result
+      // Update announcement with validation result - serialize to ensure it's JSON compatible
       const { error: updateError } = await supabase
         .from('announcements')
         .update({
-          validation_result: validationResult,
+          validation_result: serializeValidationResult(validationResult),
           status: validationResult.isValid ? 'PENDING_VALIDATION' : 'VALIDATION_FAILED'
         })
         .eq('id', announcement.id);

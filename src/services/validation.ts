@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 interface ValidationResult {
   isValid: boolean;
@@ -31,4 +32,9 @@ export const validateAnnouncementWithAI = async (
       feedback: "An error occurred during validation. Please try again."
     };
   }
+}
+
+// This type ensures the validation result is compatible with Json type
+export const serializeValidationResult = (result: ValidationResult): Json => {
+  return result as unknown as Json;
 }
