@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -16,15 +15,18 @@ import {
   X, 
   Upload, 
   MessageSquare, 
-  AlertTriangle 
+  AlertTriangle,
+  Wand2
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   validateAnnouncementWithAI, 
-  serializeValidationResult, 
-  getSuggestions 
+  serializeValidationResult,
+  getSuggestions,
+  enhanceAnnouncementWithAI
 } from '@/services/validation';
 import SuggestionsList from './SuggestionsList';
 import CopperXPayment from '../payments/CopperXPayment';
@@ -68,6 +70,9 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [platformFee, setPlatformFee] = useState<number>(1);
   const [showCryptoPayment, setShowCryptoPayment] = useState(false);
+
+  // Add new state for handling AI enhancement
+  const [isEnhancing, setIsEnhancing] = useState(false);
 
   useEffect(() => {
     // Fetch platform fee
@@ -309,6 +314,40 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
       toast.error(`Error updating payment status: ${error.message}`);
     }
   };
+  
+  // Add new function to handle AI enhancement
+  const handleEnhanceWithAI = async () => {
+    if (!title.trim() && !content.trim()) {
+      toast.error('Please provide some text to enhance');
+      return;
+    }
+
+    setIsEnhancing(true);
+
+    try {
+      const enhanced = await enhanceAnnouncementWithAI(title, content);
+      
+      if (enhanced.error) {
+        toast.error(enhanced.error);
+        return;
+      }
+      
+      if (enhanced.improved_title) {
+        setTitle(enhanced.improved_title);
+      }
+      
+      if (enhanced.improved_content) {
+        setContent(enhanced.improved_content);
+      }
+      
+      toast.success('Announcement enhanced successfully!');
+      setShowSuggestions(false);
+    } catch (error: any) {
+      toast.error(`Error enhancing announcement: ${error.message}`);
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
 
   const renderStep = () => {
     switch (step) {
@@ -317,7 +356,27 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
           <>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Announcement Title</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="title">Announcement Title</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-crypto-blue hover:text-crypto-blue/80"
+                          onClick={() => handleEnhanceWithAI()}
+                          disabled={isEnhancing || !title.trim()}
+                        >
+                          {isEnhancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Enhance with AI</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   id="title"
                   placeholder="Enter a clear, attention-grabbing title"
@@ -328,7 +387,27 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="content">Announcement Content</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="content">Announcement Content</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-crypto-blue hover:text-crypto-blue/80"
+                          onClick={() => handleEnhanceWithAI()}
+                          disabled={isEnhancing || !content.trim()}
+                        >
+                          {isEnhancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Enhance with AI</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Textarea
                   id="content"
                   placeholder="Share your announcement message. Keep it clear and concise."
@@ -427,6 +506,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
                 suggestions={suggestions}
                 isValid={validationResult.isValid}
                 onEdit={() => setShowSuggestions(false)}
+                onEditWithAI={handleEnhanceWithAI}
                 onContinue={() => {
                   setShowSuggestions(false);
                   setStep(2);

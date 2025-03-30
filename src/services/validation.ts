@@ -34,6 +34,29 @@ export const validateAnnouncementWithAI = async (
   }
 }
 
+export const enhanceAnnouncementWithAI = async (
+  title?: string,
+  content?: string
+): Promise<{ improved_title?: string, improved_content?: string, error?: string }> => {
+  try {
+    // Call Gemini enhancement edge function
+    const { data, error } = await supabase.functions.invoke("enhance-announcement", {
+      body: { title, content },
+    });
+
+    if (error) throw error;
+    
+    return data;
+  } catch (error) {
+    console.error("Error enhancing announcement:", error);
+    return {
+      improved_title: title,
+      improved_content: content,
+      error: "Failed to enhance the announcement. Please try again later."
+    };
+  }
+}
+
 // This function ensures the validation result is compatible with Json type
 export const serializeValidationResult = (result: ValidationResult): Json => {
   // Convert the ValidationResult object to a plain object that's compatible with Json

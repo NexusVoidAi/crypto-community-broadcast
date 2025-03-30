@@ -2,12 +2,13 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Lightbulb, ArrowRight, Edit } from 'lucide-react';
+import { Lightbulb, ArrowRight, Edit, Wand2 } from 'lucide-react';
 
 interface SuggestionsListProps {
   suggestions: string[];
   onEdit: () => void;
   onContinue: () => void;
+  onEditWithAI?: () => void;
   isValid: boolean;
 }
 
@@ -15,6 +16,7 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
   suggestions,
   onEdit,
   onContinue,
+  onEditWithAI,
   isValid
 }) => {
   return (
@@ -41,13 +43,26 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
         </ul>
         
         <div className="flex justify-between">
-          <Button 
-            variant="outline" 
-            onClick={onEdit}
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Announcement
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={onEdit}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Manually
+            </Button>
+            
+            {onEditWithAI && (
+              <Button 
+                variant="outline"
+                className="border-crypto-blue/50 text-crypto-blue"
+                onClick={onEditWithAI}
+              >
+                <Wand2 className="h-4 w-4 mr-2" />
+                Enhance with AI
+              </Button>
+            )}
+          </div>
           
           <Button 
             className="bg-crypto-blue hover:bg-crypto-blue/90"
