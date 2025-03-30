@@ -33,16 +33,18 @@ serve(async (req) => {
     
     console.log(`Checking Telegram bot for community ID: ${communityId}`);
     
-    // Create a Supabase client
+    // Create Supabase client
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
     
     // Get platform settings
-    const { data: settings, error: settingsError } = await supabaseAdmin
+    const { data: settingsData, error: settingsError } = await supabaseAdmin
       .from('platform_settings')
-      .select('telegram_bot_token, telegram_bot_username')
-      .single();
+      .select('telegram_bot_token, telegram_bot_username');
       
     if (settingsError) throw settingsError;
+    
+    // Settings might return an array with one object, handle both cases
+    const settings = Array.isArray(settingsData) ? settingsData[0] : settingsData;
     
     if (!settings?.telegram_bot_token) {
       throw new Error('Telegram bot token not configured');
@@ -51,13 +53,20 @@ serve(async (req) => {
     const botToken = settings.telegram_bot_token;
     
     // Get community data
-    const { data: community, error: communityError } = await supabaseAdmin
+    const { data: communityData, error: communityError } = await supabaseAdmin
       .from('communities')
-      .select('platform, platform_id')
-      .eq('id', communityId)
-      .single();
-      
+      .select('platform, platform_id');
+    
     if (communityError) throw communityError;
+    
+    // Find the community in the array of communities
+    const community = Array.isArray(communityData) 
+      ? communityData.find((c) => c.id === communityId) 
+      : (communityData?.id === communityId ? communityData : null);
+      
+    if (!community) {
+      throw new Error(`Community with ID ${communityId} not found`);
+    }
     
     if (community.platform !== 'TELEGRAM' || !community.platform_id) {
       throw new Error('Not a valid Telegram community or missing platform ID');
@@ -114,16 +123,18 @@ serve(async (req) => {
 const createClient = (url: string, key: string) => {
   return {
     from: (table: string) => ({
-      select: (columns: string) => ({
-        eq: (column: string, value: any) => ({
-          single: () => fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=eq.${value}&limit=1`, {
-            headers: {
-              'apikey': key,
-              'Authorization': `Bearer ${key}`,
-            },
-          }).then(res => res.json().then(data => ({ data: data?.[0] || null, error: null }))),
-        }),
-      }),
+      select: (columns: string) => {
+        return {
+          eq: (column: string, value: any) => {
+            return fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=eq.${value}`, {
+              headers: {
+                'apikey': key,
+                'Authorization': `Bearer ${key}`,
+              },
+            }).then(res => res.json());
+          }
+        };
+      }
     }),
   };
 };

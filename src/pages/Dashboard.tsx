@@ -4,34 +4,30 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Megaphone, 
-  BrainCircuit,
   ShoppingBag,
   CreditCard,
   Settings,
   Shield,
   ArrowRight,
   TrendingUp,
-  Check
+  Check,
+  Loader2,
+  Eye,
+  Edit,
+  BarChart2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { LineChart, BarChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import { cn } from '@/lib/utils';
+import { LineChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 import StatCard from '@/components/dashboard/StatCard';
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
 import CreateAnnouncementButton from '@/components/dashboard/CreateAnnouncementButton';
-import CampaignTable from '@/components/dashboard/CampaignTable';
 import { ActivityItem, Campaign } from '@/components/dashboard/types';
-import { Loader2 } from 'lucide-react';
 import { 
   Table,
   TableHeader,
@@ -40,85 +36,8 @@ import {
   TableRow,
   TableCell
 } from '@/components/ui/table';
-
-// Sample activities data
-const sampleActivities: ActivityItem[] = [
-  {
-    id: '1',
-    timestamp: "2023-09-01T10:00:00Z",
-    title: 'New announcement created',
-    description: 'Your announcement "Summer Sale" has been created.',
-    type: "announcement",
-    status: "success",
-  },
-  {
-    id: '2',
-    timestamp: "2023-09-01T09:30:00Z",
-    title: 'Payment received',
-    description: 'You received a payment of $100 for your community.',
-    type: "payment",
-    status: "success",
-  },
-  {
-    id: '3',
-    timestamp: "2023-09-01T09:00:00Z",
-    title: 'Announcement validation failed',
-    description: 'Your announcement "Winter Sale" failed validation.',
-    type: "validation",
-    status: "warning",
-  },
-  {
-    id: '4',
-    timestamp: "2023-09-01T08:30:00Z",
-    title: 'New community joined',
-    description: 'A new community joined your network.',
-    type: "community",
-    status: "info",
-  },
-];
-
-// Sample campaigns data
-const sampleCampaigns: Campaign[] = [
-  {
-    id: '1',
-    name: 'Summer Sale',
-    status: 'ACTIVE',
-    reach: 1000,
-    clicks: 100,
-    conversionRate: 0.1,
-    budget: 100,
-    spent: 50,
-    title: 'Summer Sale',
-    communities: [],
-    impressions: 1500
-  },
-  {
-    id: '2',
-    name: 'Winter Sale',
-    status: 'PENDING',
-    reach: 500,
-    clicks: 50,
-    conversionRate: 0.05,
-    budget: 50,
-    spent: 25,
-    title: 'Winter Sale',
-    communities: [],
-    impressions: 800
-  },
-  {
-    id: '3',
-    name: 'Spring Sale',
-    status: 'REJECTED',
-    reach: 0,
-    clicks: 0,
-    conversionRate: 0,
-    budget: 25,
-    spent: 0,
-    title: 'Spring Sale',
-    communities: [],
-    impressions: 0
-  },
-];
+import DashboardNav from '@/components/dashboard/DashboardNav';
+import AppLayout from '@/components/layout/AppLayout';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -127,9 +46,12 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [payments, setPayments] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [chartData, setChartData] = useState([]);
+  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
 
+  // Fetch profile, payments, and admin status
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -189,6 +111,91 @@ const Dashboard = () => {
     checkAdminStatus();
   }, [user]);
 
+  // Fetch campaigns (announcements) data
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('announcements')
+          .select(`
+            id,
+            title,
+            status,
+            created_at,
+            announcement_communities (
+              community_id
+            ),
+            impressions
+          `)
+          .eq('user_id', user?.id)
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
+        
+        // Transform the announcement data to match the Campaign interface
+        const formattedCampaigns: Campaign[] = (data || []).map((announcement: any) => ({
+          id: announcement.id,
+          name: announcement.title,
+          title: announcement.title,
+          status: announcement.status,
+          reach: Math.floor(Math.random() * 1000) + 500, // Placeholder for now
+          clicks: Math.floor(Math.random() * 200), // Placeholder for now
+          conversionRate: (Math.random() * 0.1).toFixed(2), // Placeholder for now
+          budget: 100, // Placeholder for now
+          spent: Math.floor(Math.random() * 50) + 10, // Placeholder for now
+          communities: announcement.announcement_communities || [],
+          impressions: announcement.impressions || 0,
+        }));
+        
+        setCampaigns(formattedCampaigns);
+      } catch (error: any) {
+        console.error("Error fetching campaigns:", error);
+        toast.error("Failed to load campaigns");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    if (user?.id) {
+      fetchCampaigns();
+    }
+  }, [user?.id]);
+
+  // Generate activities from payments and campaigns
+  useEffect(() => {
+    const activities: ActivityItem[] = [];
+    
+    // Add payment activities
+    payments.slice(0, 3).forEach(payment => {
+      activities.push({
+        id: payment.id,
+        timestamp: payment.created_at,
+        title: 'Payment processed',
+        description: `Payment of $${payment.amount} ${payment.currency} for announcement`,
+        type: 'payment',
+        status: payment.status === 'PAID' ? 'success' : (payment.status === 'PENDING' ? 'warning' : 'error'),
+      });
+    });
+    
+    // Add campaign activities
+    campaigns.slice(0, 3).forEach(campaign => {
+      activities.push({
+        id: campaign.id,
+        timestamp: new Date().toISOString(), // Using current time as placeholder
+        title: `Campaign "${campaign.title}" ${campaign.status === 'ACTIVE' ? 'is active' : 'status updated'}`,
+        description: `Campaign status: ${campaign.status}`,
+        type: 'announcement',
+        status: campaign.status === 'ACTIVE' ? 'success' : (campaign.status === 'PENDING' ? 'warning' : 'error'),
+      });
+    });
+    
+    // Sort by timestamp (newest first) and limit to 5
+    activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    setRecentActivities(activities.slice(0, 5));
+  }, [payments, campaigns]);
+
+  // Generate chart data
   useEffect(() => {
     // Generate dummy chart data for the last 7 days
     const today = new Date();
@@ -203,6 +210,7 @@ const Dashboard = () => {
     setChartData(data);
   }, []);
 
+  // Helper functions
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -225,33 +233,47 @@ const Dashboard = () => {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case 'PENDING':
+        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      case 'REJECTED':
+        return 'bg-red-500/10 text-red-500 border-red-500/20';
+      default:
+        return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+    }
+  };
+
+  // Tab content rendering
   const renderOverviewContent = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
-          title="Total Announcements"
-          value="124"
+          title="Total Campaigns"
+          value={campaigns.length.toString()}
           trend={{value: "+12%", positive: true}}
           icon={<Megaphone className="h-5 w-5" />}
         />
         <StatCard
           title="Community Reach"
-          value="12,432"
+          value={campaigns.reduce((sum, campaign) => sum + campaign.reach, 0).toLocaleString()}
           trend={{value: "+1%", positive: true}}
           icon={<TrendingUp className="h-5 w-5" />}
         />
         <StatCard
-          title="Avg. CTR"
-          value="0.32%"
-          trend={{value: "-0.1%", positive: false}}
-          icon={<ArrowRight className="h-5 w-5" />}
+          title="Total Spent"
+          value={`$${payments.reduce((sum, payment) => sum + Number(payment.amount), 0).toFixed(2)}`}
+          trend={{value: "+5.3%", positive: true}}
+          icon={<CreditCard className="h-5 w-5" />}
         />
       </div>
       
       <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
         <CardHeader>
-          <CardTitle>Revenue</CardTitle>
-          <CardDescription>Your revenue for the last 7 days</CardDescription>
+          <CardTitle>Campaign Performance</CardTitle>
+          <CardDescription>Your campaign performance for the last 7 days</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -267,32 +289,32 @@ const Dashboard = () => {
       </Card>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <ActivityFeed activities={sampleActivities} />
+        <ActivityFeed activities={recentActivities} />
         
         <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
           <CardHeader>
-            <CardTitle>Tasks</CardTitle>
-            <CardDescription>Your tasks for this week</CardDescription>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Get started with common tasks</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Create new announcement</p>
-                <p className="text-sm text-muted-foreground">Due in 2 days</p>
+                <p className="font-medium">Create new campaign</p>
+                <p className="text-sm text-muted-foreground">Start a new announcement campaign</p>
               </div>
-              <Button variant="outline" size="sm">
-                <Check className="h-4 w-4 mr-2" />
-                Complete
+              <Button variant="outline" size="sm" onClick={() => navigate('/announcements/create')}>
+                <Megaphone className="h-4 w-4 mr-2" />
+                Create
               </Button>
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Review community applications</p>
-                <p className="text-sm text-muted-foreground">Due in 5 days</p>
+                <p className="font-medium">Add a community</p>
+                <p className="text-sm text-muted-foreground">Register a new community</p>
               </div>
-              <Button variant="outline" size="sm">
-                <Check className="h-4 w-4 mr-2" />
-                Complete
+              <Button variant="outline" size="sm" onClick={() => navigate('/communities/create')}>
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                Add
               </Button>
             </div>
           </CardContent>
@@ -303,19 +325,67 @@ const Dashboard = () => {
 
   const renderCampaignsContent = () => (
     <div className="mt-4">
-      <CampaignTable campaigns={sampleCampaigns} />
-    </div>
-  );
-
-  const renderValidationContent = () => (
-    <div className="mt-4">
+      <div className="mb-4 flex justify-between">
+        <h2 className="text-xl font-semibold">Your Campaigns</h2>
+        <CreateAnnouncementButton />
+      </div>
+      
       <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-        <CardHeader>
-          <CardTitle>AI Validation</CardTitle>
-          <CardDescription>Validate your announcements with AI</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>This feature is coming soon!</p>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/50 hover:bg-crypto-darkgray/30">
+                <TableHead className="w-[300px]">Campaign</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Communities</TableHead>
+                <TableHead>Impressions</TableHead>
+                <TableHead className="text-right">Spent</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center h-24">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  </TableCell>
+                </TableRow>
+              ) : campaigns.length > 0 ? (
+                campaigns.map((campaign) => (
+                  <TableRow key={campaign.id} className="border-border/50 hover:bg-crypto-darkgray/30">
+                    <TableCell className="font-medium">{campaign.title}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={getStatusColor(campaign.status)}>
+                        {campaign.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{campaign.communities?.length || 0}</TableCell>
+                    <TableCell>{campaign.impressions?.toLocaleString() || 0}</TableCell>
+                    <TableCell className="text-right">${campaign.spent.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-1">
+                        <Button variant="ghost" size="icon" title="View">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Edit">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Analytics">
+                          <BarChart2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                    No campaigns found. Create your first campaign!
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
@@ -323,13 +393,25 @@ const Dashboard = () => {
 
   const renderMarketplaceContent = () => (
     <div className="mt-4">
+      <div className="mb-4 flex justify-between">
+        <h2 className="text-xl font-semibold">Community Marketplace</h2>
+        <Button
+          onClick={() => navigate('/communities/create')}
+          className="bg-crypto-blue hover:bg-crypto-blue/90"
+        >
+          Add Community
+        </Button>
+      </div>
+      
       <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-        <CardHeader>
-          <CardTitle>Community Marketplace</CardTitle>
-          <CardDescription>Discover new communities to promote your announcements</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>This feature is coming soon!</p>
+        <CardContent className="p-6">
+          <p className="mb-4">Discover and manage communities for your announcements.</p>
+          <Button
+            onClick={() => navigate('/communities')}
+            variant="outline"
+          >
+            Browse Communities
+          </Button>
         </CardContent>
       </Card>
     </div>
@@ -420,303 +502,44 @@ const Dashboard = () => {
     </div>
   );
 
-  const renderSettingsContent = () => (
-    <div className="mt-4">
-      <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-        <CardHeader>
-          <CardTitle>Account Settings</CardTitle>
-          <CardDescription>Manage your profile and preferences</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium mb-4">Profile Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input id="displayName" placeholder="Your Name" value={profile?.name || ''} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" placeholder="your.email@example.com" value={user?.email || ''} readOnly />
-                </div>
-              </div>
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <h3 className="text-lg font-medium mb-4">Notification Settings</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Email Notifications</p>
-                    <p className="text-sm text-muted-foreground">Receive updates on your announcements</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Manage
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Announcement Alerts</p>
-                    <p className="text-sm text-muted-foreground">Get notified when your announcements are approved</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Manage
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <h3 className="text-lg font-medium mb-4">Security</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Change Password</p>
-                    <p className="text-sm text-muted-foreground">Update your account password</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Update
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Two-Factor Authentication</p>
-                    <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Enable
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
+  // Render the appropriate content based on the active tab
   const renderContent = () => {
     switch (activeTab) {
       case "overview":
         return renderOverviewContent();
       case "campaigns":
         return renderCampaignsContent();
-      case "validation":
-        return renderValidationContent();
       case "marketplace":
         return renderMarketplaceContent();
       case "payments":
         return renderPaymentsContent();
-      case "settings":
-        return renderSettingsContent();
       default:
         return renderOverviewContent();
     }
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-64 border-r border-border/10 p-4 bg-crypto-darkgray hidden md:block overflow-auto">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold">Dashboard</h2>
-          </div>
-          
-          <nav className="space-y-1">
-            <Link
-              to="#"
-              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
-                activeTab === "overview" ? 
-                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setActiveTab("overview")}
+    <AppLayout>
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          {isAdmin && (
+            <Button
+              onClick={() => navigate('/admin')}
+              variant="outline"
+              className="flex items-center"
             >
-              <LayoutDashboard className="h-5 w-5 mr-3" />
-              Overview
-            </Link>
-            <Link
-              to="#"
-              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
-                activeTab === "campaigns" ? 
-                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setActiveTab("campaigns")}
-            >
-              <Megaphone className="h-5 w-5 mr-3" />
-              Campaigns
-            </Link>
-            <Link
-              to="#"
-              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
-                activeTab === "validation" ? 
-                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setActiveTab("validation")}
-            >
-              <BrainCircuit className="h-5 w-5 mr-3" />
-              AI Validation
-            </Link>
-            <Link
-              to="#"
-              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
-                activeTab === "marketplace" ? 
-                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setActiveTab("marketplace")}
-            >
-              <ShoppingBag className="h-5 w-5 mr-3" />
-              Community Marketplace
-            </Link>
-            <Link
-              to="#"
-              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
-                activeTab === "payments" ? 
-                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setActiveTab("payments")}
-            >
-              <CreditCard className="h-5 w-5 mr-3" />
-              Payments
-            </Link>
-            <Link
-              to="#"
-              className={`flex items-center px-4 py-2 rounded-md transition-colors ${
-                activeTab === "settings" ? 
-                'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setActiveTab("settings")}
-            >
-              <Settings className="h-5 w-5 mr-3" />
-              Settings
-            </Link>
-            
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className="flex items-center px-4 py-2 mt-4 rounded-md text-muted-foreground hover:bg-crypto-darkgray/60 hover:text-white"
-              >
-                <Shield className="h-5 w-5 mr-3" />
-                Admin Dashboard
-              </Link>
-            )}
-          </nav>
-          
-          <div className="absolute bottom-4 left-4 right-4 p-4 border-t border-border/10">
-            <div className="flex items-center space-x-3">
-              <div className="h-8 w-8 rounded-full bg-crypto-blue flex items-center justify-center text-white font-bold">
-                {profile?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{profile?.name || 'User'}</p>
-                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/profile')}>
-                <Settings className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+              <Shield className="mr-2 h-4 w-4" />
+              Admin Dashboard
+            </Button>
+          )}
         </div>
         
-        <div className="flex-1 overflow-auto">
-          <div className="p-6">
-            <div className="mb-6">
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
-                <div className="flex space-x-2">
-                  {activeTab === "campaigns" && (
-                    <CreateAnnouncementButton />
-                  )}
-                </div>
-              </div>
-              
-              <div className="mt-4 overflow-x-auto pb-2">
-                <div className="inline-flex space-x-1 border-b border-border/10 pb-3 min-w-full">
-                  <button 
-                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
-                      activeTab === "overview" ? 
-                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-                    }`}
-                    onClick={() => setActiveTab("overview")}
-                  >
-                    <LayoutDashboard className="h-4 w-4 mr-2" />
-                    Overview
-                  </button>
-                  <button 
-                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
-                      activeTab === "campaigns" ? 
-                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-                    }`}
-                    onClick={() => setActiveTab("campaigns")}
-                  >
-                    <Megaphone className="h-4 w-4 mr-2" />
-                    Campaigns
-                  </button>
-                  <button 
-                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
-                      activeTab === "validation" ? 
-                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-                    }`}
-                    onClick={() => setActiveTab("validation")}
-                  >
-                    <BrainCircuit className="h-4 w-4 mr-2" />
-                    AI Validation
-                  </button>
-                  <button 
-                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
-                      activeTab === "marketplace" ? 
-                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-                    }`}
-                    onClick={() => setActiveTab("marketplace")}
-                  >
-                    <ShoppingBag className="h-4 w-4 mr-2" />
-                    Community Marketplace
-                  </button>
-                  <button 
-                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
-                      activeTab === "payments" ? 
-                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-                    }`}
-                    onClick={() => setActiveTab("payments")}
-                  >
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Payments
-                  </button>
-                  <button 
-                    className={`flex items-center px-3 py-1.5 rounded-md whitespace-nowrap transition-colors ${
-                      activeTab === "settings" ? 
-                      'bg-crypto-green/10 text-crypto-green border border-crypto-green/20' : 
-                      'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-                    }`}
-                    onClick={() => setActiveTab("settings")}
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            {renderContent()}
-          </div>
-        </div>
+        <DashboardNav activeTab={activeTab} setActiveTab={setActiveTab} />
+        
+        {renderContent()}
       </div>
-    </div>
+    </AppLayout>
   );
 };
 

@@ -1,11 +1,9 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   LayoutDashboard, 
   Megaphone, 
-  BrainCircuit,
   ShoppingBag,
   CreditCard,
   Settings
@@ -20,10 +18,8 @@ const DashboardNav: React.FC<DashboardNavProps> = ({ activeTab, setActiveTab }) 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/' },
     { id: 'campaigns', label: 'Campaigns', icon: Megaphone, path: '/campaigns' },
-    { id: 'validation', label: 'AI Validation', icon: BrainCircuit, path: '/validation' },
     { id: 'marketplace', label: 'Community Marketplace', icon: ShoppingBag, path: '/communities' },
     { id: 'payments', label: 'Payments', icon: CreditCard, path: '/payments' },
-    { id: 'settings', label: 'Settings', icon: Settings, path: '/profile' },
   ];
 
   return (
