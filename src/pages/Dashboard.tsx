@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -141,7 +140,7 @@ const Dashboard = () => {
           status: announcement.status,
           reach: Math.floor(Math.random() * 1000) + 500, // Placeholder for now
           clicks: Math.floor(Math.random() * 200), // Placeholder for now
-          conversionRate: (Math.random() * 0.1).toFixed(2), // Placeholder for now
+          conversionRate: parseFloat((Math.random() * 0.1).toFixed(2)), // Convert to number with parseFloat
           budget: 100, // Placeholder for now
           spent: Math.floor(Math.random() * 50) + 10, // Placeholder for now
           communities: announcement.announcement_communities || [],
