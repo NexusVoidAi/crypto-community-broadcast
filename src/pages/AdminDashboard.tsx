@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle, XCircle, Settings, MessageSquare, Users, BarChart3, RefreshCcw } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Loader2, CheckCircle, XCircle, Settings, MessageSquare, Users, BarChart3, RefreshCcw, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import AnnouncementApproval from '@/components/admin/AnnouncementApproval';
@@ -21,6 +22,7 @@ interface DashboardStats {
   totalCommunities: number;
   recentPayments: any[];
   isLoading: boolean;
+  error: string | null;
 }
 
 const AdminDashboard = () => {
@@ -34,7 +36,8 @@ const AdminDashboard = () => {
     totalAnnouncements: 0,
     totalCommunities: 0,
     recentPayments: [],
-    isLoading: true
+    isLoading: true,
+    error: null
   });
 
   useEffect(() => {
@@ -76,7 +79,7 @@ const AdminDashboard = () => {
 
   const fetchDashboardStats = async () => {
     try {
-      setStats(prev => ({ ...prev, isLoading: true }));
+      setStats(prev => ({ ...prev, isLoading: true, error: null }));
 
       // Fetch pending announcements count
       const { count: pendingAnnouncementsCount, error: announcementsError } = await supabase
@@ -108,28 +111,63 @@ const AdminDashboard = () => {
 
       if (totalCommunitiesError) throw totalCommunitiesError;
 
-      // Fetch recent payments
-      const { data: recentPaymentsData, error: paymentsError } = await supabase
+      // Fetch recent payments - Fix the relationship issue by using a different query approach
+      // Instead of trying to join payments and profiles directly, we'll fetch payments first
+      // and then use the user_id to get the profile information
+      const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
-        .select('*, profiles(name)')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(5);
 
       if (paymentsError) throw paymentsError;
+
+      // If we have payment data, fetch the associated user profiles separately
+      let recentPayments: any[] = [];
+      
+      if (paymentsData && paymentsData.length > 0) {
+        const userIds = paymentsData.map(payment => payment.user_id);
+        
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', userIds);
+          
+        if (profilesError) throw profilesError;
+        
+        // Create a map of user IDs to profile names for easy lookup
+        const profileMap = new Map();
+        if (profilesData) {
+          profilesData.forEach(profile => {
+            profileMap.set(profile.id, profile.name);
+          });
+        }
+        
+        // Combine payment data with profile names
+        recentPayments = paymentsData.map(payment => ({
+          ...payment,
+          profileName: profileMap.get(payment.user_id) || 'Unknown User'
+        }));
+      }
 
       setStats({
         pendingAnnouncements: pendingAnnouncementsCount || 0,
         pendingCommunities: pendingCommunitiesCount || 0,
         totalAnnouncements: totalAnnouncementsCount || 0,
         totalCommunities: totalCommunitiesCount || 0,
-        recentPayments: recentPaymentsData || [],
-        isLoading: false
+        recentPayments: recentPayments,
+        isLoading: false,
+        error: null
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching dashboard stats:", error);
-      toast.error("Failed to load dashboard statistics");
-      setStats(prev => ({ ...prev, isLoading: false }));
+      setStats(prev => ({ 
+        ...prev, 
+        isLoading: false, 
+        error: `Failed to load dashboard statistics: ${error.message}` 
+      }));
+      toast.error(`Failed to load dashboard statistics: ${error.message}`);
     }
   };
 
@@ -172,6 +210,14 @@ const AdminDashboard = () => {
           Refresh
         </Button>
       </div>
+      
+      {stats.error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{stats.error}</AlertDescription>
+        </Alert>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-crypto-darkgray/50 border border-border/50">
@@ -278,7 +324,7 @@ const AdminDashboard = () => {
               {stats.recentPayments.map((payment) => (
                 <div key={payment.id} className="flex justify-between items-center p-3 border border-border/30 rounded-md bg-crypto-dark/30">
                   <div>
-                    <p className="font-medium">{payment.profiles?.name || 'Unknown User'}</p>
+                    <p className="font-medium">{payment.profileName}</p>
                     <p className="text-sm text-muted-foreground">
                       {new Date(payment.created_at).toLocaleDateString()}
                     </p>

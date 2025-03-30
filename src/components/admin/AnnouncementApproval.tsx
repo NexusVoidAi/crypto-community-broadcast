@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, AlertTriangle, Loader2, MessageSquare, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +13,7 @@ const AnnouncementApproval = () => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPendingAnnouncements();
@@ -20,11 +22,14 @@ const AnnouncementApproval = () => {
   const fetchPendingAnnouncements = async () => {
     try {
       setIsLoading(true);
+      setError(null);
+      
+      // We need to modify this query to correctly join profiles
       const { data, error } = await supabase
         .from('announcements')
         .select(`
           *,
-          profiles(name),
+          profiles:user_id(name),
           announcement_communities(
             community:communities(name, platform)
           )
@@ -36,6 +41,8 @@ const AnnouncementApproval = () => {
       
       setAnnouncements(data || []);
     } catch (error: any) {
+      console.error("Error fetching announcements:", error);
+      setError(`Error loading announcements: ${error.message}`);
       toast.error(`Error loading announcements: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -79,6 +86,16 @@ const AnnouncementApproval = () => {
       <div className="flex justify-center items-center min-h-[300px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
     );
   }
 
