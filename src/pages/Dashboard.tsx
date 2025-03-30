@@ -41,6 +41,14 @@ import CreateAnnouncementButton from '@/components/dashboard/CreateAnnouncementB
 import CampaignTable from '@/components/dashboard/CampaignTable';
 import { ActivityItem } from '@/components/dashboard/types';
 import { Loader2 } from 'lucide-react';
+import { 
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell
+} from '@/components/ui/table';
 
 // Sample activities for ActivityFeed with string IDs
 const sampleActivities: ActivityItem[] = [
@@ -726,9 +734,11 @@ const Dashboard = () => {
           
           <h3 className="font-medium mb-3">Transaction History</h3>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-border/50">
-                  <th className="text-left py-2 px-4 text-sm font-medium text-muted-foreground">Date</th>
-                  <th className="text-left py-2 px-4 text-sm font-medium text-muted-foreground">Transaction</th>
-                  <th className="text-left py-2 px-4 text-
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Transaction</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-
