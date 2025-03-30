@@ -1,28 +1,32 @@
 
-export interface ActivityItem {
-  id: string;
-  timestamp: string;
-  title: string;
-  description: string;
-  type: 'announcement' | 'payment' | 'validation' | 'community' | string;
-  status: 'success' | 'warning' | 'error' | 'info' | string;
-}
-
-export interface TrendProps {
-  value: string;
-  positive: boolean;
-}
-
 export interface Campaign {
   id: string;
   name: string;
+  title: string;
   status: string;
   reach: number;
   clicks: number;
+  views: number; // Changed from impressions to views
   conversionRate: number;
   budget: number;
   spent: number;
-  title: string;
   communities: any[];
-  impressions: number;
+}
+
+export interface StatCardData {
+  title: string;
+  value: string | number;
+  change?: string | number;
+  icon: React.ComponentType;
+  iconColor?: string;
+  changeIsPositive?: boolean;
+}
+
+export interface ActivityItem {
+  id: string;
+  type: 'announcement' | 'payment' | 'community';
+  title: string;
+  description: string;
+  timestamp: string;
+  status?: string;
 }
