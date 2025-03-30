@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,13 +9,32 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { ArrowRight, Loader2, Check, X, Upload, MessageSquare, AlertTriangle } from 'lucide-react';
+import { 
+  ArrowRight, 
+  Loader2, 
+  Check, 
+  X, 
+  Upload, 
+  MessageSquare, 
+  AlertTriangle 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ValidationResult = {
   isValid: boolean;
   score: number;
   issues: string[];
+};
+
+type Community = {
+  id: string;
+  name: string;
+  platform: 'TELEGRAM' | 'DISCORD' | 'WHATSAPP';
+  price_per_announcement: number;
+  reach: number;
+  selected?: boolean;
 };
 
 type AnnouncementFormProps = {
@@ -24,6 +43,8 @@ type AnnouncementFormProps = {
 
 const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [ctaText, setCtaText] = useState('');
@@ -31,6 +52,35 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
+  const [announcementId, setAnnouncementId] = useState<string | null>(null);
+  const [loadingCommunities, setLoadingCommunities] = useState(false);
+
+  useEffect(() => {
+    const fetchCommunities = async () => {
+      if (step !== 2) return;
+      
+      setLoadingCommunities(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('communities')
+          .select('*')
+          .order('name');
+          
+        if (error) throw error;
+        
+        setCommunities(data || []);
+      } catch (error: any) {
+        toast.error(`Error loading communities: ${error.message}`);
+      } finally {
+        setLoadingCommunities(false);
+      }
+    };
+    
+    fetchCommunities();
+  }, [step]);
 
   const handleValidate = async () => {
     if (!title.trim() || !content.trim()) {
@@ -41,6 +91,45 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
     setIsLoading(true);
 
     try {
+      // First, save the announcement as draft
+      let announcement;
+      
+      if (!announcementId) {
+        // Create new announcement
+        const { data, error } = await supabase
+          .from('announcements')
+          .insert({
+            title,
+            content,
+            cta_text: ctaText,
+            cta_url: ctaUrl,
+            status: 'DRAFT',
+            user_id: user?.id
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
+        announcement = data;
+        setAnnouncementId(data.id);
+      } else {
+        // Update existing announcement
+        const { data, error } = await supabase
+          .from('announcements')
+          .update({
+            title,
+            content,
+            cta_text: ctaText,
+            cta_url: ctaUrl
+          })
+          .eq('id', announcementId)
+          .select()
+          .single();
+          
+        if (error) throw error;
+        announcement = data;
+      }
+      
       // Simulate AI validation
       await new Promise(resolve => setTimeout(resolve, 2000));
       
@@ -51,6 +140,17 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
         issues: [],
       };
       
+      // Update announcement with validation result
+      const { error: updateError } = await supabase
+        .from('announcements')
+        .update({
+          validation_result: mockResult,
+          status: mockResult.isValid ? 'PENDING_VALIDATION' : 'VALIDATION_FAILED'
+        })
+        .eq('id', announcement.id);
+        
+      if (updateError) throw updateError;
+      
       setValidationResult(mockResult);
       
       if (mockResult.isValid) {
@@ -59,9 +159,79 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
       } else {
         toast.error('Announcement failed validation checks');
       }
-    } catch (error) {
-      toast.error('Error validating announcement');
-      console.error('Validation error:', error);
+    } catch (error: any) {
+      toast.error(`Error validating announcement: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleCommunitySelection = (communityId: string) => {
+    setSelectedCommunities(prev => {
+      if (prev.includes(communityId)) {
+        return prev.filter(id => id !== communityId);
+      } else {
+        return [...prev, communityId];
+      }
+    });
+  };
+
+  const calculateTotalCost = () => {
+    return communities
+      .filter(community => selectedCommunities.includes(community.id))
+      .reduce((sum, community) => sum + Number(community.price_per_announcement), 0);
+  };
+
+  const handlePreviewAndPay = async () => {
+    if (selectedCommunities.length === 0) {
+      toast.error('Please select at least one community');
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      // First, update the announcement status
+      const { error: updateError } = await supabase
+        .from('announcements')
+        .update({
+          status: 'PENDING_VALIDATION'
+        })
+        .eq('id', announcementId);
+        
+      if (updateError) throw updateError;
+      
+      // Create announcement-community links
+      const communityLinks = selectedCommunities.map(communityId => ({
+        announcement_id: announcementId,
+        community_id: communityId
+      }));
+      
+      const { error: linkError } = await supabase
+        .from('announcement_communities')
+        .insert(communityLinks);
+        
+      if (linkError) throw linkError;
+      
+      // Create a payment record
+      const { error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          amount: calculateTotalCost(),
+          currency: 'USDT',
+          user_id: user?.id,
+          announcement_id: announcementId,
+          status: 'PENDING'
+        });
+        
+      if (paymentError) throw paymentError;
+      
+      toast.success('Announcement prepared for preview');
+      
+      // Navigate to preview page with the announcement ID
+      navigate(`/announcements/preview?id=${announcementId}`);
+    } catch (error: any) {
+      toast.error(`Error preparing preview: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -218,38 +388,72 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
             
             <div>
               <h3 className="text-lg font-medium mb-4">Select Communities</h3>
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                {[
-                  { id: 1, name: 'Crypto Traders', platform: 'Telegram', price: 25, reach: 15000 },
-                  { id: 2, name: 'DeFi Hub', platform: 'Discord', price: 35, reach: 22000 },
-                  { id: 3, name: 'NFT Collectors', platform: 'Discord', price: 30, reach: 18000 },
-                  { id: 4, name: 'Web3 Founders', platform: 'WhatsApp', price: 40, reach: 5000 },
-                ].map((community) => (
-                  <Card key={community.id} className="border border-border/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-medium">{community.name}</h4>
-                          <div className="flex items-center mt-1">
-                            <Badge variant="outline" className="mr-2">
-                              {community.platform}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {community.reach.toLocaleString()} members
-                            </span>
+              
+              {loadingCommunities ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : communities.length > 0 ? (
+                <>
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                    {communities.map((community) => (
+                      <Card 
+                        key={community.id} 
+                        className={cn(
+                          "border cursor-pointer transition-colors",
+                          selectedCommunities.includes(community.id)
+                            ? "border-crypto-green/70 bg-crypto-green/5"
+                            : "border-border/50 bg-crypto-darkgray/50"
+                        )}
+                        onClick={() => toggleCommunitySelection(community.id)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-medium flex items-center">
+                                {selectedCommunities.includes(community.id) && (
+                                  <Check className="h-4 w-4 text-crypto-green mr-2" />
+                                )}
+                                {community.name}
+                              </h4>
+                              <div className="flex items-center mt-1">
+                                <Badge variant="outline" className="mr-2">
+                                  {community.platform}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {community.reach?.toLocaleString() || 0} members
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-crypto-green">${community.price_per_announcement}</p>
+                              <button className="text-xs text-crypto-blue hover:underline mt-1">
+                                {selectedCommunities.includes(community.id) ? 'Deselect' : 'Select'}
+                              </button>
+                            </div>
                           </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  
+                  {selectedCommunities.length > 0 && (
+                    <div className="mt-6 p-4 border border-border rounded-md bg-crypto-darkgray/70">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium">Total Cost</p>
+                          <p className="text-sm text-muted-foreground">{selectedCommunities.length} communities selected</p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium text-crypto-green">${community.price}</p>
-                          <button className="text-xs text-crypto-blue hover:underline mt-1">
-                            Select
-                          </button>
-                        </div>
+                        <p className="text-xl font-bold text-crypto-green">${calculateTotalCost().toFixed(2)}</p>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">No communities available</p>
+                </div>
+              )}
               
               <div className="mt-6 flex justify-between">
                 <Button 
@@ -259,11 +463,21 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
                   Back to Edit
                 </Button>
                 <Button 
-                  onClick={() => navigate('/announcements/preview')}
+                  onClick={handlePreviewAndPay}
                   className="bg-crypto-blue hover:bg-crypto-blue/90"
+                  disabled={selectedCommunities.length === 0 || isLoading}
                 >
-                  Preview & Pay
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing
+                    </>
+                  ) : (
+                    <>
+                      Preview & Pay
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

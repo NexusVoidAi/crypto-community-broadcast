@@ -1,59 +1,22 @@
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { toast } from 'sonner';
 import { Mail, Lock, Wallet } from 'lucide-react';
 import AuthCard from '@/components/auth/AuthCard';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Login: React.FC = () => {
-  const navigate = useNavigate();
+  const { signIn, connectWallet, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real app, you would call your auth API here
-      console.log('Login with:', { email, password });
-      
-      toast.success('Successfully logged in!');
-      navigate('/');
-    } catch (error) {
-      toast.error('Failed to login. Please check your credentials.');
-      console.error('Login error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleWalletLogin = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Simulate wallet connection
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // In a real app, you would connect to MetaMask or WalletConnect here
-      console.log('Connecting wallet...');
-      
-      toast.success('Wallet connected successfully!');
-      navigate('/');
-    } catch (error) {
-      toast.error('Failed to connect wallet. Please try again.');
-      console.error('Wallet connection error:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    await signIn(email, password);
   };
 
   return (
@@ -128,7 +91,7 @@ const Login: React.FC = () => {
           type="button"
           variant="outline"
           className="w-full"
-          onClick={handleWalletLogin}
+          onClick={connectWallet}
           disabled={isLoading}
         >
           <Wallet className="mr-2 h-4 w-4" />

@@ -1,62 +1,25 @@
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import { toast } from 'sonner';
 import { Mail, Lock, User, Building2, Wallet } from 'lucide-react';
 import AuthCard from '@/components/auth/AuthCard';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Register: React.FC = () => {
-  const navigate = useNavigate();
+  const { signUp, connectWallet, isLoading } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [accountType, setAccountType] = useState('business');
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // In a real app, you would call your registration API here
-      console.log('Register with:', { name, email, password, accountType });
-      
-      toast.success('Account created successfully!');
-      navigate('/');
-    } catch (error) {
-      toast.error('Failed to create account. Please try again.');
-      console.error('Registration error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleWalletRegister = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Simulate wallet connection
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // In a real app, you would connect to MetaMask or WalletConnect here
-      console.log('Connecting wallet...');
-      
-      toast.success('Wallet connected successfully!');
-      navigate('/');
-    } catch (error) {
-      toast.error('Failed to connect wallet. Please try again.');
-      console.error('Wallet connection error:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    await signUp(email, password, name, accountType);
   };
 
   return (
@@ -170,7 +133,7 @@ const Register: React.FC = () => {
           type="button"
           variant="outline"
           className="w-full"
-          onClick={handleWalletRegister}
+          onClick={connectWallet}
           disabled={isLoading}
         >
           <Wallet className="mr-2 h-4 w-4" />

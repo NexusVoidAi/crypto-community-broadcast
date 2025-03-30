@@ -9,7 +9,254 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      announcement_communities: {
+        Row: {
+          announcement_id: string
+          clicks: number | null
+          community_id: string
+          created_at: string
+          delivered: boolean | null
+          delivery_log: Json | null
+          id: string
+          views: number | null
+        }
+        Insert: {
+          announcement_id: string
+          clicks?: number | null
+          community_id: string
+          created_at?: string
+          delivered?: boolean | null
+          delivery_log?: Json | null
+          id?: string
+          views?: number | null
+        }
+        Update: {
+          announcement_id?: string
+          clicks?: number | null
+          community_id?: string
+          created_at?: string
+          delivered?: boolean | null
+          delivery_log?: Json | null
+          id?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_communities_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_communities_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          cta_text: string | null
+          cta_url: string | null
+          id: string
+          media_url: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          status: Database["public"]["Enums"]["announcement_status"]
+          title: string
+          updated_at: string
+          user_id: string
+          validation_result: Json | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          cta_text?: string | null
+          cta_url?: string | null
+          id?: string
+          media_url?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          status?: Database["public"]["Enums"]["announcement_status"]
+          title: string
+          updated_at?: string
+          user_id: string
+          validation_result?: Json | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          cta_text?: string | null
+          cta_url?: string | null
+          id?: string
+          media_url?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          status?: Database["public"]["Enums"]["announcement_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+          validation_result?: Json | null
+        }
+        Relationships: []
+      }
+      communities: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_id: string
+          platform: Database["public"]["Enums"]["platform_type"]
+          platform_id: string | null
+          price_per_announcement: number
+          reach: number | null
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          platform: Database["public"]["Enums"]["platform_type"]
+          platform_id?: string | null
+          price_per_announcement?: number
+          reach?: number | null
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          platform?: Database["public"]["Enums"]["platform_type"]
+          platform_id?: string | null
+          price_per_announcement?: number
+          reach?: number | null
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      community_earnings: {
+        Row: {
+          amount: number
+          community_id: string
+          created_at: string
+          currency: string
+          id: string
+          payment_id: string
+        }
+        Insert: {
+          amount: number
+          community_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_id: string
+        }
+        Update: {
+          amount?: number
+          community_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_earnings_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_earnings_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          announcement_id: string
+          created_at: string
+          currency: string
+          id: string
+          status: Database["public"]["Enums"]["payment_status"]
+          transaction_hash: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          announcement_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          transaction_hash?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          announcement_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          transaction_hash?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          account_type: string
+          created_at: string
+          id: string
+          name: string | null
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          account_type?: string
+          created_at?: string
+          id: string
+          name?: string | null
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          account_type?: string
+          created_at?: string
+          id?: string
+          name?: string | null
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +265,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      announcement_status:
+        | "DRAFT"
+        | "PENDING_VALIDATION"
+        | "VALIDATION_FAILED"
+        | "PUBLISHED"
+      payment_status: "PENDING" | "PAID" | "FAILED"
+      platform_type: "TELEGRAM" | "DISCORD" | "WHATSAPP"
     }
     CompositeTypes: {
       [_ in never]: never
