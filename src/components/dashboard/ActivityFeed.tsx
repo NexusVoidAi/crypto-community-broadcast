@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Bell, Check, AlertTriangle, Info, Ban, ArrowRight } from 'lucide-react';
 
 interface ActivityFeedProps {
-  activities: ActivityItem[];
+  activity: ActivityItem[]; // Changed from activities to activity
 }
 
 const getStatusIcon = (status: string) => {
@@ -53,7 +52,7 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities }) => {
+const ActivityFeed: React.FC<ActivityFeedProps> = ({ activity }) => { // Changed from activities to activity
   return (
     <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
       <CardHeader className="pb-2">
@@ -64,8 +63,8 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities }) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {activities.length > 0 ? (
-            activities.map((activity) => (
+          {activity.length > 0 ? ( // Changed from activities to activity
+            activity.map((activity) => ( // Changed from activities to activity
               <div key={activity.id} className="flex items-start gap-4 pb-4 last:pb-0 border-b border-border/30 last:border-0">
                 <div className="p-2 rounded-full bg-crypto-dark/60">
                   {getTypeIcon(activity.type)}

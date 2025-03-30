@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +7,7 @@ import DashboardNav from '@/components/dashboard/DashboardNav';
 import StatCards from '@/components/dashboard/StatCards';
 import CampaignTable from '@/components/dashboard/CampaignTable';
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/context/UserContext'; // Fixed import path
 import { Campaign, StatCardData, ActivityItem } from '@/components/dashboard/types';
 import { 
   Eye, 

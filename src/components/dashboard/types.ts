@@ -1,4 +1,6 @@
 
+import React from 'react';
+
 export interface Campaign {
   id: string;
   name: string;
@@ -20,6 +22,11 @@ export interface StatCardData {
   icon: React.ComponentType;
   iconColor?: string;
   changeIsPositive?: boolean;
+}
+
+export interface TrendProps {
+  value: string | number;
+  positive: boolean;
 }
 
 export interface ActivityItem {
