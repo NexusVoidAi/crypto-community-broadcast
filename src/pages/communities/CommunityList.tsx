@@ -20,6 +20,7 @@ interface Community {
   reach: number;
   price_per_announcement: number;
   owner_id: string;
+  approval_status: string;
 }
 
 const CommunityList: React.FC = () => {
@@ -30,38 +31,39 @@ const CommunityList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const fetchCommunities = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch all communities
-        const { data: allCommunitiesData, error: allCommunitiesError } = await supabase
-          .from('communities')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (allCommunitiesError) throw allCommunitiesError;
-        setCommunities(allCommunitiesData || []);
-        
-        // Fetch user's communities
-        if (user) {
-          const { data: myCommunitiesData, error: myCommunitiesError } = await supabase
-            .from('communities')
-            .select('*')
-            .eq('owner_id', user.id)
-            .order('created_at', { ascending: false });
-            
-          if (myCommunitiesError) throw myCommunitiesError;
-          setMyCommunities(myCommunitiesData || []);
-        }
-      } catch (error: any) {
-        toast.error(`Error loading communities: ${error.message}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchCommunities();
   }, [user]);
+
+  const fetchCommunities = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch all approved communities
+      const { data: allCommunitiesData, error: allCommunitiesError } = await supabase
+        .from('communities')
+        .select('*')
+        .eq('approval_status', 'APPROVED') // Only show approved communities
+        .order('created_at', { ascending: false });
+
+      if (allCommunitiesError) throw allCommunitiesError;
+      setCommunities(allCommunitiesData || []);
+      
+      // Fetch user's communities
+      if (user) {
+        const { data: myCommunitiesData, error: myCommunitiesError } = await supabase
+          .from('communities')
+          .select('*')
+          .eq('owner_id', user.id)
+          .order('created_at', { ascending: false });
+          
+        if (myCommunitiesError) throw myCommunitiesError;
+        setMyCommunities(myCommunitiesData || []);
+      }
+    } catch (error: any) {
+      toast.error(`Error loading communities: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredCommunities = communities.filter(community => 
     community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -91,11 +93,11 @@ const CommunityList: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Communities</h1>
+            <h1 className="text-3xl font-bold text-gradient">Communities</h1>
             <p className="text-muted-foreground">Browse and manage crypto communities</p>
           </div>
           <Link to="/communities/create">
-            <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90">
+            <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90 shadow-xl shadow-crypto-green/20">
               <Plus className="mr-2 h-4 w-4" /> Add Community
             </Button>
           </Link>
@@ -105,18 +107,18 @@ const CommunityList: React.FC = () => {
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search communities..."
-            className="pl-10 bg-crypto-darkgray/50 border-border/50"
+            className="pl-10 bg-crypto-darkgray/50 border-border/50 backdrop-blur-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="all">
+          <TabsList className="grid w-full grid-cols-2 mb-6 glassmorphism">
+            <TabsTrigger value="all" className="data-[state=active]:bg-crypto-green/10 data-[state=active]:text-crypto-green">
               <Users className="mr-2 h-4 w-4" /> All Communities
             </TabsTrigger>
-            <TabsTrigger value="mine">
+            <TabsTrigger value="mine" className="data-[state=active]:bg-crypto-green/10 data-[state=active]:text-crypto-green">
               <Users className="mr-2 h-4 w-4" /> My Communities
             </TabsTrigger>
           </TabsList>
@@ -130,7 +132,7 @@ const CommunityList: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCommunities.map((community) => (
                   <Link to={`/communities/${community.id}`} key={community.id}>
-                    <Card className="h-full hover:border-crypto-blue/50 transition-colors border border-border/50 bg-crypto-darkgray/50">
+                    <Card className="h-full hover:border-crypto-blue/50 transition-colors border border-border/50 bg-crypto-darkgray/50 backdrop-blur-md hover:shadow-lg hover:shadow-crypto-blue/10 hover:-translate-y-1 transition-all duration-300">
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-3">
                           <h3 className="font-semibold text-lg truncate flex-1">{community.name}</h3>
@@ -141,21 +143,26 @@ const CommunityList: React.FC = () => {
                         <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                           {community.description || 'No description provided'}
                         </p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">
-                            {community.reach.toLocaleString()} members
+                        <div className="flex items-center justify-between mt-auto">
+                          <span className="text-sm text-muted-foreground flex items-center">
+                            <Users className="h-3 w-3 mr-1" /> {community.reach.toLocaleString()}
                           </span>
-                          <span className="font-medium text-crypto-green">
+                          <span className="font-medium text-crypto-green flex items-center">
                             ${community.price_per_announcement}
                           </span>
                         </div>
+                        {community.approval_status === 'APPROVED' && (
+                          <Badge variant="outline" className="mt-3 bg-crypto-green/10 text-crypto-green border-crypto-green/20">
+                            Verified
+                          </Badge>
+                        )}
                       </CardContent>
                     </Card>
                   </Link>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 text-muted-foreground">
+              <div className="text-center py-12 glassmorphism rounded-lg">
                 {searchQuery ? 'No communities found matching your search.' : 'No communities available.'}
               </div>
             )}
@@ -170,7 +177,7 @@ const CommunityList: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredMyCommunities.map((community) => (
                   <Link to={`/communities/${community.id}`} key={community.id}>
-                    <Card className="h-full hover:border-crypto-blue/50 transition-colors border border-border/50 bg-crypto-darkgray/50">
+                    <Card className="h-full hover:border-crypto-blue/50 transition-colors border border-border/50 bg-crypto-darkgray/50 backdrop-blur-md hover:shadow-lg hover:shadow-crypto-blue/10 hover:-translate-y-1 transition-all duration-300">
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-3">
                           <h3 className="font-semibold text-lg truncate flex-1">{community.name}</h3>
@@ -182,25 +189,34 @@ const CommunityList: React.FC = () => {
                           {community.description || 'No description provided'}
                         </p>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">
-                            {community.reach.toLocaleString()} members
+                          <span className="text-sm text-muted-foreground flex items-center">
+                            <Users className="h-3 w-3 mr-1" /> {community.reach.toLocaleString()}
                           </span>
                           <span className="font-medium text-crypto-green">
                             ${community.price_per_announcement}
                           </span>
                         </div>
+                        <Badge variant="outline" className={`mt-3 ${
+                          community.approval_status === 'APPROVED' 
+                            ? 'bg-crypto-green/10 text-crypto-green border-crypto-green/20'
+                            : community.approval_status === 'PENDING'
+                            ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                            : 'bg-red-500/10 text-red-500 border-red-500/20'
+                        }`}>
+                          {community.approval_status}
+                        </Badge>
                       </CardContent>
                     </Card>
                   </Link>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
+              <div className="text-center py-8 glassmorphism rounded-lg">
                 <p className="text-muted-foreground mb-4">
                   {searchQuery ? 'No communities found matching your search.' : 'You haven\'t created any communities yet.'}
                 </p>
                 <Link to="/communities/create">
-                  <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90">
+                  <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90 shadow-lg shadow-crypto-green/20">
                     <Plus className="mr-2 h-4 w-4" /> Create Community
                   </Button>
                 </Link>
