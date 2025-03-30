@@ -14,7 +14,7 @@ export const validateAnnouncementWithAI = async (
   content: string
 ): Promise<ValidationResult> => {
   try {
-    // Call OpenAI validation edge function
+    // Call Gemini validation edge function
     const { data, error } = await supabase.functions.invoke("validate-announcement", {
       body: { title, content },
     });
@@ -43,4 +43,46 @@ export const serializeValidationResult = (result: ValidationResult): Json => {
     issues: result.issues,
     feedback: result.feedback
   } as unknown as Json;
+}
+
+export const getSuggestions = (validationResult: ValidationResult): string[] => {
+  const suggestions: string[] = [];
+  
+  // Extract suggestions from the feedback
+  if (validationResult.feedback) {
+    // Split feedback by sentences and filter for actionable suggestions
+    const sentences = validationResult.feedback.split('.');
+    sentences.forEach(sentence => {
+      const trimmed = sentence.trim();
+      if (
+        trimmed.includes('suggest') || 
+        trimmed.includes('consider') || 
+        trimmed.includes('try') ||
+        trimmed.includes('add') ||
+        trimmed.includes('improve')
+      ) {
+        suggestions.push(trimmed);
+      }
+    });
+  }
+  
+  // Add general suggestions based on score
+  if (validationResult.score < 0.7 && validationResult.issues.length > 0) {
+    suggestions.push("Address the issues mentioned above to improve your announcement");
+  }
+  
+  // If no specific suggestions were found, add generic ones
+  if (suggestions.length === 0) {
+    if (validationResult.isValid) {
+      suggestions.push("Your announcement is good to go, but you can always refine the messaging");
+      suggestions.push("Consider adding more specific details about benefits or features");
+      suggestions.push("Make sure your call-to-action is clear and compelling");
+    } else {
+      validationResult.issues.forEach(issue => {
+        suggestions.push(`Fix issue: ${issue}`);
+      });
+    }
+  }
+  
+  return suggestions;
 }

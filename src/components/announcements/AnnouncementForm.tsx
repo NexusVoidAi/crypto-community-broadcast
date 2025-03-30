@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,13 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { validateAnnouncementWithAI, serializeValidationResult } from '@/services/validation';
+import { 
+  validateAnnouncementWithAI, 
+  serializeValidationResult, 
+  getSuggestions 
+} from '@/services/validation';
+import SuggestionsList from './SuggestionsList';
+import CopperXPayment from '../payments/CopperXPayment';
 
 type ValidationResult = {
   isValid: boolean;
@@ -57,6 +64,33 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
   const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
   const [announcementId, setAnnouncementId] = useState<string | null>(null);
   const [loadingCommunities, setLoadingCommunities] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [platformFee, setPlatformFee] = useState<number>(1);
+  const [showCryptoPayment, setShowCryptoPayment] = useState(false);
+
+  useEffect(() => {
+    // Fetch platform fee
+    const fetchPlatformFee = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('platform_settings')
+          .select('platform_fee')
+          .maybeSingle();
+          
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        if (data) {
+          setPlatformFee(data.platform_fee);
+        }
+      } catch (error: any) {
+        console.error("Error fetching platform fee:", error);
+        // Use default fee if there's an error
+      }
+    };
+    
+    fetchPlatformFee();
+  }, []);
 
   useEffect(() => {
     const fetchCommunities = async () => {
@@ -131,7 +165,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
         announcement = data;
       }
       
-      // Call OpenAI validation service
+      // Call Gemini validation service
       const validationResult = await validateAnnouncementWithAI(title, content);
       
       // Update announcement with validation result - serialize to ensure it's JSON compatible
@@ -147,9 +181,13 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
       
       setValidationResult(validationResult);
       
+      // Generate suggestions from validation result
+      const suggestionList = getSuggestions(validationResult);
+      setSuggestions(suggestionList);
+      setShowSuggestions(true);
+      
       if (validationResult.isValid) {
         toast.success('Announcement validated successfully!');
-        setStep(2);
       } else {
         toast.error('Announcement failed validation checks');
       }
@@ -207,29 +245,22 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
         
       if (linkError) throw linkError;
       
-      // Get platform fee from settings
-      const { data: settings } = await supabase
-        .from('platform_settings')
-        .select('platform_fee')
-        .single();
-      
-      const platformFee = settings?.platform_fee || 1;
-      
       // Calculate total with platform fee
       const communityTotal = calculateTotalCost();
       const totalWithFee = communityTotal + platformFee;
       
       // Create a payment record
-      const { error: paymentError } = await supabase
+      const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
           amount: totalWithFee,
           currency: 'USDT',
           user_id: user?.id,
           announcement_id: announcementId,
-          status: 'PENDING',
-          platform_fee: platformFee
-        });
+          status: 'PENDING'
+        })
+        .select()
+        .single();
         
       if (paymentError) throw paymentError;
       
@@ -241,6 +272,41 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
       toast.error(`Error preparing preview: ${error.message}`);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCryptoPayment = () => {
+    setShowCryptoPayment(true);
+  };
+
+  const handlePaymentSuccess = async (txHash: string) => {
+    try {
+      // Update the payment status
+      const { error: paymentError } = await supabase
+        .from('payments')
+        .update({
+          status: 'PAID',
+          transaction_hash: txHash
+        })
+        .eq('announcement_id', announcementId);
+        
+      if (paymentError) throw paymentError;
+      
+      // Update the announcement status
+      const { error: announcementError } = await supabase
+        .from('announcements')
+        .update({
+          status: 'PUBLISHED',
+          payment_status: 'PAID'
+        })
+        .eq('id', announcementId);
+        
+      if (announcementError) throw announcementError;
+      
+      toast.success('Payment successful! Your announcement is published.');
+      navigate('/');
+    } catch (error: any) {
+      toast.error(`Error updating payment status: ${error.message}`);
     }
   };
 
@@ -310,7 +376,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
               </div>
             </div>
             
-            {validationResult && (
+            {validationResult && !showSuggestions && (
               <div className={cn(
                 "mt-6 p-4 rounded-md",
                 validationResult.isValid 
@@ -356,138 +422,187 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
               </div>
             )}
             
-            <div className="mt-6 flex justify-end">
-              <Button
-                onClick={handleValidate}
-                disabled={isLoading || !title.trim() || !content.trim()}
-                className="bg-crypto-blue hover:bg-crypto-blue/90"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Validating
-                  </>
-                ) : (
-                  <>
-                    Validate & Continue
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </div>
-          </>
-        );
-      case 2:
-        return (
-          <div className="space-y-6">
-            <div className="rounded-md border border-border p-4 bg-crypto-darkgray">
-              <h3 className="text-lg font-medium mb-2">Your Announcement</h3>
-              <div className="space-y-2">
-                <p className="font-medium">{title}</p>
-                <p className="text-sm text-muted-foreground">{content}</p>
-                {(ctaText && ctaUrl) && (
-                  <Button variant="outline" size="sm" className="mt-2">
-                    {ctaText}
-                  </Button>
-                )}
-              </div>
-            </div>
+            {showSuggestions && validationResult && (
+              <SuggestionsList 
+                suggestions={suggestions}
+                isValid={validationResult.isValid}
+                onEdit={() => setShowSuggestions(false)}
+                onContinue={() => {
+                  setShowSuggestions(false);
+                  setStep(2);
+                }}
+              />
+            )}
             
-            <div>
-              <h3 className="text-lg font-medium mb-4">Select Communities</h3>
-              
-              {loadingCommunities ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : communities.length > 0 ? (
-                <>
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                    {communities.map((community) => (
-                      <Card 
-                        key={community.id} 
-                        className={cn(
-                          "border cursor-pointer transition-colors",
-                          selectedCommunities.includes(community.id)
-                            ? "border-crypto-green/70 bg-crypto-green/5"
-                            : "border-border/50 bg-crypto-darkgray/50"
-                        )}
-                        onClick={() => toggleCommunitySelection(community.id)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h4 className="font-medium flex items-center">
-                                {selectedCommunities.includes(community.id) && (
-                                  <Check className="h-4 w-4 text-crypto-green mr-2" />
-                                )}
-                                {community.name}
-                              </h4>
-                              <div className="flex items-center mt-1">
-                                <Badge variant="outline" className="mr-2">
-                                  {community.platform}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  {community.reach?.toLocaleString() || 0} members
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-medium text-crypto-green">${community.price_per_announcement}</p>
-                              <button className="text-xs text-crypto-blue hover:underline mt-1">
-                                {selectedCommunities.includes(community.id) ? 'Deselect' : 'Select'}
-                              </button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                  
-                  {selectedCommunities.length > 0 && (
-                    <div className="mt-6 p-4 border border-border rounded-md bg-crypto-darkgray/70">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">Total Cost</p>
-                          <p className="text-sm text-muted-foreground">{selectedCommunities.length} communities selected</p>
-                        </div>
-                        <p className="text-xl font-bold text-crypto-green">${calculateTotalCost().toFixed(2)}</p>
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">No communities available</p>
-                </div>
-              )}
-              
-              <div className="mt-6 flex justify-between">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setStep(1)}
-                >
-                  Back to Edit
-                </Button>
-                <Button 
-                  onClick={handlePreviewAndPay}
+            {!showSuggestions && (
+              <div className="mt-6 flex justify-end">
+                <Button
+                  onClick={handleValidate}
+                  disabled={isLoading || !title.trim() || !content.trim()}
                   className="bg-crypto-blue hover:bg-crypto-blue/90"
-                  disabled={selectedCommunities.length === 0 || isLoading}
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing
+                      Validating
                     </>
                   ) : (
                     <>
-                      Preview & Pay
+                      Validate & Continue
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </>
                   )}
                 </Button>
               </div>
-            </div>
+            )}
+          </>
+        );
+      case 2:
+        return (
+          <div className="space-y-6">
+            {showCryptoPayment ? (
+              <CopperXPayment
+                amount={calculateTotalCost() + platformFee}
+                currency="USDT"
+                onSuccess={handlePaymentSuccess}
+                onCancel={() => setShowCryptoPayment(false)}
+              />
+            ) : (
+              <>
+                <div className="rounded-md border border-border p-4 bg-crypto-darkgray">
+                  <h3 className="text-lg font-medium mb-2">Your Announcement</h3>
+                  <div className="space-y-2">
+                    <p className="font-medium">{title}</p>
+                    <p className="text-sm text-muted-foreground">{content}</p>
+                    {(ctaText && ctaUrl) && (
+                      <Button variant="outline" size="sm" className="mt-2">
+                        {ctaText}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Select Communities</h3>
+                  
+                  {loadingCommunities ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : communities.length > 0 ? (
+                    <>
+                      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                        {communities.map((community) => (
+                          <Card 
+                            key={community.id} 
+                            className={cn(
+                              "border cursor-pointer transition-colors",
+                              selectedCommunities.includes(community.id)
+                                ? "border-crypto-green/70 bg-crypto-green/5"
+                                : "border-border/50 bg-crypto-darkgray/50"
+                            )}
+                            onClick={() => toggleCommunitySelection(community.id)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <h4 className="font-medium flex items-center">
+                                    {selectedCommunities.includes(community.id) && (
+                                      <Check className="h-4 w-4 text-crypto-green mr-2" />
+                                    )}
+                                    {community.name}
+                                  </h4>
+                                  <div className="flex items-center mt-1">
+                                    <Badge variant="outline" className="mr-2">
+                                      {community.platform}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      {community.reach?.toLocaleString() || 0} members
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-medium text-crypto-green">${community.price_per_announcement}</p>
+                                  <button className="text-xs text-crypto-blue hover:underline mt-1">
+                                    {selectedCommunities.includes(community.id) ? 'Deselect' : 'Select'}
+                                  </button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                      
+                      {selectedCommunities.length > 0 && (
+                        <div className="mt-6 p-4 border border-border rounded-md bg-crypto-darkgray/70">
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">Selected Communities:</span>
+                              <span>{selectedCommunities.length}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">Communities Cost:</span>
+                              <span>${calculateTotalCost().toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">Platform Fee:</span>
+                              <span>${platformFee.toFixed(2)}</span>
+                            </div>
+                            <Separator className="my-2" />
+                            <div className="flex justify-between items-center font-bold">
+                              <span>Total:</span>
+                              <span className="text-crypto-green">${(calculateTotalCost() + platformFee).toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground mb-4">No communities available</p>
+                    </div>
+                  )}
+                  
+                  <div className="mt-6 flex justify-between">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setStep(1)}
+                    >
+                      Back to Edit
+                    </Button>
+                    
+                    <div className="space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={handleCryptoPayment}
+                        disabled={selectedCommunities.length === 0 || isLoading}
+                        className="border-crypto-green/50 text-crypto-green"
+                      >
+                        Pay with CopperX
+                      </Button>
+                      
+                      <Button 
+                        onClick={handlePreviewAndPay}
+                        className="bg-crypto-blue hover:bg-crypto-blue/90"
+                        disabled={selectedCommunities.length === 0 || isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing
+                          </>
+                        ) : (
+                          <>
+                            Preview & Pay
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         );
       default:

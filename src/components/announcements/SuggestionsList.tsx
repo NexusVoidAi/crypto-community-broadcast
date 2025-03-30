@@ -1,0 +1,70 @@
+
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Lightbulb, ArrowRight, Edit } from 'lucide-react';
+
+interface SuggestionsListProps {
+  suggestions: string[];
+  onEdit: () => void;
+  onContinue: () => void;
+  isValid: boolean;
+}
+
+const SuggestionsList: React.FC<SuggestionsListProps> = ({
+  suggestions,
+  onEdit,
+  onContinue,
+  isValid
+}) => {
+  return (
+    <Card className="border border-border/50 bg-crypto-darkgray/50 mt-6">
+      <CardContent className="pt-6">
+        <div className="flex items-start mb-4">
+          <Lightbulb className="h-5 w-5 text-yellow-400 mr-3 mt-0.5" />
+          <div>
+            <h3 className="font-medium text-base mb-1">AI Suggestions</h3>
+            <p className="text-sm text-muted-foreground">
+              {isValid 
+                ? "Your announcement passes our guidelines. Here are some suggestions to make it even better:" 
+                : "Please review these suggestions to improve your announcement:"}
+            </p>
+          </div>
+        </div>
+        
+        <ul className="space-y-2 mb-6 pl-9">
+          {suggestions.map((suggestion, index) => (
+            <li key={index} className="text-sm list-disc text-muted-foreground">
+              {suggestion}
+            </li>
+          ))}
+        </ul>
+        
+        <div className="flex justify-between">
+          <Button 
+            variant="outline" 
+            onClick={onEdit}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Announcement
+          </Button>
+          
+          <Button 
+            className="bg-crypto-blue hover:bg-crypto-blue/90"
+            onClick={onContinue}
+            disabled={!isValid}
+          >
+            {isValid ? (
+              <>
+                Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </>
+            ) : "Fix Issues to Continue"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default SuggestionsList;
