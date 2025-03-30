@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Bell, Check, AlertTriangle, Info, Ban, ArrowRight } from 'lucide-react';
 
 interface ActivityFeedProps {
-  activities: ActivityItem[];
+  activity: ActivityItem[];
 }
 
 const getStatusIcon = (status: string) => {
@@ -53,7 +52,7 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities }) => {
+const ActivityFeed: React.FC<ActivityFeedProps> = ({ activity }) => {
   return (
     <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
       <CardHeader className="pb-2">
@@ -64,23 +63,23 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities }) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {activities.length > 0 ? (
-            activities.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-4 pb-4 last:pb-0 border-b border-border/30 last:border-0">
+          {activity.length > 0 ? (
+            activity.map((item) => (
+              <div key={item.id} className="flex items-start gap-4 pb-4 last:pb-0 border-b border-border/30 last:border-0">
                 <div className="p-2 rounded-full bg-crypto-dark/60">
-                  {getTypeIcon(activity.type)}
+                  {getTypeIcon(item.type)}
                 </div>
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium">{activity.title}</p>
-                    <Badge variant="outline" className={`${getStatusColor(activity.status)}`}>
-                      {activity.status}
+                    <p className="font-medium">{item.title}</p>
+                    <Badge variant="outline" className={`${getStatusColor(item.status)}`}>
+                      {item.status}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{activity.description}</p>
+                  <p className="text-sm text-muted-foreground">{item.description}</p>
                   <div className="flex items-center justify-between pt-1">
                     <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
                     </p>
                     <button className="text-xs text-crypto-blue hover:underline flex items-center">
                       View Details <ArrowRight className="ml-1 h-3 w-3" />

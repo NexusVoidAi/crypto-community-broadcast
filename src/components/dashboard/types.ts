@@ -22,6 +22,11 @@ export interface StatCardData {
   changeIsPositive?: boolean;
 }
 
+export interface TrendProps {
+  value: string | number;
+  positive: boolean;
+}
+
 export interface ActivityItem {
   id: string;
   type: 'announcement' | 'payment' | 'community';
