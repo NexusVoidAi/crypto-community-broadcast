@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -23,77 +23,77 @@ serve(async (req) => {
     }
 
     try {
-      // OpenAI validation
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      // Gemini validation
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${OPENAI_API_KEY}`
+          "x-goog-api-key": GEMINI_API_KEY
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: `You are an AI validator for crypto announcements. Evaluate if the announcement follows community guidelines:
-              1. No hate speech, discrimination, or offensive content
-              2. No misleading claims or scams
-              3. No explicit content
-              4. No personal information
-              5. Relevant to crypto/blockchain topics
-              
-              Respond with a JSON object containing:
-              1. "isValid": boolean (true if passes all guidelines)
-              2. "score": number between 0 and 1 indicating confidence
-              3. "issues": array of strings with specific issues found (empty if none)
-              4. "feedback": constructive feedback if issues found`
-            },
+          contents: [
             {
               role: "user",
-              content: `Announcement Title: ${title}\n\nAnnouncement Content: ${content}`
+              parts: [
+                {
+                  text: `You are an AI validator for crypto announcements. Evaluate if the following announcement follows community guidelines:
+                  1. No hate speech, discrimination, or offensive content
+                  2. No misleading claims or scams
+                  3. No explicit content
+                  4. No personal information
+                  5. Relevant to crypto/blockchain topics
+                  
+                  Announcement Title: ${title}
+                  Announcement Content: ${content}
+                  
+                  Respond with a JSON object containing:
+                  1. "isValid": boolean (true if passes all guidelines)
+                  2. "score": number between 0 and 1 indicating confidence
+                  3. "issues": array of strings with specific issues found (empty if none)
+                  4. "feedback": constructive feedback if issues found`
+                }
+              ]
             }
-          ]
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            topP: 0.8,
+            topK: 40,
+            maxOutputTokens: 1024,
+            responseMimeType: "application/json"
+          }
         })
       });
 
-      const result = await response.json();
+      const geminiResult = await response.json();
+      console.log("Gemini API response:", JSON.stringify(geminiResult, null, 2));
       
-      // Check for API quota error
-      if (result.error && result.error.type === "insufficient_quota") {
-        console.error("OpenAI API quota exceeded:", result.error.message);
-        
-        // Return a fallback validation with a clear message about the API limitation
-        return new Response(JSON.stringify({
-          isValid: true,  // Allow the content to pass in fallback mode
-          score: 0.9,
-          issues: [],
-          feedback: "Validation service is currently experiencing high demand. Your announcement has been automatically approved."
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
+      // Check for API errors
+      if (geminiResult.error) {
+        console.error("Gemini API error:", geminiResult.error);
+        throw new Error("Gemini API error: " + geminiResult.error.message);
       }
       
-      // Check if we have a valid response with choices
-      if (!result || !result.choices || !result.choices[0] || !result.choices[0].message) {
-        console.error("Invalid response from OpenAI:", result);
-        
-        // Use a basic fallback validation
-        return new Response(JSON.stringify({
-          isValid: true,  // Allow the content to pass in fallback mode
-          score: 0.8,
-          issues: [],
-          feedback: "Basic validation passed. Full validation service currently unavailable."
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
+      // Extract the text content from the Gemini response
+      if (!geminiResult.candidates || geminiResult.candidates.length === 0 || !geminiResult.candidates[0].content) {
+        throw new Error("Invalid response format from Gemini API");
       }
       
+      const textResponse = geminiResult.candidates[0].content.parts[0].text;
+      
+      // Parse the JSON response from the text
       let validationResult;
       try {
-        validationResult = JSON.parse(result.choices[0].message.content);
+        // Try to extract JSON from the text (in case it's wrapped in markdown code blocks)
+        const jsonMatch = textResponse.match(/```json\n([\s\S]*?)\n```/) || 
+                          textResponse.match(/```\n([\s\S]*?)\n```/) ||
+                          textResponse.match(/{[\s\S]*?}/);
+                          
+        const jsonText = jsonMatch ? jsonMatch[0].replace(/```json\n|```\n|```/g, '') : textResponse;
+        validationResult = JSON.parse(jsonText);
       } catch (parseError) {
-        console.error("Error parsing OpenAI response:", parseError);
-        console.log("Raw content:", result.choices[0].message.content);
+        console.error("Error parsing Gemini response:", parseError);
+        console.log("Raw content:", textResponse);
         
         // Provide a fallback response if parsing fails
         validationResult = {
@@ -107,10 +107,10 @@ serve(async (req) => {
       return new Response(JSON.stringify(validationResult), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
-    } catch (openAiError) {
-      console.error("Error calling OpenAI API:", openAiError);
+    } catch (geminiError) {
+      console.error("Error calling Gemini API:", geminiError);
       
-      // Fallback to basic validation if OpenAI call fails
+      // Fallback to basic validation if Gemini call fails
       const basicValidation = {
         isValid: true,  // Allow the content to pass in fallback mode
         score: 0.75,
