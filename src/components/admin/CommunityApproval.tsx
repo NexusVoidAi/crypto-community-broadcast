@@ -30,18 +30,48 @@ const CommunityApproval = () => {
   const fetchPendingCommunities = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
+      
+      // First fetch the communities
+      const { data: communitiesData, error: communitiesError } = await supabase
         .from('communities')
-        .select(`
-          *,
-          owner:profiles!communities_owner_id_fkey(name)
-        `)
+        .select('*')
         .eq('approval_status', 'PENDING')
         .order('created_at', { ascending: false });
         
-      if (error) throw error;
+      if (communitiesError) throw communitiesError;
       
-      setCommunities(data || []);
+      if (!communitiesData || communitiesData.length === 0) {
+        setCommunities([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Now fetch profiles for these communities
+      const ownerIds = communitiesData.map(c => c.owner_id);
+      const { data: ownersData, error: ownersError } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', ownerIds);
+        
+      if (ownersError) throw ownersError;
+      
+      // Create a profiles map for easy lookup
+      const ownersMap = new Map();
+      if (ownersData) {
+        ownersData.forEach(owner => {
+          ownersMap.set(owner.id, owner);
+        });
+      }
+      
+      // Combine all data
+      const enhancedCommunities = communitiesData.map(community => {
+        return {
+          ...community,
+          owner: ownersMap.get(community.owner_id) || { name: 'Unknown' }
+        };
+      });
+      
+      setCommunities(enhancedCommunities);
     } catch (error: any) {
       toast.error(`Error loading communities: ${error.message}`);
     } finally {

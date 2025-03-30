@@ -24,22 +24,71 @@ const AnnouncementApproval = () => {
       setIsLoading(true);
       setError(null);
       
-      // We need to modify this query to correctly join profiles
-      const { data, error } = await supabase
+      // First fetch the announcements
+      const { data: announcementsData, error: announcementsError } = await supabase
         .from('announcements')
-        .select(`
-          *,
-          profiles:user_id(name),
-          announcement_communities(
-            community:communities(name, platform)
-          )
-        `)
+        .select('*')
         .eq('status', 'PENDING_VALIDATION')
         .order('created_at', { ascending: false });
         
-      if (error) throw error;
+      if (announcementsError) throw announcementsError;
       
-      setAnnouncements(data || []);
+      if (!announcementsData || announcementsData.length === 0) {
+        setAnnouncements([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Now fetch the profiles for these announcements
+      const userIds = announcementsData.map(a => a.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', userIds);
+        
+      if (profilesError) throw profilesError;
+      
+      // Create a profiles map for easy lookup
+      const profilesMap = new Map();
+      if (profilesData) {
+        profilesData.forEach(profile => {
+          profilesMap.set(profile.id, profile);
+        });
+      }
+      
+      // Fetch announcement communities
+      const announcementIds = announcementsData.map(a => a.id);
+      const { data: communitiesData, error: communitiesError } = await supabase
+        .from('announcement_communities')
+        .select(`
+          announcement_id,
+          community:communities(id, name, platform)
+        `)
+        .in('announcement_id', announcementIds);
+        
+      if (communitiesError) throw communitiesError;
+      
+      // Group communities by announcement_id
+      const communitiesMap = new Map();
+      if (communitiesData) {
+        communitiesData.forEach(item => {
+          if (!communitiesMap.has(item.announcement_id)) {
+            communitiesMap.set(item.announcement_id, []);
+          }
+          communitiesMap.get(item.announcement_id).push(item);
+        });
+      }
+      
+      // Combine all data
+      const enhancedAnnouncements = announcementsData.map(announcement => {
+        return {
+          ...announcement,
+          profiles: profilesMap.get(announcement.user_id) || { name: 'Unknown' },
+          announcement_communities: communitiesMap.get(announcement.id) || []
+        };
+      });
+      
+      setAnnouncements(enhancedAnnouncements);
     } catch (error: any) {
       console.error("Error fetching announcements:", error);
       setError(`Error loading announcements: ${error.message}`);

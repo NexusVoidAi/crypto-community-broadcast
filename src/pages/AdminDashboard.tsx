@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
@@ -111,9 +110,7 @@ const AdminDashboard = () => {
 
       if (totalCommunitiesError) throw totalCommunitiesError;
 
-      // Fetch recent payments - Fix the relationship issue by using a different query approach
-      // Instead of trying to join payments and profiles directly, we'll fetch payments first
-      // and then use the user_id to get the profile information
+      // Fetch recent payments (separate from profiles)
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
         .select('*')
