@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/NotFound";
+import Web3Provider from "./contexts/Web3Provider";
 
 // Dashboard
 import Dashboard from "./pages/Dashboard";
@@ -25,6 +26,9 @@ import CommunityCreate from "./pages/communities/CommunityCreate";
 
 // Profile page
 import Profile from "./pages/Profile";
+
+// Payment pages
+import PaymentSuccess from "./pages/payment/PaymentSuccess";
 
 // Admin Dashboard
 import AdminDashboard from "./pages/AdminDashboard";
@@ -74,6 +78,9 @@ const AppRoutes = () => (
     <Route path="/communities/create" element={<ProtectedRoute><CommunityCreate /></ProtectedRoute>} />
     <Route path="/communities/:id" element={<ProtectedRoute><CommunityDetail /></ProtectedRoute>} />
     
+    {/* Payment Routes */}
+    <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
+    
     {/* Admin Routes */}
     <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
     
@@ -89,13 +96,15 @@ const AppRoutes = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
+      <Web3Provider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </BrowserRouter>
+      </Web3Provider>
     </TooltipProvider>
   </QueryClientProvider>
 );

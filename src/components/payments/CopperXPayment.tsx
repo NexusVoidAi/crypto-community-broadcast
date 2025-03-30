@@ -4,9 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Loader2, CreditCard, Check, QrCode, Copy } from 'lucide-react';
+import { Loader2, CreditCard, Check, QrCode, Copy, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount } from 'wagmi';
+import { useCopperX } from '@/hooks/useCopperX';
 
 interface CopperXPaymentProps {
   amount: number;
@@ -28,9 +31,57 @@ const CopperXPayment: React.FC<CopperXPaymentProps> = ({
   const [showQrCode, setShowQrCode] = useState(false);
   const [walletAddress] = useState(`0xc0pp3rx${Math.random().toString(16).substring(2, 18)}`);
   
+  const { address, isConnected } = useAccount();
+  const { createCheckoutSession, redirectToCheckout, isLoading: isCheckoutLoading } = useCopperX();
+  
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Address copied to clipboard');
+  };
+  
+  const handleCopperXCheckout = async () => {
+    if (!isConnected) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // Create checkout session
+      const successUrl = `${window.location.origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&announcement_id=${announcementId || ''}`;
+      
+      const session = await createCheckoutSession({
+        amount: amount,
+        currency: currency,
+        productName: "Announcement Campaign",
+        productDescription: "Payment for crypto announcement distribution",
+        successUrl: successUrl
+      });
+      
+      if (session) {
+        // Store checkout session details in database if needed
+        if (announcementId) {
+          const { error } = await supabase
+            .from('payments')
+            .update({
+              payment_gateway: 'COPPERX',
+              payment_session_id: session.id,
+              status: 'PENDING'
+            })
+            .eq('announcement_id', announcementId);
+            
+          if (error) throw error;
+        }
+        
+        // Redirect to checkout
+        redirectToCheckout(session);
+      }
+    } catch (error: any) {
+      toast.error(`Payment failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handlePayment = async () => {
@@ -143,28 +194,101 @@ const CopperXPayment: React.FC<CopperXPaymentProps> = ({
               </div>
             </div>
             
-            <Button
-              className="w-full bg-crypto-blue hover:bg-crypto-blue/90"
-              onClick={() => setShowQrCode(true)}
-            >
-              Pay with QR code
-            </Button>
+            <div className="bg-crypto-darkgray/70 p-4 rounded-md border border-border/50">
+              <h3 className="text-sm font-medium mb-3">Connect your wallet</h3>
+              <ConnectButton.Custom>
+                {({
+                  account,
+                  chain,
+                  openAccountModal,
+                  openChainModal,
+                  openConnectModal,
+                  mounted,
+                }) => {
+                  return (
+                    <div
+                      {...(!mounted && {
+                        'aria-hidden': true,
+                        'style': {
+                          opacity: 0,
+                          pointerEvents: 'none',
+                          userSelect: 'none',
+                        },
+                      })}
+                    >
+                      {(() => {
+                        if (!mounted || !account || !chain) {
+                          return (
+                            <Button
+                              onClick={openConnectModal}
+                              className="w-full bg-crypto-blue hover:bg-crypto-blue/90"
+                            >
+                              Connect Wallet
+                            </Button>
+                          );
+                        }
+
+                        if (chain.unsupported) {
+                          return (
+                            <Button 
+                              onClick={openChainModal}
+                              variant="destructive"
+                              className="w-full"
+                            >
+                              Wrong network
+                            </Button>
+                          );
+                        }
+
+                        return (
+                          <div className="flex flex-col space-y-2">
+                            <div className="flex items-center justify-between rounded-md bg-crypto-dark p-2 px-3">
+                              <div className="flex items-center space-x-2">
+                                <div className="text-sm font-medium">
+                                  {account.displayName}
+                                </div>
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={openAccountModal}
+                                className="text-xs"
+                              >
+                                Change
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  );
+                }}
+              </ConnectButton.Custom>
+            </div>
             
             <Button
               className="w-full bg-crypto-green hover:bg-crypto-green/90"
-              disabled={isLoading}
-              onClick={handlePayment}
+              disabled={isLoading || isCheckoutLoading || !isConnected}
+              onClick={handleCopperXCheckout}
             >
-              {isLoading ? (
+              {isLoading || isCheckoutLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Processing
                 </>
               ) : (
                 <>
-                  Connect Wallet
+                  Pay with CopperX <ExternalLink className="ml-2 h-4 w-4" />
                 </>
               )}
+            </Button>
+            
+            <Button
+              className="w-full bg-crypto-blue hover:bg-crypto-blue/90"
+              disabled={isLoading}
+              onClick={handlePayment}
+            >
+              Pay with Demo Mode
             </Button>
             
             <Button 

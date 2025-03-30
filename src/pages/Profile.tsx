@@ -9,11 +9,11 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 const Profile: React.FC = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, walletAddress, isWalletConnected } = useAuth();
   const [name, setName] = useState(profile?.name || '');
-  const [walletAddress, setWalletAddress] = useState(profile?.wallet_address || '');
   const [isLoading, setIsLoading] = useState(false);
 
   const getInitials = () => {
@@ -35,7 +35,6 @@ const Profile: React.FC = () => {
         .from('profiles')
         .update({
           name,
-          wallet_address: walletAddress,
         })
         .eq('id', user?.id);
 
@@ -46,20 +45,6 @@ const Profile: React.FC = () => {
       toast.success('Profile updated successfully');
     } catch (error: any) {
       toast.error(`Error updating profile: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const connectWallet = async () => {
-    // Mock wallet connection
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setWalletAddress('0x1234...5678');
-      toast.success('Wallet connected successfully');
-    } catch (error) {
-      toast.error('Failed to connect wallet');
     } finally {
       setIsLoading(false);
     }
@@ -119,23 +104,92 @@ const Profile: React.FC = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="wallet">Wallet Address</Label>
-                  <div className="flex space-x-2">
-                    <Input
-                      id="wallet"
-                      value={walletAddress}
-                      onChange={(e) => setWalletAddress(e.target.value)}
-                      placeholder="Connect your crypto wallet"
-                      className="bg-crypto-dark border-border/50 flex-1"
-                    />
-                    <Button 
-                      type="button"
-                      variant="outline"
-                      onClick={connectWallet}
-                      disabled={isLoading}
-                    >
-                      Connect
-                    </Button>
+                  <Label htmlFor="wallet">Wallet</Label>
+                  <div className="bg-crypto-dark border-border/50 rounded-md p-4">
+                    <ConnectButton.Custom>
+                      {({
+                        account,
+                        chain,
+                        openAccountModal,
+                        openChainModal,
+                        openConnectModal,
+                        mounted,
+                      }) => {
+                        return (
+                          <div
+                            {...(!mounted && {
+                              'aria-hidden': true,
+                              'style': {
+                                opacity: 0,
+                                pointerEvents: 'none',
+                                userSelect: 'none',
+                              },
+                            })}
+                          >
+                            {(() => {
+                              if (!mounted || !account || !chain) {
+                                return (
+                                  <Button
+                                    onClick={openConnectModal}
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full"
+                                  >
+                                    Connect Wallet
+                                  </Button>
+                                );
+                              }
+
+                              if (chain.unsupported) {
+                                return (
+                                  <Button 
+                                    onClick={openChainModal}
+                                    type="button"
+                                    variant="destructive"
+                                    className="w-full"
+                                  >
+                                    Wrong network
+                                  </Button>
+                                );
+                              }
+
+                              return (
+                                <div className="flex flex-col space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-sm">
+                                      <p className="font-medium">
+                                        {account.displayName}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Connected to {chain.name}
+                                      </p>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={openChainModal}
+                                        type="button"
+                                      >
+                                        {chain.name}
+                                      </Button>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={openAccountModal}
+                                        type="button"
+                                      >
+                                        Account
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        );
+                      }}
+                    </ConnectButton.Custom>
                   </div>
                 </div>
                 

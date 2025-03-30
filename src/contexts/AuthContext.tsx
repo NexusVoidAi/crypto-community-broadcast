@@ -4,6 +4,8 @@ import { Session, User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useAccount, useDisconnect } from 'wagmi';
+import { useConnectModal } from '@rainbow-me/rainbowkit';
 
 interface AuthContextType {
   session: Session | null;
@@ -14,6 +16,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string, accountType: string) => Promise<void>;
   signOut: () => Promise<void>;
   connectWallet: () => Promise<void>;
+  walletAddress: string | undefined;
+  isWalletConnected: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,6 +28,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Rainbow Kit hook
+  const { address, isConnected } = useAccount();
+  const { openConnectModal } = useConnectModal();
+  const { disconnect } = useDisconnect();
 
   useEffect(() => {
     const setupAuth = async () => {
@@ -62,6 +71,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setupAuth();
   }, []);
+
+  // Update user profile when wallet is connected/disconnected
+  useEffect(() => {
+    const updateWalletInfo = async () => {
+      if (user && isConnected && address) {
+        try {
+          const { error } = await supabase
+            .from('profiles')
+            .update({ wallet_address: address })
+            .eq('id', user.id);
+            
+          if (error) {
+            console.error('Error updating wallet address:', error);
+          } else {
+            // Refresh the profile
+            await fetchProfile(user.id);
+            toast.success('Wallet connected successfully!');
+          }
+        } catch (error) {
+          console.error('Error updating wallet:', error);
+        }
+      }
+    };
+    
+    updateWalletInfo();
+  }, [user, isConnected, address]);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -135,6 +170,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       setIsLoading(true);
+      
+      // Disconnect wallet if connected
+      if (isConnected) {
+        disconnect();
+      }
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -154,11 +195,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const connectWallet = async () => {
     try {
       setIsLoading(true);
-      // In a real app, you would connect to MetaMask or WalletConnect here
-      // For now, we're just simulating the process
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success('Wallet connected successfully!');
-      navigate('/');
+      
+      if (openConnectModal) {
+        openConnectModal();
+      } else {
+        toast.error('Wallet connection is not available');
+      }
+      
     } catch (error: any) {
       toast.error(error.message || 'Failed to connect wallet');
     } finally {
@@ -177,6 +220,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signOut,
         connectWallet,
+        walletAddress: address,
+        isWalletConnected: isConnected
       }}
     >
       {children}
