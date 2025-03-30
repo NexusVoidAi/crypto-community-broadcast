@@ -4,16 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Check, MessageSquare, Zap, Bell, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-type ActivityItem = {
-  id: string;
-  type: 'announcement' | 'payment' | 'validation' | 'notification';
-  title: string;
-  description: string;
-  timestamp: string;
-  status?: 'success' | 'warning' | 'error' | 'info';
-  icon?: React.ReactNode;
-};
+import { ActivityItem } from './types';
 
 type ActivityFeedProps = {
   activities: ActivityItem[];
@@ -35,7 +26,7 @@ const getIcon = (type: ActivityItem['type'], status?: ActivityItem['status']) =>
   }
 };
 
-const getStatusClass = (status?: ActivityItem['status']) => {
+const getStatusClass = (status?: string) => {
   switch (status) {
     case 'success':
       return 'bg-crypto-green/20 text-crypto-green';
@@ -76,7 +67,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, className }) =>
                 <p className="text-sm font-medium">{activity.title}</p>
                 <p className="text-xs text-muted-foreground">{activity.description}</p>
               </div>
-              <div className="text-xs text-muted-foreground">{activity.timestamp}</div>
+              <div className="text-xs text-muted-foreground">{activity.timestamp || activity.time}</div>
             </div>
           ))}
         </div>

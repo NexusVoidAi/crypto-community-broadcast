@@ -3,24 +3,38 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { 
+  CheckCircle, 
+  XCircle, 
+  Loader2, 
+  Users, 
+  Send,
+  MessageSquare,
+  Hash,
+  BotMessageSquare
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const CommunityApproval = () => {
   const [communities, setCommunities] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [processingIds, setProcessingIds] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [checkingBot, setCheckingBot] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchPendingCommunities();
+  }, []);
 
   const fetchPendingCommunities = async () => {
     try {
       setIsLoading(true);
-      
       const { data, error } = await supabase
         .from('communities')
         .select(`
           *,
-          owner:profiles!owner_id(name)
+          owner:profiles!communities_owner_id_fkey(name)
         `)
         .eq('approval_status', 'PENDING')
         .order('created_at', { ascending: false });
@@ -28,173 +42,237 @@ const CommunityApproval = () => {
       if (error) throw error;
       
       setCommunities(data || []);
-    } catch (error) {
-      console.error("Error fetching communities:", error);
-      toast.error("Failed to load communities");
+    } catch (error: any) {
+      toast.error(`Error loading communities: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchPendingCommunities();
-  }, []);
+  const checkTelegramBot = async (community: any) => {
+    if (community.platform !== 'TELEGRAM' || !community.platform_id) {
+      toast.error("This community doesn't have a valid Telegram ID");
+      return false;
+    }
 
-  const handleApproveCommunity = async (communityId: string) => {
-    setProcessingIds(prev => [...prev, communityId]);
+    setCheckingBot(community.id);
     
     try {
-      // Call Telegram bot check function
-      const { data: botStatus, error: botError } = await supabase.functions.invoke("telegram-check-bot", {
-        body: { communityId }
-      });
+      // Get the bot token
+      const { data: settings, error: settingsError } = await supabase
+        .from('platform_settings')
+        .select('telegram_bot_token')
+        .single();
+        
+      if (settingsError) throw settingsError;
       
-      if (botError) throw botError;
-      
-      if (!botStatus?.botAdded) {
-        toast.warning("Bot is not added to the group yet. Please make sure the bot is added to the group before approving.");
-        setProcessingIds(prev => prev.filter(id => id !== communityId));
-        return;
+      if (!settings.telegram_bot_token) {
+        toast.error("Telegram bot token not configured");
+        return false;
       }
       
-      // Update community approval status
-      const { error } = await supabase
-        .from('communities')
-        .update({ approval_status: 'APPROVED' })
-        .eq('id', communityId);
-        
+      // Check if the bot is in the group
+      const { data, error } = await supabase.functions.invoke("telegram-check-bot", {
+        body: { 
+          token: settings.telegram_bot_token,
+          chat_id: community.platform_id
+        }
+      });
+      
       if (error) throw error;
       
-      // Refresh the list
-      fetchPendingCommunities();
-      toast.success("Community approved successfully");
-    } catch (error) {
-      console.error("Error approving community:", error);
-      toast.error("Failed to approve community");
+      if (data.success) {
+        toast.success("Bot is successfully added to the group");
+        return true;
+      } else {
+        toast.error(data.message || "Bot is not in the group");
+        return false;
+      }
+    } catch (error: any) {
+      console.error("Error checking bot:", error);
+      toast.error(`Failed to check bot status: ${error.message}`);
+      return false;
     } finally {
-      setProcessingIds(prev => prev.filter(id => id !== communityId));
+      setCheckingBot(null);
     }
   };
 
-  const handleRejectCommunity = async (communityId: string) => {
-    setProcessingIds(prev => [...prev, communityId]);
+  const handleApproval = async (communityId: string, approved: boolean) => {
+    const community = communities.find(c => c.id === communityId);
+    
+    if (approved && community.platform === 'TELEGRAM') {
+      const botAdded = await checkTelegramBot(community);
+      if (!botAdded) {
+        toast.error("Cannot approve community - bot is not added to the group");
+        return;
+      }
+    }
+    
+    setIsProcessing(communityId);
     
     try {
-      // Update community approval status
       const { error } = await supabase
         .from('communities')
-        .update({ approval_status: 'REJECTED' })
+        .update({
+          approval_status: approved ? 'APPROVED' : 'REJECTED'
+        })
         .eq('id', communityId);
         
       if (error) throw error;
       
-      // Refresh the list
-      fetchPendingCommunities();
-      toast.success("Community rejected");
-    } catch (error) {
-      console.error("Error rejecting community:", error);
-      toast.error("Failed to reject community");
+      toast.success(`Community ${approved ? 'approved' : 'rejected'} successfully`);
+      
+      // Remove the processed community from the list
+      setCommunities(prevCommunities => 
+        prevCommunities.filter(c => c.id !== communityId)
+      );
+    } catch (error: any) {
+      toast.error(`Error processing community: ${error.message}`);
     } finally {
-      setProcessingIds(prev => prev.filter(id => id !== communityId));
+      setIsProcessing(null);
     }
   };
 
+  const getPlatformIcon = (platform: string) => {
+    switch (platform) {
+      case 'TELEGRAM':
+        return <Send className="h-5 w-5 text-blue-400" />;
+      case 'DISCORD':
+        return <Hash className="h-5 w-5 text-indigo-400" />;
+      case 'WHATSAPP':
+        return <MessageSquare className="h-5 w-5 text-green-400" />;
+      default:
+        return <MessageSquare className="h-5 w-5" />;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[300px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-      <CardHeader>
-        <CardTitle>Pending Communities</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : communities.length > 0 ? (
-          <div className="space-y-4">
-            {communities.map((community) => (
-              <Card key={community.id} className="border border-border/50 bg-crypto-dark/70">
-                <CardContent className="p-4">
-                  <div className="flex flex-col space-y-3">
-                    <div className="flex justify-between items-start">
+    <div className="space-y-6">
+      <Card className="border border-border/50 bg-crypto-darkgray/50">
+        <CardHeader>
+          <CardTitle className="text-xl">Pending Communities</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {communities.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No pending communities to review</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {communities.map((community) => (
+                <div 
+                  key={community.id} 
+                  className="border border-border rounded-md p-4 bg-crypto-dark/50"
+                >
+                  <div className="flex flex-col md:flex-row justify-between mb-2">
+                    <div className="flex items-center">
+                      <div className="mr-3">
+                        {getPlatformIcon(community.platform)}
+                      </div>
                       <div>
-                        <h3 className="text-lg font-bold">{community.name}</h3>
-                        <div className="flex items-center mt-1">
-                          <Badge variant="outline" className="mr-2">
-                            {community.platform}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {community.reach?.toLocaleString() || 0} members
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Owner: {community.owner?.name || 'Unknown user'} • 
-                          {new Date(community.created_at).toLocaleDateString()}
+                        <h3 className="text-lg font-medium">{community.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Registered by {community.owner?.name || 'Unknown'} on {new Date(community.created_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
-                        Pending Approval
+                    </div>
+                    <div className="mt-2 md:mt-0 flex items-center">
+                      <Badge variant="outline" className="ml-2">
+                        {community.platform}
+                      </Badge>
+                      <Badge variant="outline" className="ml-2 bg-crypto-blue/10 text-crypto-blue">
+                        ${community.price_per_announcement}
                       </Badge>
                     </div>
-                    
-                    {community.description && (
+                  </div>
+                  
+                  {community.description && (
+                    <div className="my-4 p-3 bg-crypto-darkgray/50 rounded-md">
                       <p className="text-sm">{community.description}</p>
-                    )}
-                    
-                    <div className="flex items-center">
-                      <p className="text-sm font-medium mr-2">Post Price:</p>
-                      <span className="font-bold text-crypto-green">${community.price_per_announcement}</span>
                     </div>
-                    
-                    {community.platform === 'TELEGRAM' && (
-                      <div className="flex items-center space-x-2 bg-yellow-500/10 p-2 rounded-md">
-                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                        <p className="text-xs">
-                          Make sure the bot is added as admin to the Telegram group before approving
-                        </p>
+                  )}
+                  
+                  <div className="mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center">
+                        <span className="text-sm text-muted-foreground mr-2">Reach:</span>
+                        <span className="font-medium">{community.reach?.toLocaleString() || 'Unknown'} members</span>
                       </div>
-                    )}
-                    
-                    <div className="flex space-x-2 pt-2">
-                      <Button
-                        onClick={() => handleApproveCommunity(community.id)}
-                        disabled={processingIds.includes(community.id)}
-                        className="flex-1 bg-green-500 hover:bg-green-600"
-                        size="sm"
-                      >
-                        {processingIds.includes(community.id) ? (
-                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                        ) : (
-                          <CheckCircle className="mr-2 h-3 w-3" />
-                        )}
-                        Approve
-                      </Button>
-                      <Button
-                        onClick={() => handleRejectCommunity(community.id)}
-                        disabled={processingIds.includes(community.id)}
-                        variant="outline"
-                        className="flex-1 border-red-500/50 text-red-500 hover:bg-red-500/10"
-                        size="sm"
-                      >
-                        {processingIds.includes(community.id) ? (
-                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                        ) : (
-                          <XCircle className="mr-2 h-3 w-3" />
-                        )}
-                        Reject
-                      </Button>
+                      {community.platform_id && (
+                        <div className="flex items-center">
+                          <span className="text-sm text-muted-foreground mr-2">Platform ID:</span>
+                          <span className="font-medium">{community.platform_id}</span>
+                        </div>
+                      )}
+                      {community.wallet_address && (
+                        <div className="flex items-center">
+                          <span className="text-sm text-muted-foreground mr-2">Wallet:</span>
+                          <span className="font-medium truncate max-w-[200px]">{community.wallet_address}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No pending communities to review</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                  
+                  <Separator className="my-4" />
+                  
+                  <div className="flex flex-wrap gap-2 justify-end">
+                    {community.platform === 'TELEGRAM' && (
+                      <Button
+                        variant="outline"
+                        onClick={() => checkTelegramBot(community)}
+                        disabled={checkingBot === community.id}
+                      >
+                        {checkingBot === community.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <BotMessageSquare className="h-4 w-4 mr-2" />
+                        )}
+                        Check Bot Status
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleApproval(community.id, false)}
+                      disabled={isProcessing === community.id}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {isProcessing === community.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <XCircle className="h-4 w-4 mr-2" />
+                      )}
+                      Reject
+                    </Button>
+                    <Button
+                      onClick={() => handleApproval(community.id, true)}
+                      disabled={isProcessing === community.id}
+                      className="bg-crypto-green hover:bg-crypto-green/90"
+                    >
+                      {isProcessing === community.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                      )}
+                      Approve
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

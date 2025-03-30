@@ -5,6 +5,6 @@ export interface ActivityItem {
   title: string;
   time: string;
   status: string;
-  description?: string;
+  description: string;
   timestamp?: string;
 }
