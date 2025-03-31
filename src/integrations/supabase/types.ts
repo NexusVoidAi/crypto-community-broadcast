@@ -64,6 +64,7 @@ export type Database = {
           cta_text: string | null
           cta_url: string | null
           id: string
+          impressions: number | null
           media_url: string | null
           payment_status: Database["public"]["Enums"]["payment_status"]
           status: Database["public"]["Enums"]["announcement_status"]
@@ -78,6 +79,7 @@ export type Database = {
           cta_text?: string | null
           cta_url?: string | null
           id?: string
+          impressions?: number | null
           media_url?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           status?: Database["public"]["Enums"]["announcement_status"]
@@ -92,6 +94,7 @@ export type Database = {
           cta_text?: string | null
           cta_url?: string | null
           id?: string
+          impressions?: number | null
           media_url?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           status?: Database["public"]["Enums"]["announcement_status"]
