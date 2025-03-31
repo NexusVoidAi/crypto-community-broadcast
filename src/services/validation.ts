@@ -7,6 +7,13 @@ export interface ValidationResult {
   score: number;
   issues: string[];
   feedback?: string;
+  factors?: {
+    length: { weight: number, score: number },
+    clarity: { weight: number, score: number },
+    relevance: { weight: number, score: number },
+    engagement: { weight: number, score: number },
+    compliance: { weight: number, score: number }
+  };
 }
 
 export const validateAnnouncement = async (title: string, content: string): Promise<ValidationResult> => {
@@ -25,14 +32,16 @@ export const validateAnnouncement = async (title: string, content: string): Prom
       suggestions: data.suggestions || [],
       score: data.score || 0.6,
       issues: data.issues || [],
-      feedback: data.feedback
+      feedback: data.feedback,
+      factors: data.factors
     };
   } catch (error) {
     console.error('Error validating announcement:', error);
     
     // Fallback to basic validation
     return {
-      isValid: title.length >= 5 && content.length >= 20,
+      isValid: title.split(/\s+/).filter(w => w.trim()).length >= 5 && 
+               content.split(/\s+/).filter(w => w.trim()).length >= 15,
       suggestions: [
         'Make sure your title is clear and concise.',
         'Provide specific details in your content.',
@@ -62,14 +71,16 @@ export const validateAnnouncementWithAI = async (title: string, content: string)
       suggestions: data.suggestions || [],
       score: data.score || 0.7,
       issues: data.issues || [],
-      feedback: data.feedback || ''
+      feedback: data.feedback || '',
+      factors: data.factors
     };
   } catch (error) {
     console.error('Error validating announcement with AI:', error);
     
     // Fallback to basic validation
     return {
-      isValid: title.length >= 5 && content.length >= 20,
+      isValid: title.split(/\s+/).filter(w => w.trim()).length >= 5 && 
+               content.split(/\s+/).filter(w => w.trim()).length >= 15,
       score: 0.6,
       issues: ['Could not perform complete AI validation'],
       suggestions: [
@@ -90,6 +101,7 @@ export const serializeValidationResult = (result: ValidationResult): any => {
     score: result.score || 0,
     issues: result.issues || [],
     feedback: result.feedback || '',
+    factors: result.factors || null,
   };
 };
 
@@ -100,6 +112,36 @@ export const getSuggestions = (validationResult: ValidationResult): string[] => 
   
   if (validationResult.issues && validationResult.issues.length > 0) {
     return validationResult.issues.map(issue => `Fix issue: ${issue}`);
+  }
+  
+  // Generate suggestions based on factors if available
+  if (validationResult.factors) {
+    const factorSuggestions = [];
+    const { length, clarity, relevance, engagement, compliance } = validationResult.factors;
+    
+    if (length.score < 0.7) {
+      factorSuggestions.push('Add more detail to your announcement to make it more informative.');
+    }
+    
+    if (clarity.score < 0.7) {
+      factorSuggestions.push('Improve readability by using clearer sentence structures.');
+    }
+    
+    if (relevance.score < 0.6) {
+      factorSuggestions.push('Include more crypto-specific terminology to increase relevance.');
+    }
+    
+    if (engagement.score < 0.6) {
+      factorSuggestions.push('Add engaging elements like questions, calls-to-action, or links.');
+    }
+    
+    if (compliance.score < 1) {
+      factorSuggestions.push('Review your content for potentially problematic language.');
+    }
+    
+    if (factorSuggestions.length > 0) {
+      return factorSuggestions;
+    }
   }
   
   // Default suggestions if none are provided

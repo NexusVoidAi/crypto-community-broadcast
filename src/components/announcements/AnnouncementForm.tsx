@@ -16,7 +16,8 @@ import {
   Upload, 
   MessageSquare, 
   AlertTriangle,
-  Wand2
+  Wand2,
+  Info
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
@@ -64,9 +65,20 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [platformFee, setPlatformFee] = useState<number>(1);
   const [showCryptoPayment, setShowCryptoPayment] = useState(false);
+  const [titleWordCount, setTitleWordCount] = useState(0);
+  const [contentWordCount, setContentWordCount] = useState(0);
 
   // Add new state for handling AI enhancement
   const [isEnhancing, setIsEnhancing] = useState(false);
+
+  // Calculate word count
+  useEffect(() => {
+    setTitleWordCount(title.trim().split(/\s+/).filter(word => word !== '').length);
+  }, [title]);
+
+  useEffect(() => {
+    setContentWordCount(content.trim().split(/\s+/).filter(word => word !== '').length);
+  }, [content]);
 
   useEffect(() => {
     // Fetch platform fee
@@ -117,8 +129,14 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
   }, [step]);
 
   const handleValidate = async () => {
-    if (!title.trim() || !content.trim()) {
-      toast.error('Please fill in all required fields');
+    // Check minimum word counts
+    if (titleWordCount < 5) {
+      toast.error('Title must contain at least 5 words');
+      return;
+    }
+
+    if (contentWordCount < 15) {
+      toast.error('Content must contain at least 15 words');
       return;
     }
 
@@ -309,10 +327,16 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
     }
   };
   
-  // Update the handleEnhanceWithAI function to use the correct property names
+  // Update the handleEnhanceWithAI function to check word count
   const handleEnhanceWithAI = async () => {
-    if (!title.trim() && !content.trim()) {
-      toast.error('Please provide some text to enhance');
+    // Check minimum word counts before enhancing
+    if (titleWordCount < 5) {
+      toast.error('Title must contain at least 5 words before AI enhancement');
+      return;
+    }
+
+    if (contentWordCount < 15) {
+      toast.error('Content must contain at least 15 words before AI enhancement');
       return;
     }
 
@@ -342,7 +366,24 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="title">Announcement Title</Label>
+                  <div className="flex items-center">
+                    <Label htmlFor="title">Announcement Title</Label>
+                    <span className={`ml-2 text-xs ${titleWordCount >= 5 ? 'text-crypto-green' : 'text-red-500'}`}>
+                      ({titleWordCount}/5 words minimum)
+                    </span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Info className="h-4 w-4 ml-1 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Title must contain at least 5 words</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -351,29 +392,47 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
                           size="icon" 
                           className="h-8 w-8 text-crypto-blue hover:text-crypto-blue/80"
                           onClick={() => handleEnhanceWithAI()}
-                          disabled={isEnhancing || !title.trim()}
+                          disabled={isEnhancing || titleWordCount < 5 || contentWordCount < 15}
                         >
                           {isEnhancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Enhance with AI</p>
+                        <p>Enhance with AI (requires min 5 words for title, 15 for content)</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
                 <Input
                   id="title"
-                  placeholder="Enter a clear, attention-grabbing title"
+                  placeholder="Enter a clear, attention-grabbing title (min 5 words)"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
+                  className={titleWordCount < 5 && title.trim() ? 'border-red-400' : ''}
                 />
               </div>
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="content">Announcement Content</Label>
+                  <div className="flex items-center">
+                    <Label htmlFor="content">Announcement Content</Label>
+                    <span className={`ml-2 text-xs ${contentWordCount >= 15 ? 'text-crypto-green' : 'text-red-500'}`}>
+                      ({contentWordCount}/15 words minimum)
+                    </span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Info className="h-4 w-4 ml-1 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Content must contain at least 15 words</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -382,21 +441,21 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
                           size="icon" 
                           className="h-8 w-8 text-crypto-blue hover:text-crypto-blue/80"
                           onClick={() => handleEnhanceWithAI()}
-                          disabled={isEnhancing || !content.trim()}
+                          disabled={isEnhancing || titleWordCount < 5 || contentWordCount < 15}
                         >
                           {isEnhancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Enhance with AI</p>
+                        <p>Enhance with AI (requires min 5 words for title, 15 for content)</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
                 <Textarea
                   id="content"
-                  placeholder="Share your announcement message. Keep it clear and concise."
-                  className="min-h-[150px]"
+                  placeholder="Share your announcement message. Keep it clear and concise. (min 15 words)"
+                  className={`min-h-[150px] ${contentWordCount < 15 && content.trim() ? 'border-red-400' : ''}`}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   required
@@ -464,7 +523,8 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
                       <div 
                         className={cn(
                           "h-2 rounded-full", 
-                          validationResult.isValid ? "bg-crypto-green" : "bg-red-500"
+                          validationResult.score >= 0.8 ? "bg-crypto-green" : 
+                          validationResult.score >= 0.6 ? "bg-yellow-500" : "bg-red-500"
                         )}
                         style={{ width: `${validationResult.score * 100}%` }}
                       ></div>
@@ -480,6 +540,13 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
                           <li key={i} className="text-red-400">{issue}</li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+                  
+                  {validationResult.feedback && (
+                    <div className="text-sm mt-2 p-2 bg-muted/50 rounded">
+                      <p className="font-medium mb-1">AI Feedback:</p>
+                      <p className="text-muted-foreground">{validationResult.feedback}</p>
                     </div>
                   )}
                 </div>
@@ -503,7 +570,7 @@ const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
               <div className="mt-6 flex justify-end">
                 <Button
                   onClick={handleValidate}
-                  disabled={isLoading || !title.trim() || !content.trim()}
+                  disabled={isLoading || titleWordCount < 5 || contentWordCount < 15}
                   className="bg-crypto-blue hover:bg-crypto-blue/90"
                 >
                   {isLoading ? (
