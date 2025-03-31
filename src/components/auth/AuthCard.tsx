@@ -22,7 +22,7 @@ const AuthCard: React.FC<AuthCardProps> = ({ title, description, children, foote
         <CardHeader>
           <div className="mb-4 flex justify-center">
             <div className="w-12 h-12 rounded-md bg-crypto-green flex items-center justify-center">
-              <span className="text-black font-bold text-lg">CB</span>
+              <span className="text-black font-bold text-lg">AA</span>
             </div>
           </div>
           <CardTitle className="text-xl font-space text-center">{title}</CardTitle>

@@ -57,9 +57,9 @@ const Navbar: React.FC<NavbarProps> = ({ user, onSignOut }) => {
             <Link to="/" className="flex-shrink-0">
               <div className="flex items-center">
                 <div className="w-8 h-8 rounded-md bg-crypto-green flex items-center justify-center mr-2">
-                  <span className="text-black font-bold text-sm">CB</span>
+                  <span className="text-black font-bold text-sm">AA</span>
                 </div>
-                <span className="text-white font-space font-bold text-xl">CryptoBroadcast</span>
+                <span className="text-white font-space font-bold text-xl">ACHO AI</span>
               </div>
             </Link>
             <div className="hidden md:block ml-10">

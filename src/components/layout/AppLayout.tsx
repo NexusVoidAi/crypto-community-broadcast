@@ -107,9 +107,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <div className="p-4 border-b border-border/10 flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2">
             <div className="h-8 w-8 rounded-md bg-crypto-green flex items-center justify-center">
-              <span className="text-crypto-dark font-bold">CB</span>
+              <span className="text-crypto-dark font-bold">AA</span>
             </div>
-            <span className="font-bold text-xl">CryptoBlast</span>
+            <span className="font-bold text-xl">ACHO AI</span>
           </Link>
           {isMobile && (
             <Button 
@@ -207,7 +207,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold">CryptoBlast</h1>
+          <h1 className="text-xl font-bold">ACHO AI</h1>
         </header>
 
         {/* Content */}
