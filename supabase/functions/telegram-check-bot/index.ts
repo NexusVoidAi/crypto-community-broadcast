@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +34,7 @@ serve(async (req) => {
     
     console.log(`Checking Telegram bot for community ID: ${communityId}`);
     
-    // Create Supabase client with more comprehensive methods
+    // Create Supabase client with proper SDK
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
     
     // Get platform settings
@@ -141,47 +142,3 @@ serve(async (req) => {
     });
   }
 });
-
-// More comprehensive helper to create Supabase client in Deno
-const createClient = (url: string, key: string) => {
-  return {
-    from: (table: string) => ({
-      select: (columns: string = '*') => ({
-        limit: (n: number) => fetch(`${url}/rest/v1/${table}?select=${columns}&limit=${n}`, {
-          headers: {
-            'apikey': key,
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json'
-          }
-        })
-        .then(res => res.json())
-        .then(data => ({ data, error: null }))
-        .catch(error => ({ data: null, error })),
-        
-        eq: (column: string, value: any) => fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=eq.${value}`, {
-          headers: {
-            'apikey': key,
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json'
-          },
-        })
-        .then(res => res.json())
-        .then(data => ({ data, error: null }))
-        .catch(error => ({ data: null, error })),
-        
-        maybeSingle: () => fetch(`${url}/rest/v1/${table}?select=${columns}&limit=1`, {
-          headers: {
-            'apikey': key,
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json'
-          }
-        })
-        .then(async res => {
-          const data = await res.json();
-          return { data: data.length > 0 ? data[0] : null, error: null };
-        })
-        .catch(error => ({ data: null, error }))
-      })
-    }),
-  };
-};

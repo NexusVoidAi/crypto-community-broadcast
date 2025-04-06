@@ -6,7 +6,6 @@ import { Plus, Pencil, Trash2, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -56,13 +55,16 @@ const BotCommandsManagement = () => {
   const fetchCommands = async () => {
     setIsLoading(true);
     try {
+      // Use 'bot_commands' as the table name with the updated client
       const { data, error } = await supabase
         .from('bot_commands')
         .select('*')
         .order('command');
         
       if (error) throw error;
-      setCommands(data || []);
+      
+      // Explicitly cast the data to BotCommand[] to ensure type safety
+      setCommands(data as BotCommand[]);
     } catch (error: any) {
       console.error('Error fetching bot commands:', error);
       toast.error(`Failed to load bot commands: ${error.message}`);
