@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { MessagesSquare, Send, Users, AlertTriangle, Bot, Check } from 'lucide-react';
+import { MessagesSquare, Send, Users, AlertTriangle, Bot, Check, ExternalLink } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,6 +31,11 @@ const CommunityCreate: React.FC = () => {
     botAdded?: boolean;
     isAdmin?: boolean;
     error?: string;
+    botInfo?: {
+      id: number;
+      username: string;
+      first_name: string;
+    };
   } | null>(null);
 
   const handleTelegramVerification = async () => {
@@ -102,8 +108,14 @@ const CommunityCreate: React.FC = () => {
           isValid: true,
           botAdded: true,
           isAdmin: data.isAdmin,
+          botInfo: data.botInfo
         });
-        toast.success('Verification successful! The bot is in the group.');
+        
+        if (data.isAdmin) {
+          toast.success('Verification successful! The bot is in the group with admin rights.');
+        } else {
+          toast.warning('Bot is in the group, but needs admin rights for all features.');
+        }
       } else {
         setVerificationResult({
           isValid: false,
@@ -131,7 +143,6 @@ const CommunityCreate: React.FC = () => {
       setIsVerifying(false);
     }
   };
-
   
   const validateForm = () => {
     if (!name) {
@@ -168,11 +179,28 @@ const CommunityCreate: React.FC = () => {
           <li>Go to your Telegram group</li>
           <li>Click on the group name to open the info panel</li>
           <li>Select "Add members"</li>
-          <li>Search for the ACHO AI bot (check Admin dashboard for bot username)</li>
+          <li>Search for the ACHO AI bot {verificationResult?.botInfo?.username && <span className="font-medium">@{verificationResult.botInfo.username}</span>}</li>
           <li>Add the bot to your group</li>
           <li>Make the bot an administrator of the group (required for posting announcements)</li>
           <li>Click "Verify" below to confirm the bot has been added successfully</li>
         </ol>
+        
+        {verificationResult?.botInfo && (
+          <div className="mt-3 border-t border-blue-400/30 pt-3 flex flex-col gap-1">
+            <p className="text-sm text-blue-400 font-medium">Bot Information:</p>
+            <p className="text-xs text-muted-foreground">Username: @{verificationResult.botInfo.username}</p>
+            <p className="text-xs text-muted-foreground">Name: {verificationResult.botInfo.first_name}</p>
+          </div>
+        )}
+
+        {verificationResult?.botAdded && !verificationResult.isAdmin && (
+          <Alert className="mt-3 bg-orange-500/10 border-orange-500/30">
+            <AlertTriangle className="h-4 w-4 text-orange-500 mr-2" />
+            <AlertDescription className="text-orange-400 text-xs">
+              Please make the bot an administrator of your group for full functionality.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
     );
   };
@@ -209,6 +237,25 @@ const CommunityCreate: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const extractUsernameFromUrl = (url: string) => {
+    if (url.includes('t.me/')) {
+      // Extract username from URL
+      const match = url.match(/t\.me\/([^/]+)/);
+      if (match && match[1]) {
+        return '@' + match[1];
+      }
+    }
+    return url;
+  };
+
+  const handlePlatformIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setPlatformId(value);
+    
+    // Reset verification when changing the platform ID
+    setVerificationResult(null);
   };
 
   return (
@@ -295,7 +342,7 @@ const CommunityCreate: React.FC = () => {
                   <Input
                     id="platformId"
                     value={platformId}
-                    onChange={(e) => setPlatformId(e.target.value)}
+                    onChange={handlePlatformIdChange}
                     placeholder={platform === 'TELEGRAM' ? "e.g., @crypto_traders or -1001234567890" : "e.g., https://discord.gg/..."}
                     className="bg-crypto-dark border-border/50"
                     required

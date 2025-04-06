@@ -39,6 +39,28 @@ serve(async (req) => {
     
     const botToken = settings.telegram_bot_token;
     
+    // Get bot info
+    let botInfo;
+    try {
+      const botInfoResponse = await fetch(
+        `https://api.telegram.org/bot${botToken}/getMe`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+      
+      const botInfoResult = await botInfoResponse.json();
+      if (botInfoResult.ok) {
+        botInfo = botInfoResult.result;
+        console.log(`Bot Username: ${botInfo.username}, Bot ID: ${botInfo.id}`);
+      } else {
+        console.error(`Error getting bot info: ${botInfoResult.description}`);
+      }
+    } catch (error) {
+      console.error(`Error getting bot info: ${error.message}`);
+    }
+    
     // Get announcement data
     const { data: announcement, error: announcementError } = await supabaseAdmin
       .from('announcements')
@@ -70,6 +92,19 @@ serve(async (req) => {
     const postResults = await Promise.all(
       communities.map(async (community) => {
         try {
+          // First check if bot is admin in the group (if we have bot info)
+          let isAdmin = false;
+          if (botInfo) {
+            try {
+              isAdmin = await isBotAdminInGroup(community.platform_id, botToken, botInfo.id);
+              if (!isAdmin) {
+                console.log(`Bot is not admin in community ${community.platform_id}, but will still try to post`);
+              }
+            } catch (error) {
+              console.error(`Error checking admin status for ${community.id}:`, error);
+            }
+          }
+          
           // Send message to telegram group
           const telegramResponse = await fetch(
             `https://api.telegram.org/bot${botToken}/sendMessage`,
@@ -106,6 +141,7 @@ serve(async (req) => {
           return {
             community_id: community.id,
             success: true,
+            isAdmin,
             message_id: telegramResult.result.message_id
           };
         } catch (error) {
@@ -142,6 +178,35 @@ serve(async (req) => {
     });
   }
 });
+
+// Helper function to check if bot is admin in group
+async function isBotAdminInGroup(chatId: string | number, botToken: string, botId: number) {
+  try {
+    const chatMemberResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/getChatMember`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          chat_id: chatId, 
+          user_id: botId 
+        }),
+      }
+    );
+    
+    const chatMember = await chatMemberResponse.json();
+    
+    if (!chatMember.ok) return false;
+    
+    return (
+      chatMember.result.status === "administrator" || 
+      chatMember.result.status === "creator"
+    );
+  } catch (error) {
+    console.error("Error checking bot admin status:", error);
+    return false;
+  }
+}
 
 // Helper to create Supabase client in Deno
 const createClient = (url: string, key: string) => {

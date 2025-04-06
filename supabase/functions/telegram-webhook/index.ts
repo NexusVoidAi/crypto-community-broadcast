@@ -27,6 +27,40 @@ serve(async (req) => {
     // Create Supabase client
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
     
+    // Get bot token from settings for later use
+    const { data: settings } = await supabaseAdmin
+      .from('platform_settings')
+      .select('telegram_bot_token')
+      .limit(1);
+      
+    if (!settings || settings.length === 0 || !settings[0].telegram_bot_token) {
+      throw new Error('Bot token not configured');
+    }
+    
+    const botToken = settings[0].telegram_bot_token;
+    
+    // Store bot information
+    let botInfo;
+    try {
+      const response = await fetch(
+        `https://api.telegram.org/bot${botToken}/getMe`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      const result = await response.json();
+      if (result.ok) {
+        botInfo = result.result;
+        console.log(`Bot Username: ${botInfo.username}, Bot ID: ${botInfo.id}`);
+      }
+    } catch (error) {
+      console.error(`Error getting bot info: ${error.message}`);
+    }
+    
     // Handle different types of updates
     if (update.message) {
       const { message } = update;
@@ -80,6 +114,19 @@ serve(async (req) => {
             
             // Send response back to Telegram
             await sendTelegramMessage(chatId, response);
+          } else if (command === '/check_admin_status') {
+            // New command to check if bot is admin in the current group
+            if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
+              const isAdmin = await isBotAdminInGroup(chatId, botToken, botInfo?.id);
+              
+              if (isAdmin) {
+                await sendTelegramMessage(chatId, "✅ I have administrator rights in this group.");
+              } else {
+                await sendTelegramMessage(chatId, "⚠️ I don't have administrator rights in this group. Please make me an administrator to use all features.");
+              }
+            } else {
+              await sendTelegramMessage(chatId, "This command can only be used in groups.");
+            }
           } else {
             // Standard command response
             await sendTelegramMessage(chatId, commandData.response_template);
@@ -104,6 +151,48 @@ serve(async (req) => {
     });
   }
 });
+
+// Helper function to check if bot is admin in group
+async function isBotAdminInGroup(chatId: string | number, botToken: string, botId?: number) {
+  try {
+    if (!botId) {
+      // Get bot info if not provided
+      const response = await fetch(
+        `https://api.telegram.org/bot${botToken}/getMe`,
+        { method: 'GET' }
+      );
+      
+      const result = await response.json();
+      if (!result.ok) return false;
+      
+      botId = result.result.id;
+    }
+    
+    const chatMemberResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/getChatMember`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          chat_id: chatId, 
+          user_id: botId 
+        }),
+      }
+    );
+    
+    const chatMember = await chatMemberResponse.json();
+    
+    if (!chatMember.ok) return false;
+    
+    return (
+      chatMember.result.status === "administrator" || 
+      chatMember.result.status === "creator"
+    );
+  } catch (error) {
+    console.error("Error checking bot admin status:", error);
+    return false;
+  }
+}
 
 // Helper function to send Telegram messages
 async function sendTelegramMessage(chatId: string | number, text: string) {

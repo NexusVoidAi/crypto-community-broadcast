@@ -94,8 +94,39 @@ serve(async (req) => {
       const numericMatch = chatId.match(/-\d+/);
       if (numericMatch) {
         chatId = numericMatch[0];
+      } else {
+        // Try to extract chat ID from URL using the utility function
+        const extractedId = extractChatIdFromUrl(chatId);
+        if (extractedId) {
+          chatId = extractedId;
+        }
       }
     }
+    
+    // Get bot info first
+    const botInfoResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/getMe`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    
+    const botInfoResult = await botInfoResponse.json();
+    console.log("Bot info:", JSON.stringify(botInfoResult));
+    
+    if (!botInfoResult.ok) {
+      return new Response(JSON.stringify({ 
+        botAdded: false,
+        error: "Failed to get bot information: " + botInfoResult.description 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const botId = botInfoResult.result.id;
     
     // Check if bot is a member of the chat
     const telegramResponse = await fetch(
@@ -107,7 +138,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           chat_id: chatId,
-          user_id: 'me', // Special value to get bot's own info
+          user_id: botId, // Use the actual bot ID instead of 'me'
         }),
       }
     );
@@ -130,7 +161,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       botAdded: true,
       isAdmin,
-      status: telegramResult.result.status
+      status: telegramResult.result.status,
+      botInfo: botInfoResult.result
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -142,3 +174,39 @@ serve(async (req) => {
     });
   }
 });
+
+// Utility function to extract chat ID from Telegram URL
+function extractChatIdFromUrl(url: string): string | null {
+  let chatId: string | null = null;
+
+  try {
+    // Check if it's a private group or channel link (with "joinchat/")
+    if (url.includes("joinchat/")) {
+      // Telegram doesn't expose chat_id directly for private invite links
+      chatId = url.split("joinchat/")[1];
+      console.log(`Private chat invite hash extracted: ${chatId}`);
+    }
+    // Check if it's a public group or channel link
+    else if (url.includes("t.me/")) {
+      let path = url.split("t.me/")[1];
+
+      // Check if it contains a subpath like "/c/"
+      if (path.startsWith("c/")) {
+        // For "/c/" channels, there is a numeric ID followed by "/<message_id>"
+        chatId = "-" + path.split("/")[1]; // Prefix it with "-"
+      } else {
+        // For public channels or groups, we use the group name or channel name directly
+        chatId = path.split("/")[0]; // First part before any slash
+        console.log(`Public group or channel ID extracted: ${chatId}`);
+      }
+    } else {
+      console.log("Not a recognized Telegram URL format:", url);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Failed to extract chat ID: ${error.message}`);
+    return null;
+  }
+
+  return chatId;
+}
