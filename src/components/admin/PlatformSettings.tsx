@@ -1,181 +1,282 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, Save } from 'lucide-react';
-import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Loader2, Settings, Send, Bot, MessageSquare } from 'lucide-react';
+import BotCommandsManagement from './BotCommandsManagement';
+import TelegramMessenger from './TelegramMessenger';
 
 const PlatformSettings = () => {
   const [settings, setSettings] = useState({
-    platformFee: 1,
-    telegramBotToken: '',
-    telegramBotUsername: ''
+    id: 0,
+    platform_fee: 1.0,
+    telegram_bot_token: '',
+    telegram_bot_username: '',
   });
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
+  const [activeTab, setActiveTab] = useState('general');
+  const [botConfigured, setBotConfigured] = useState(false);
+  
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+  
   const fetchSettings = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
       const { data, error } = await supabase
         .from('platform_settings')
         .select('*')
         .single();
-        
+      
       if (error && error.code !== 'PGRST116') {
         throw error;
       }
       
       if (data) {
-        setSettings({
-          platformFee: data.platform_fee || 1,
-          telegramBotToken: data.telegram_bot_token || '',
-          telegramBotUsername: data.telegram_bot_username || ''
-        });
+        setSettings(data);
+        setBotConfigured(!!data.telegram_bot_token);
       }
-    } catch (error) {
-      console.error("Error fetching settings:", error);
-      toast.error("Failed to load platform settings");
+    } catch (error: any) {
+      console.error('Error fetching platform settings:', error);
+      toast.error(`Failed to load settings: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const handleSaveSettings = async () => {
+  
+  const handleSave = async () => {
     setIsSaving(true);
-    
     try {
-      // Check if settings record exists first
-      const { data: existing } = await supabase
+      // Check if settings exist
+      const { data: existingData, error: existingError } = await supabase
         .from('platform_settings')
         .select('id')
-        .limit(1);
-
-      // Prepare the upsert data
-      const upsertData = {
-        id: existing && existing.length > 0 ? existing[0].id : 1, // Use existing ID or default to 1
-        platform_fee: settings.platformFee,
-        telegram_bot_token: settings.telegramBotToken,
-        telegram_bot_username: settings.telegramBotUsername,
-        updated_at: new Date().toISOString()
-      };
-        
-      const { error } = await supabase
-        .from('platform_settings')
-        .upsert(upsertData);
-        
-      if (error) throw error;
+        .maybeSingle();
       
-      // Call the configure bot function to update the webhook
-      if (settings.telegramBotToken && settings.telegramBotUsername) {
-        await supabase.functions.invoke("telegram-configure-bot", {
-          body: { 
-            token: settings.telegramBotToken,
-            username: settings.telegramBotUsername
-          }
-        });
+      if (existingError && existingError.code !== 'PGRST116') {
+        throw existingError;
       }
       
-      toast.success("Settings saved successfully");
-    } catch (error) {
-      console.error("Error saving settings:", error);
-      toast.error("Failed to save settings");
+      let result;
+      
+      if (existingData) {
+        // Update existing settings
+        result = await supabase
+          .from('platform_settings')
+          .update({
+            platform_fee: settings.platform_fee,
+            telegram_bot_token: settings.telegram_bot_token,
+            telegram_bot_username: settings.telegram_bot_username,
+          })
+          .eq('id', existingData.id);
+      } else {
+        // Insert new settings
+        result = await supabase
+          .from('platform_settings')
+          .insert({
+            platform_fee: settings.platform_fee,
+            telegram_bot_token: settings.telegram_bot_token,
+            telegram_bot_username: settings.telegram_bot_username,
+          });
+      }
+      
+      if (result.error) {
+        throw result.error;
+      }
+      
+      // Configure bot webhook after saving token
+      if (settings.telegram_bot_token) {
+        try {
+          const response = await supabase.functions.invoke('telegram-configure-bot', {
+            body: { token: settings.telegram_bot_token },
+          });
+          
+          if (response.error) {
+            throw new Error(response.error.message || 'Failed to configure bot webhook');
+          }
+          
+          setBotConfigured(true);
+          toast.success('Bot webhook configured successfully!');
+        } catch (webhookError: any) {
+          console.error('Failed to configure bot webhook:', webhookError);
+          toast.error(`Bot webhook configuration failed: ${webhookError.message}`);
+        }
+      }
+      
+      toast.success('Platform settings saved successfully');
+    } catch (error: any) {
+      console.error('Error saving platform settings:', error);
+      toast.error(`Failed to save settings: ${error.message}`);
     } finally {
       setIsSaving(false);
     }
   };
-
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setSettings(prev => ({
+      ...prev,
+      [name]: name === 'platform_fee' ? parseFloat(value) : value,
+    }));
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-32">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  
   return (
-    <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-      <CardHeader>
-        <CardTitle>Platform Settings</CardTitle>
-        <CardDescription>Configure platform-wide settings</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="platformFee">Platform Fee (USDT)</Label>
-              <Input
-                id="platformFee"
-                type="number"
-                min="0"
-                step="0.01"
-                value={settings.platformFee}
-                onChange={(e) => setSettings(prev => ({ ...prev, platformFee: parseFloat(e.target.value) }))}
-                className="bg-crypto-dark border-border"
-              />
-              <p className="text-xs text-muted-foreground">Additional fee added to each announcement</p>
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <h3 className="text-lg font-medium mb-4">Telegram Bot Configuration</h3>
-              
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="telegramBotToken">Bot Token</Label>
-                  <Input
-                    id="telegramBotToken"
-                    type="password"
-                    value={settings.telegramBotToken}
-                    onChange={(e) => setSettings(prev => ({ ...prev, telegramBotToken: e.target.value }))}
-                    className="bg-crypto-dark border-border"
-                  />
-                  <p className="text-xs text-muted-foreground">Get this from @BotFather on Telegram</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="telegramBotUsername">Bot Username</Label>
-                  <Input
-                    id="telegramBotUsername"
-                    placeholder="e.g., my_acho_bot"
-                    value={settings.telegramBotUsername}
-                    onChange={(e) => setSettings(prev => ({ ...prev, telegramBotUsername: e.target.value }))}
-                    className="bg-crypto-dark border-border"
-                  />
-                  <p className="text-xs text-muted-foreground">Username without the @ symbol</p>
-                </div>
+    <div className="space-y-6">
+      <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-crypto-darkgray/80">
+          <TabsTrigger value="general" className="flex items-center">
+            <Settings className="h-4 w-4 mr-2" />
+            General
+          </TabsTrigger>
+          <TabsTrigger value="telegram-bot" className="flex items-center">
+            <Bot className="h-4 w-4 mr-2" />
+            Telegram Bot
+          </TabsTrigger>
+          <TabsTrigger 
+            value="bot-commands" 
+            className="flex items-center"
+            disabled={!botConfigured}
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Bot Commands
+          </TabsTrigger>
+          <TabsTrigger 
+            value="messenger" 
+            className="flex items-center"
+            disabled={!botConfigured}
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Send Messages
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="general">
+          <Card className="border border-border/50 bg-crypto-darkgray/50">
+            <CardHeader>
+              <CardTitle>General Settings</CardTitle>
+              <CardDescription>
+                Configure platform-wide settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="platform_fee">Platform Fee (USD)</Label>
+                <Input
+                  id="platform_fee"
+                  name="platform_fee"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={settings.platform_fee}
+                  onChange={handleChange}
+                  className="max-w-xs bg-crypto-dark"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Fee charged on each announcement in addition to community price
+                </p>
               </div>
-            </div>
-            
-            <div className="flex justify-end pt-4">
-              <Button
-                onClick={handleSaveSettings}
-                disabled={isSaving}
-                className="bg-crypto-blue hover:bg-crypto-blue/90"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Settings
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              
+              <div className="flex justify-end pt-4">
+                <Button 
+                  onClick={handleSave} 
+                  disabled={isSaving}
+                  className="bg-crypto-blue hover:bg-crypto-blue/90"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : 'Save Settings'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="telegram-bot">
+          <Card className="border border-border/50 bg-crypto-darkgray/50">
+            <CardHeader>
+              <CardTitle>Telegram Bot Configuration</CardTitle>
+              <CardDescription>
+                Configure your Telegram bot for community management and announcements
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="telegram_bot_token">Bot Token</Label>
+                <Input
+                  id="telegram_bot_token"
+                  name="telegram_bot_token"
+                  type="password"
+                  value={settings.telegram_bot_token}
+                  onChange={handleChange}
+                  className="bg-crypto-dark"
+                  placeholder="Enter your Telegram bot token from BotFather"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Get a token from <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-crypto-blue hover:underline">@BotFather</a> on Telegram
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="telegram_bot_username">Bot Username</Label>
+                <Input
+                  id="telegram_bot_username"
+                  name="telegram_bot_username"
+                  value={settings.telegram_bot_username}
+                  onChange={handleChange}
+                  className="bg-crypto-dark"
+                  placeholder="@YourBotUsername"
+                />
+                <p className="text-sm text-muted-foreground">
+                  The username of your Telegram bot (e.g. @AchoAIBot)
+                </p>
+              </div>
+              
+              <div className="flex justify-end pt-4">
+                <Button 
+                  onClick={handleSave} 
+                  disabled={isSaving}
+                  className="bg-crypto-blue hover:bg-crypto-blue/90"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving & Configuring...
+                    </>
+                  ) : 'Save Bot Settings'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="bot-commands">
+          <BotCommandsManagement />
+        </TabsContent>
+        
+        <TabsContent value="messenger">
+          <TelegramMessenger />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

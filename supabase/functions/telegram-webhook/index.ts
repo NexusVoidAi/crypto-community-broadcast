@@ -12,98 +12,234 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase credentials');
+    }
+
+    // Parse request body from Telegram
     const update = await req.json();
     console.log('Received Telegram update:', JSON.stringify(update));
-    
-    // Create a Supabase client
+
+    // Create Supabase client
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
     
-    // Get platform settings
-    const { data: settings, error: settingsError } = await supabaseAdmin
-      .from('platform_settings')
-      .select('telegram_bot_token')
-      .single();
-      
-    if (settingsError) throw settingsError;
-    
-    const botToken = settings?.telegram_bot_token;
-    
-    if (!botToken) {
-      throw new Error('Telegram bot token not configured');
-    }
-    
-    // Handle message updates
+    // Handle different types of updates
     if (update.message) {
       const { message } = update;
+      const chatId = message.chat.id;
+      const text = message.text || '';
       
-      // Log chat info for potential new communities
-      if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
-        console.log(`Bot added to chat: ${message.chat.title} (ID: ${message.chat.id})`);
+      // Handle commands
+      if (text.startsWith('/')) {
+        const command = text.split(' ')[0]; // Extract command part
         
-        // Check if this is a new community that needs to be registered
-        const chatId = String(message.chat.id);
-        
-        const { data: communities } = await supabaseAdmin
-          .from('communities')
-          .select('id, platform_id')
-          .eq('platform', 'TELEGRAM')
-          .eq('platform_id', chatId);
+        // Fetch command from database
+        const { data: commandData, error: commandError } = await supabaseAdmin
+          .from('bot_commands')
+          .select('*')
+          .eq('command', command)
+          .maybeSingle();
           
-        if (communities && communities.length > 0) {
-          console.log(`Found ${communities.length} communities matching chat ID ${chatId}`);
+        if (commandError) {
+          console.error('Error fetching command:', commandError);
+        } else if (commandData) {
+          // Handle admin-only commands
+          if (commandData.is_admin_only) {
+            // Check if user is an admin by fetching platform_settings editor rights
+            // For now, we'll just log and proceed
+            console.log(`Admin command '${command}' received`);
+          }
           
-          // Send a welcome message
-          await fetch(
-            `https://api.telegram.org/bot${botToken}/sendMessage`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                chat_id: chatId,
-                text: "✅ Bot successfully connected to this community! Now you can receive approved announcements.",
-                parse_mode: 'Markdown'
-              }),
+          // Special command handlers
+          if (command === '/list_communities') {
+            // Handle list_communities command
+            const { data: communities } = await supabaseAdmin
+              .from('communities')
+              .select('*')
+              .eq('platform', 'TELEGRAM');
+              
+            let response = commandData.response_template + '\n\n';
+            
+            if (communities && communities.length > 0) {
+              communities.forEach((community, index) => {
+                response += `${index + 1}. ${community.name}\n`;
+                response += `  Members: ${community.reach || 'N/A'}\n`;
+                response += `  Price: $${community.price_per_announcement} USDT\n`;
+                if (community.description) {
+                  response += `  Description: ${community.description.substring(0, 50)}...\n`;
+                }
+                response += '\n';
+              });
+            } else {
+              response += 'No communities available.';
             }
-          );
+            
+            // Send response back to Telegram
+            await sendTelegramMessage(chatId, response);
+          } else {
+            // Standard command response
+            await sendTelegramMessage(chatId, commandData.response_template);
+          }
+        } else {
+          console.log(`Unknown command received: ${command}`);
+          await sendTelegramMessage(chatId, "Sorry, I don't understand that command.");
         }
       }
     }
-    
-    // Handle callback queries (button clicks)
-    if (update.callback_query) {
-      // Implementation for handling button clicks if needed
-    }
-    
-    return new Response(JSON.stringify({ success: true }), {
+
+    // Always respond with status 200 to Telegram
+    return new Response(JSON.stringify({ status: 'ok' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
+    
   } catch (error) {
-    console.error('Error handling Telegram webhook:', error);
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    console.error('Error processing webhook:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
 
-// Helper to create Supabase client in Deno
+// Helper function to send Telegram messages
+async function sendTelegramMessage(chatId: string | number, text: string) {
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    
+    // Create Supabase client
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+    
+    // Get bot token from settings
+    const { data: settings } = await supabaseAdmin
+      .from('platform_settings')
+      .select('telegram_bot_token')
+      .limit(1);
+      
+    if (!settings || settings.length === 0 || !settings[0].telegram_bot_token) {
+      throw new Error('Bot token not configured');
+    }
+    
+    const botToken = settings[0].telegram_bot_token;
+    
+    // Send message via Telegram API
+    const response = await fetch(
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: text,
+          parse_mode: 'HTML',
+        }),
+      }
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Telegram API error: ${JSON.stringify(errorData)}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending Telegram message:', error);
+    throw error;
+  }
+}
+
+// More comprehensive helper to create Supabase client in Deno
 const createClient = (url: string, key: string) => {
   return {
     from: (table: string) => ({
-      select: (columns: string) => ({
+      select: (columns: string = '*') => ({
+        limit: (n: number) => fetch(`${url}/rest/v1/${table}?select=${columns}&limit=${n}`, {
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
+          }
+        }).then(res => res.json()),
         eq: (column: string, value: any) => fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=eq.${value}`, {
           headers: {
             'apikey': key,
             'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
           },
-        }).then(res => res.json().then(data => ({ data, error: null }))),
+        }).then(res => res.json()),
+        in: (column: string, values: any[]) => {
+          const valuesStr = values.join(',');
+          return fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=in.(${valuesStr})`, {
+            headers: {
+              'apikey': key,
+              'Authorization': `Bearer ${key}`,
+              'Content-Type': 'application/json'
+            },
+          }).then(res => res.json());
+        },
+        maybeSingle: () => fetch(`${url}/rest/v1/${table}?select=${columns}&limit=1`, {
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
+          }
+        }).then(async res => {
+          const data = await res.json();
+          return { data: data.length > 0 ? data[0] : null, error: null };
+        }).catch(error => ({ data: null, error }))
       }),
+      insert: (data: any) => fetch(`${url}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(data)
+      }).then(async res => {
+        if (!res.ok) {
+          const error = await res.json();
+          return { data: null, error };
+        }
+        const responseData = await res.json();
+        return { data: responseData, error: null };
+      }),
+      update: (data: any) => ({
+        eq: (column: string, value: any) => fetch(`${url}/rest/v1/${table}?${column}=eq.${value}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(data)
+        }).then(async res => {
+          if (!res.ok) {
+            const error = await res.json();
+            return { data: null, error };
+          }
+          const responseData = await res.json();
+          return { data: responseData, error: null };
+        })
+      }),
+      delete: () => ({
+        eq: (column: string, value: any) => fetch(`${url}/rest/v1/${table}?${column}=eq.${value}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
+          }
+        }).then(res => res.ok ? { error: null } : res.json().then(error => ({ error })))
+      })
     }),
   };
 };

@@ -105,6 +105,36 @@ export type Database = {
         }
         Relationships: []
       }
+      bot_commands: {
+        Row: {
+          command: string
+          created_at: string
+          description: string
+          id: string
+          is_admin_only: boolean
+          response_template: string
+          updated_at: string
+        }
+        Insert: {
+          command: string
+          created_at?: string
+          description: string
+          id?: string
+          is_admin_only?: boolean
+          response_template: string
+          updated_at?: string
+        }
+        Update: {
+          command?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_admin_only?: boolean
+          response_template?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       communities: {
         Row: {
           approval_status: string

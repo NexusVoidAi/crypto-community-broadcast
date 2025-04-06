@@ -37,46 +37,52 @@ serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
     
     // Get platform settings
-    const { data: settings } = await supabaseAdmin
+    const { data: settingsData, error: settingsError } = await supabaseAdmin
       .from('platform_settings')
       .select('*')
-      .limit(1);
+      .maybeSingle();
       
-    console.log("Retrieved platform settings:", settings ? "Found settings" : "No settings found");
+    if (settingsError) {
+      console.error("Error fetching platform settings:", settingsError);
+      throw new Error('Failed to fetch platform settings');
+    }
     
-    if (!settings || settings.length === 0) {
+    console.log("Retrieved platform settings:", settingsData ? "Found settings" : "No settings found");
+    
+    if (!settingsData) {
       throw new Error('Platform settings not found');
     }
     
-    const botToken = settings[0]?.telegram_bot_token;
+    const botToken = settingsData.telegram_bot_token;
     
     if (!botToken) {
-      throw new Error('Telegram bot token not configured in platform settings');
+      throw new Error('Telegram bot token not configured');
     }
     
     // Get community data
-    const { data: communities } = await supabaseAdmin
+    const { data: communityData, error: communityError } = await supabaseAdmin
       .from('communities')
-      .select('*');
+      .select('*')
+      .eq('id', communityId)
+      .maybeSingle();
       
-    if (!communities || communities.length === 0) {
-      throw new Error('No communities found');
+    if (communityError) {
+      console.error("Error fetching community:", communityError);
+      throw new Error(`Failed to fetch community: ${communityError.message}`);
     }
     
-    const community = communities.find(c => c.id === communityId);
-    
-    if (!community) {
+    if (!communityData) {
       throw new Error(`Community with ID ${communityId} not found`);
     }
     
-    if (community.platform !== 'TELEGRAM' || !community.platform_id) {
+    if (communityData.platform !== 'TELEGRAM' || !communityData.platform_id) {
       throw new Error('Not a valid Telegram community or missing platform ID');
     }
     
-    console.log(`Checking bot for Telegram chat: ${community.platform_id}`);
+    console.log(`Checking bot for Telegram chat: ${communityData.platform_id}`);
     
     // Ensure we're using a valid chat ID format
-    let chatId = community.platform_id;
+    let chatId = communityData.platform_id;
     if (chatId.startsWith('@')) {
       // It's a username, we can use it directly
     } else if (!isNaN(Number(chatId))) {
@@ -147,14 +153,34 @@ const createClient = (url: string, key: string) => {
             'Authorization': `Bearer ${key}`,
             'Content-Type': 'application/json'
           }
-        }).then(res => res.json()),
+        })
+        .then(res => res.json())
+        .then(data => ({ data, error: null }))
+        .catch(error => ({ data: null, error })),
+        
         eq: (column: string, value: any) => fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=eq.${value}`, {
           headers: {
             'apikey': key,
             'Authorization': `Bearer ${key}`,
             'Content-Type': 'application/json'
           },
-        }).then(res => res.json()),
+        })
+        .then(res => res.json())
+        .then(data => ({ data, error: null }))
+        .catch(error => ({ data: null, error })),
+        
+        maybeSingle: () => fetch(`${url}/rest/v1/${table}?select=${columns}&limit=1`, {
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(async res => {
+          const data = await res.json();
+          return { data: data.length > 0 ? data[0] : null, error: null };
+        })
+        .catch(error => ({ data: null, error }))
       })
     }),
   };
