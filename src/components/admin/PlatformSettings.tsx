@@ -54,15 +54,24 @@ const PlatformSettings = () => {
     setIsSaving(true);
     
     try {
-      const { data, error } = await supabase
+      // Check if settings record exists first
+      const { data: existing } = await supabase
         .from('platform_settings')
-        .upsert({
-          id: 1, // Single row for all settings
-          platform_fee: settings.platformFee,
-          telegram_bot_token: settings.telegramBotToken,
-          telegram_bot_username: settings.telegramBotUsername,
-          updated_at: new Date().toISOString()
-        });
+        .select('id')
+        .limit(1);
+
+      // Prepare the upsert data
+      const upsertData = {
+        id: existing && existing.length > 0 ? existing[0].id : 1, // Use existing ID or default to 1
+        platform_fee: settings.platformFee,
+        telegram_bot_token: settings.telegramBotToken,
+        telegram_bot_username: settings.telegramBotUsername,
+        updated_at: new Date().toISOString()
+      };
+        
+      const { error } = await supabase
+        .from('platform_settings')
+        .upsert(upsertData);
         
       if (error) throw error;
       
@@ -127,17 +136,19 @@ const PlatformSettings = () => {
                     onChange={(e) => setSettings(prev => ({ ...prev, telegramBotToken: e.target.value }))}
                     className="bg-crypto-dark border-border"
                   />
+                  <p className="text-xs text-muted-foreground">Get this from @BotFather on Telegram</p>
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="telegramBotUsername">Bot Username</Label>
                   <Input
                     id="telegramBotUsername"
-                    placeholder="e.g., my_crypto_bot"
+                    placeholder="e.g., my_acho_bot"
                     value={settings.telegramBotUsername}
                     onChange={(e) => setSettings(prev => ({ ...prev, telegramBotUsername: e.target.value }))}
                     className="bg-crypto-dark border-border"
                   />
+                  <p className="text-xs text-muted-foreground">Username without the @ symbol</p>
                 </div>
               </div>
             </div>

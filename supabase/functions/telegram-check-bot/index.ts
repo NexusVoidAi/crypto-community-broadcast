@@ -33,37 +33,38 @@ serve(async (req) => {
     
     console.log(`Checking Telegram bot for community ID: ${communityId}`);
     
-    // Create Supabase client
+    // Create Supabase client with more comprehensive methods
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
     
     // Get platform settings
-    const { data: settingsData, error: settingsError } = await supabaseAdmin
+    const { data: settings } = await supabaseAdmin
       .from('platform_settings')
-      .select('telegram_bot_token, telegram_bot_username');
+      .select('*')
+      .limit(1);
       
-    if (settingsError) throw settingsError;
+    console.log("Retrieved platform settings:", settings ? "Found settings" : "No settings found");
     
-    // Settings might return an array with one object, handle both cases
-    const settings = Array.isArray(settingsData) ? settingsData[0] : settingsData;
-    
-    if (!settings?.telegram_bot_token) {
-      throw new Error('Telegram bot token not configured');
+    if (!settings || settings.length === 0) {
+      throw new Error('Platform settings not found');
     }
     
-    const botToken = settings.telegram_bot_token;
+    const botToken = settings[0]?.telegram_bot_token;
+    
+    if (!botToken) {
+      throw new Error('Telegram bot token not configured in platform settings');
+    }
     
     // Get community data
-    const { data: communityData, error: communityError } = await supabaseAdmin
+    const { data: communities } = await supabaseAdmin
       .from('communities')
-      .select('platform, platform_id');
-    
-    if (communityError) throw communityError;
-    
-    // Find the community in the array of communities
-    const community = Array.isArray(communityData) 
-      ? communityData.find((c) => c.id === communityId) 
-      : (communityData?.id === communityId ? communityData : null);
+      .select('*');
       
+    if (!communities || communities.length === 0) {
+      throw new Error('No communities found');
+    }
+    
+    const community = communities.find(c => c.id === communityId);
+    
     if (!community) {
       throw new Error(`Community with ID ${communityId} not found`);
     }
@@ -74,6 +75,21 @@ serve(async (req) => {
     
     console.log(`Checking bot for Telegram chat: ${community.platform_id}`);
     
+    // Ensure we're using a valid chat ID format
+    let chatId = community.platform_id;
+    if (chatId.startsWith('@')) {
+      // It's a username, we can use it directly
+    } else if (!isNaN(Number(chatId))) {
+      // It's numeric, ensure it's treated as a string
+      chatId = chatId.toString();
+    } else {
+      // Try to extract numeric ID if it's a URL or something else
+      const numericMatch = chatId.match(/-\d+/);
+      if (numericMatch) {
+        chatId = numericMatch[0];
+      }
+    }
+    
     // Check if bot is a member of the chat
     const telegramResponse = await fetch(
       `https://api.telegram.org/bot${botToken}/getChatMember`,
@@ -83,13 +99,14 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          chat_id: community.platform_id,
+          chat_id: chatId,
           user_id: 'me', // Special value to get bot's own info
         }),
       }
     );
     
     const telegramResult = await telegramResponse.json();
+    console.log("Telegram API response:", JSON.stringify(telegramResult));
     
     if (!telegramResult.ok) {
       return new Response(JSON.stringify({ 
@@ -119,22 +136,26 @@ serve(async (req) => {
   }
 });
 
-// Helper to create Supabase client in Deno
+// More comprehensive helper to create Supabase client in Deno
 const createClient = (url: string, key: string) => {
   return {
     from: (table: string) => ({
-      select: (columns: string) => {
-        return {
-          eq: (column: string, value: any) => {
-            return fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=eq.${value}`, {
-              headers: {
-                'apikey': key,
-                'Authorization': `Bearer ${key}`,
-              },
-            }).then(res => res.json());
+      select: (columns: string = '*') => ({
+        limit: (n: number) => fetch(`${url}/rest/v1/${table}?select=${columns}&limit=${n}`, {
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
           }
-        };
-      }
+        }).then(res => res.json()),
+        eq: (column: string, value: any) => fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=eq.${value}`, {
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
+          },
+        }).then(res => res.json()),
+      })
     }),
   };
 };

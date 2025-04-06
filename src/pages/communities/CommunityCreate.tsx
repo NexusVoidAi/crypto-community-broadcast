@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -43,6 +42,24 @@ const CommunityCreate: React.FC = () => {
     setVerificationResult(null);
 
     try {
+      // First check if platform settings are configured
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('platform_settings')
+        .select('telegram_bot_token')
+        .single();
+      
+      if (settingsError) {
+        console.error("Error fetching settings:", settingsError);
+        if (settingsError.code === 'PGRST116') {
+          throw new Error("Platform settings not configured. Please contact an administrator.");
+        }
+        throw settingsError;
+      }
+      
+      if (!settingsData?.telegram_bot_token) {
+        throw new Error("Telegram bot is not configured. Please contact an administrator.");
+      }
+
       // First, let's save a draft community to get an ID
       const { data: communityData, error: communityError } = await supabase
         .from('communities')
@@ -65,12 +82,20 @@ const CommunityCreate: React.FC = () => {
         throw new Error('Failed to create temporary community record');
       }
 
+      console.log("Created draft community:", communityData.id);
+
       // Now check if bot is added to the group
-      const { data, error } = await supabase.functions.invoke('telegram-check-bot', {
+      const response = await supabase.functions.invoke('telegram-check-bot', {
         body: { communityId: communityData.id },
       });
-
-      if (error) throw error;
+      
+      console.log("Verification response:", response);
+      
+      if (response.error) {
+        throw new Error(`Verification failed: ${response.error.message || 'Unknown error'}`);
+      }
+      
+      const data = response.data;
 
       if (data.botAdded) {
         setVerificationResult({
@@ -107,6 +132,7 @@ const CommunityCreate: React.FC = () => {
     }
   };
 
+  
   const validateForm = () => {
     if (!name) {
       toast.error('Community name is required');
@@ -142,7 +168,7 @@ const CommunityCreate: React.FC = () => {
           <li>Go to your Telegram group</li>
           <li>Click on the group name to open the info panel</li>
           <li>Select "Add members"</li>
-          <li>Search for "CryptoBlastBot" (or the actual bot username)</li>
+          <li>Search for the ACHO AI bot (check Admin dashboard for bot username)</li>
           <li>Add the bot to your group</li>
           <li>Make the bot an administrator of the group (required for posting announcements)</li>
           <li>Click "Verify" below to confirm the bot has been added successfully</li>
