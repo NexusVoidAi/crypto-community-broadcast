@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -56,6 +55,8 @@ serve(async (req) => {
       if (result.ok) {
         botInfo = result.result;
         console.log(`Bot Username: ${botInfo.username}, Bot ID: ${botInfo.id}`);
+      } else {
+        console.error(`Error getting bot info: ${result.description}`);
       }
     } catch (error) {
       console.error(`Error getting bot info: ${error.message}`);
@@ -113,27 +114,27 @@ serve(async (req) => {
             }
             
             // Send response back to Telegram
-            await sendTelegramMessage(chatId, response);
+            await sendTelegramMessage(chatId, response, botToken);
           } else if (command === '/check_admin_status') {
             // New command to check if bot is admin in the current group
             if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
               const isAdmin = await isBotAdminInGroup(chatId, botToken, botInfo?.id);
               
               if (isAdmin) {
-                await sendTelegramMessage(chatId, "✅ I have administrator rights in this group.");
+                await sendTelegramMessage(chatId, "✅ I have administrator rights in this group.", botToken);
               } else {
-                await sendTelegramMessage(chatId, "⚠️ I don't have administrator rights in this group. Please make me an administrator to use all features.");
+                await sendTelegramMessage(chatId, "⚠️ I don't have administrator rights in this group. Please make me an administrator to use all features.", botToken);
               }
             } else {
-              await sendTelegramMessage(chatId, "This command can only be used in groups.");
+              await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
             }
           } else {
             // Standard command response
-            await sendTelegramMessage(chatId, commandData.response_template);
+            await sendTelegramMessage(chatId, commandData.response_template, botToken);
           }
         } else {
           console.log(`Unknown command received: ${command}`);
-          await sendTelegramMessage(chatId, "Sorry, I don't understand that command.");
+          await sendTelegramMessage(chatId, "Sorry, I don't understand that command.", botToken);
         }
       }
     }
@@ -195,25 +196,27 @@ async function isBotAdminInGroup(chatId: string | number, botToken: string, botI
 }
 
 // Helper function to send Telegram messages
-async function sendTelegramMessage(chatId: string | number, text: string) {
+async function sendTelegramMessage(chatId: string | number, text: string, botToken?: string) {
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    
-    // Create Supabase client
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-    
-    // Get bot token from settings
-    const { data: settings } = await supabaseAdmin
-      .from('platform_settings')
-      .select('telegram_bot_token')
-      .limit(1);
+    if (!botToken) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
       
-    if (!settings || settings.length === 0 || !settings[0].telegram_bot_token) {
-      throw new Error('Bot token not configured');
+      // Create Supabase client
+      const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+      
+      // Get bot token from settings
+      const { data: settings } = await supabaseAdmin
+        .from('platform_settings')
+        .select('telegram_bot_token')
+        .limit(1);
+        
+      if (!settings || settings.length === 0 || !settings[0].telegram_bot_token) {
+        throw new Error('Bot token not configured');
+      }
+      
+      botToken = settings[0].telegram_bot_token;
     }
-    
-    const botToken = settings[0].telegram_bot_token;
     
     // Send message via Telegram API
     const response = await fetch(
@@ -241,6 +244,42 @@ async function sendTelegramMessage(chatId: string | number, text: string) {
     console.error('Error sending Telegram message:', error);
     throw error;
   }
+}
+
+// Helper function to extract chat ID from Telegram URL
+function extractChatIdFromUrl(url: string): string | null {
+  let chatId: string | null = null;
+
+  try {
+    // Check if it's a private group or channel link (with "joinchat/")
+    if (url.includes("joinchat/")) {
+      // Telegram doesn't expose chat_id directly for private invite links
+      chatId = url.split("joinchat/")[1];
+      console.log(`Private chat invite hash extracted: ${chatId}`);
+    }
+    // Check if it's a public group or channel link
+    else if (url.includes("t.me/")) {
+      let path = url.split("t.me/")[1];
+
+      // Check if it contains a subpath like "/c/"
+      if (path.startsWith("c/")) {
+        // For "/c/" channels, there is a numeric ID followed by "/<message_id>"
+        chatId = "-" + path.split("/")[1]; // Prefix it with "-"
+      } else {
+        // For public channels or groups, we use the group name or channel name directly
+        chatId = path.split("/")[0]; // First part before any slash
+        console.log(`Public group or channel ID extracted: ${chatId}`);
+      }
+    } else {
+      console.log("Not a recognized Telegram URL format:", url);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Failed to extract chat ID: ${error.message}`);
+    return null;
+  }
+
+  return chatId;
 }
 
 // More comprehensive helper to create Supabase client in Deno

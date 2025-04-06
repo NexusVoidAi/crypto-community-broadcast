@@ -104,68 +104,78 @@ serve(async (req) => {
     }
     
     // Get bot info first
-    const botInfoResponse = await fetch(
-      `https://api.telegram.org/bot${botToken}/getMe`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+    try {
+      const botInfoResponse = await fetch(
+        `https://api.telegram.org/bot${botToken}/getMe`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      const botInfoResult = await botInfoResponse.json();
+      console.log("Bot info:", JSON.stringify(botInfoResult));
+      
+      if (!botInfoResult.ok) {
+        return new Response(JSON.stringify({ 
+          botAdded: false,
+          error: "Failed to get bot information: " + botInfoResult.description 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
-    );
-    
-    const botInfoResult = await botInfoResponse.json();
-    console.log("Bot info:", JSON.stringify(botInfoResult));
-    
-    if (!botInfoResult.ok) {
+      
+      const botId = botInfoResult.result.id;
+      
+      // Check if bot is a member of the chat
+      const telegramResponse = await fetch(
+        `https://api.telegram.org/bot${botToken}/getChatMember`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            user_id: botId,
+          }),
+        }
+      );
+      
+      const telegramResult = await telegramResponse.json();
+      console.log("Telegram API response:", JSON.stringify(telegramResult));
+      
+      if (!telegramResult.ok) {
+        return new Response(JSON.stringify({ 
+          botAdded: false,
+          error: telegramResult.description 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Check if bot has admin rights
+      const isAdmin = ['administrator', 'creator'].includes(telegramResult.result.status);
+      
       return new Response(JSON.stringify({ 
-        botAdded: false,
-        error: "Failed to get bot information: " + botInfoResult.description 
+        botAdded: true,
+        isAdmin,
+        status: telegramResult.result.status,
+        botInfo: botInfoResult.result
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Error checking bot status:', error);
+      return new Response(JSON.stringify({ 
+        botAdded: false, 
+        error: error.message 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-    
-    const botId = botInfoResult.result.id;
-    
-    // Check if bot is a member of the chat
-    const telegramResponse = await fetch(
-      `https://api.telegram.org/bot${botToken}/getChatMember`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: chatId,
-          user_id: botId, // Use the actual bot ID instead of 'me'
-        }),
-      }
-    );
-    
-    const telegramResult = await telegramResponse.json();
-    console.log("Telegram API response:", JSON.stringify(telegramResult));
-    
-    if (!telegramResult.ok) {
-      return new Response(JSON.stringify({ 
-        botAdded: false,
-        error: telegramResult.description 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Check if bot has admin rights
-    const isAdmin = ['administrator', 'creator'].includes(telegramResult.result.status);
-    
-    return new Response(JSON.stringify({ 
-      botAdded: true,
-      isAdmin,
-      status: telegramResult.result.status,
-      botInfo: botInfoResult.result
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
   } catch (error) {
     console.error('Error checking Telegram bot status:', error);
     return new Response(JSON.stringify({ botAdded: false, error: error.message }), {

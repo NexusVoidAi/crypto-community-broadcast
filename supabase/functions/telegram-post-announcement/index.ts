@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -39,7 +38,7 @@ serve(async (req) => {
     
     const botToken = settings.telegram_bot_token;
     
-    // Get bot info
+    // Get bot info first and cache it
     let botInfo;
     try {
       const botInfoResponse = await fetch(
@@ -92,7 +91,7 @@ serve(async (req) => {
     const postResults = await Promise.all(
       communities.map(async (community) => {
         try {
-          // First check if bot is admin in the group (if we have bot info)
+          // First check if bot is admin in the group
           let isAdmin = false;
           if (botInfo) {
             try {
