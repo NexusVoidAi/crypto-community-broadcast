@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -128,6 +129,36 @@ serve(async (req) => {
             } else {
               await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
             }
+          } else if (command === '/my_communities') {
+            // NEW COMMAND: List communities where the bot is present
+            await listBotCommunities(chatId, botToken);
+          } else if (command === '/generate_invite') {
+            // NEW COMMAND: Generate invite link to add bot to groups
+            const botUsername = botInfo?.username;
+            if (botUsername) {
+              const inviteUrl = `https://t.me/${botUsername}?startgroup=true`;
+              await sendTelegramMessage(
+                chatId, 
+                `Use this link to add me to your group:\n\n${inviteUrl}\n\nAfter adding me, please make me an administrator to enable all features.`, 
+                botToken
+              );
+            } else {
+              await sendTelegramMessage(chatId, "Couldn't generate invite link. Please try again later.", botToken);
+            }
+          } else if (command === '/community_stats') {
+            // NEW COMMAND: Get community statistics
+            if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
+              await getCommunityStats(chatId, botToken);
+            } else {
+              await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
+            }
+          } else if (command === '/member_count') {
+            // NEW COMMAND: Get number of members in the community
+            if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
+              await getMemberCount(chatId, botToken);
+            } else {
+              await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
+            }
           } else {
             // Standard command response
             await sendTelegramMessage(chatId, commandData.response_template, botToken);
@@ -195,8 +226,165 @@ async function isBotAdminInGroup(chatId: string | number, botToken: string, botI
   }
 }
 
+// NEW FUNCTION: List all communities where the bot is a member
+async function listBotCommunities(chatId: string | number, botToken: string) {
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+    // Get all communities from the database
+    const { data: communities, error } = await supabaseAdmin
+      .from('communities')
+      .select('*')
+      .eq('platform', 'TELEGRAM');
+
+    if (error) {
+      console.error("Error fetching communities:", error);
+      await sendTelegramMessage(chatId, "Failed to fetch communities. Please try again later.", botToken);
+      return;
+    }
+
+    if (!communities || communities.length === 0) {
+      await sendTelegramMessage(chatId, "No Telegram communities found in the database.", botToken);
+      return;
+    }
+
+    // Check bot status in each community and build the response
+    let response = "📊 *BOT COMMUNITIES STATUS*\n\n";
+    
+    for (const community of communities) {
+      try {
+        // Skip if no platform_id is available
+        if (!community.platform_id) continue;
+        
+        // Check if bot is a member and admin in this community
+        const isAdmin = await isBotAdminInGroup(community.platform_id, botToken);
+        const statusEmoji = isAdmin ? "✅" : "⚠️";
+        
+        response += `${statusEmoji} *${community.name}*\n`;
+        response += `   ID: ${community.platform_id}\n`;
+        response += `   Status: ${isAdmin ? "Admin" : "Not Admin"}\n\n`;
+      } catch (error) {
+        console.error(`Error checking status for community ${community.id}:`, error);
+        response += `❌ *${community.name}*: Error checking status\n\n`;
+      }
+    }
+
+    await sendTelegramMessage(chatId, response, botToken, "Markdown");
+  } catch (error) {
+    console.error("Error listing bot communities:", error);
+    await sendTelegramMessage(chatId, "An error occurred while processing your request.", botToken);
+  }
+}
+
+// NEW FUNCTION: Get community statistics
+async function getCommunityStats(chatId: string | number, botToken: string) {
+  try {
+    // Get chat info
+    const chatInfoResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/getChat`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId }),
+      }
+    );
+
+    if (!chatInfoResponse.ok) {
+      await sendTelegramMessage(chatId, "Failed to fetch group information.", botToken);
+      return;
+    }
+
+    const chatInfo = await chatInfoResponse.json();
+    
+    // Get member count
+    const memberCountResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/getChatMemberCount`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId }),
+      }
+    );
+
+    if (!memberCountResponse.ok) {
+      await sendTelegramMessage(chatId, "Failed to fetch member count.", botToken);
+      return;
+    }
+
+    const memberCount = await memberCountResponse.json();
+
+    // Calculate engagement based on message history (pseudocode)
+    let messageCount = 0;
+    let activeUsers = 0;
+    
+    // This would need actual data from the chat history
+    // In a real implementation, we would store and analyze message events
+    
+    // For now, we'll provide a placeholder response
+    const response = `
+📊 *Community Statistics*
+
+*Group Name:* ${chatInfo.result.title}
+*Type:* ${chatInfo.result.type}
+*Total Members:* ${memberCount.result}
+${chatInfo.result.description ? `*Description:* ${chatInfo.result.description}\n` : ''}
+
+*Engagement Metrics*
+This is a placeholder for engagement metrics. To implement actual metrics, we need to:
+1. Store message history in a database
+2. Analyze frequency and types of interactions
+3. Identify most active users and peak activity times
+    `;
+
+    await sendTelegramMessage(chatId, response, botToken, "Markdown");
+  } catch (error) {
+    console.error("Error fetching community stats:", error);
+    await sendTelegramMessage(chatId, "An error occurred while fetching community statistics.", botToken);
+  }
+}
+
+// NEW FUNCTION: Get number of members in the community
+async function getMemberCount(chatId: string | number, botToken: string) {
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${botToken}/getChatMemberCount`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Telegram API error: ${JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json();
+    if (data.ok) {
+      await sendTelegramMessage(
+        chatId, 
+        `This group has *${data.result}* members.`,
+        botToken,
+        "Markdown"
+      );
+    } else {
+      throw new Error(`Telegram API returned error: ${data.description}`);
+    }
+  } catch (error) {
+    console.error("Error getting member count:", error);
+    await sendTelegramMessage(
+      chatId, 
+      "Failed to get member count. Make sure I am an administrator in this group.",
+      botToken
+    );
+  }
+}
+
 // Helper function to send Telegram messages
-async function sendTelegramMessage(chatId: string | number, text: string, botToken?: string) {
+async function sendTelegramMessage(chatId: string | number, text: string, botToken?: string, parseMode: string = 'HTML') {
   try {
     if (!botToken) {
       const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -229,7 +417,7 @@ async function sendTelegramMessage(chatId: string | number, text: string, botTok
         body: JSON.stringify({
           chat_id: chatId,
           text: text,
-          parse_mode: 'HTML',
+          parse_mode: parseMode,
         }),
       }
     );

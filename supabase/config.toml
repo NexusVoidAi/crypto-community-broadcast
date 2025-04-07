@@ -1,1 +1,47 @@
+
 project_id = "mwdbxjhszysjbmvgwcrl"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+
+[realtime]
+enabled = true
+
+[edge_functions]
+[edge_functions.telegram-check-bot]
+verify_jwt = true
+
+[edge_functions.telegram-webhook]
+verify_jwt = false
+
+[edge_functions.telegram-configure-bot]
+verify_jwt = true
+
+[edge_functions.telegram-post-announcement]
+verify_jwt = true
+
+[edge_functions.telegram-analytics]
+verify_jwt = true
+
+[edge_functions.register-bot-commands]
+verify_jwt = true

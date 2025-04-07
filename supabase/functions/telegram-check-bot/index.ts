@@ -150,7 +150,8 @@ serve(async (req) => {
       if (!telegramResult.ok) {
         return new Response(JSON.stringify({ 
           botAdded: false,
-          error: telegramResult.description 
+          error: telegramResult.description,
+          inviteLink: await generateBotInviteLink(botInfoResult.result.username)
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -159,11 +160,64 @@ serve(async (req) => {
       // Check if bot has admin rights
       const isAdmin = ['administrator', 'creator'].includes(telegramResult.result.status);
       
+      // If bot is member but not admin, try to get chat info and member count
+      let memberCount = null;
+      let chatInfo = null;
+      
+      if (telegramResult.ok) {
+        try {
+          // Get member count
+          const memberCountResponse = await fetch(
+            `https://api.telegram.org/bot${botToken}/getChatMemberCount`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: chatId }),
+            }
+          );
+          
+          if (memberCountResponse.ok) {
+            const memberCountResult = await memberCountResponse.json();
+            if (memberCountResult.ok) {
+              memberCount = memberCountResult.result;
+              
+              // Update community record with member count
+              await supabaseAdmin
+                .from('communities')
+                .update({ reach: memberCount })
+                .eq('id', communityId);
+            }
+          }
+          
+          // Get chat info
+          const chatInfoResponse = await fetch(
+            `https://api.telegram.org/bot${botToken}/getChat`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: chatId }),
+            }
+          );
+          
+          if (chatInfoResponse.ok) {
+            const chatInfoResult = await chatInfoResponse.json();
+            if (chatInfoResult.ok) {
+              chatInfo = chatInfoResult.result;
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching additional chat info:", error);
+        }
+      }
+      
       return new Response(JSON.stringify({ 
         botAdded: true,
         isAdmin,
         status: telegramResult.result.status,
-        botInfo: botInfoResult.result
+        botInfo: botInfoResult.result,
+        memberCount,
+        chatInfo,
+        inviteLink: isAdmin ? null : await generateBotInviteLink(botInfoResult.result.username)
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -184,6 +238,14 @@ serve(async (req) => {
     });
   }
 });
+
+// Generate a link for users to add the bot to their group
+async function generateBotInviteLink(botUsername: string): Promise<string> {
+  if (!botUsername) {
+    return "";
+  }
+  return `https://t.me/${botUsername}?startgroup=true`;
+}
 
 // Utility function to extract chat ID from Telegram URL
 function extractChatIdFromUrl(url: string): string | null {
