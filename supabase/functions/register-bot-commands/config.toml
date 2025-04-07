@@ -1,0 +1,5 @@
+
+# Config for the register-bot-commands function
+
+# Whether the function requires JWT authentication
+verify_jwt = true

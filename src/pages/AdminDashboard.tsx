@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
@@ -6,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CheckCircle, XCircle, Settings, MessageSquare, Users, BarChart3, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Settings, MessageSquare, Users, BarChart3, RefreshCcw, AlertTriangle, Bot } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import AnnouncementApproval from '@/components/admin/AnnouncementApproval';
 import CommunityApproval from '@/components/admin/CommunityApproval';
 import PlatformSettings from '@/components/admin/PlatformSettings';
+import BotCommunityManagement from '@/components/admin/BotCommunityManagement';
 
 // Dashboard summary types
 interface DashboardStats {
@@ -369,6 +371,10 @@ const AdminDashboard = () => {
               <Users className="h-4 w-4 mr-2" />
               Communities
             </TabsTrigger>
+            <TabsTrigger value="bot-management" className="flex items-center">
+              <Bot className="h-4 w-4 mr-2" />
+              Bot Management
+            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center">
               <Settings className="h-4 w-4 mr-2" />
               Platform Settings
@@ -385,6 +391,10 @@ const AdminDashboard = () => {
           
           <TabsContent value="communities">
             <CommunityApproval />
+          </TabsContent>
+          
+          <TabsContent value="bot-management">
+            <BotCommunityManagement />
           </TabsContent>
           
           <TabsContent value="settings">
