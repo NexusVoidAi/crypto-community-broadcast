@@ -35,6 +35,8 @@ serve(async (req) => {
       throw new Error('Missing community ID');
     }
     
+    console.log(`Generating analytics for community ID: ${communityId}`);
+    
     // Create Supabase client
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
     
@@ -70,27 +72,11 @@ serve(async (req) => {
       throw new Error('Not a valid Telegram community');
     }
     
-    const chatId = communityData.platform_id;
+    // Normalize and process the chat ID
+    const chatId = normalizeTelegramChatId(communityData.platform_id);
+    console.log(`Using normalized chat ID for analytics: ${chatId}`);
     
-    // Get member count
-    const memberCountResponse = await fetch(
-      `https://api.telegram.org/bot${botToken}/getChatMemberCount`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId }),
-      }
-    );
-    
-    let memberCount = 0;
-    if (memberCountResponse.ok) {
-      const memberCountResult = await memberCountResponse.json();
-      if (memberCountResult.ok) {
-        memberCount = memberCountResult.result;
-      }
-    }
-    
-    // Get chat information
+    // Get chat information first to verify the chat exists
     const chatInfoResponse = await fetch(
       `https://api.telegram.org/bot${botToken}/getChat`,
       {
@@ -100,12 +86,49 @@ serve(async (req) => {
       }
     );
     
-    let chatInfo = null;
-    if (chatInfoResponse.ok) {
-      const chatInfoResult = await chatInfoResponse.json();
-      if (chatInfoResult.ok) {
-        chatInfo = chatInfoResult.result;
+    if (!chatInfoResponse.ok) {
+      const errorInfo = await chatInfoResponse.text();
+      console.error(`Failed to get chat info: ${errorInfo}`);
+      throw new Error(`Chat not found or bot doesn't have access: ${errorInfo}`);
+    }
+    
+    const chatInfoResult = await chatInfoResponse.json();
+    if (!chatInfoResult.ok) {
+      throw new Error(`Failed to get chat info: ${chatInfoResult.description}`);
+    }
+    
+    let chatInfo = chatInfoResult.result;
+    
+    // Get member count
+    let memberCount = 0;
+    const memberCountResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/getChatMemberCount`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId }),
       }
+    );
+    
+    if (memberCountResponse.ok) {
+      const memberCountResult = await memberCountResponse.json();
+      if (memberCountResult.ok) {
+        memberCount = memberCountResult.result;
+        
+        // Update community record with member count
+        await supabaseAdmin
+          .from('communities')
+          .update({ 
+            reach: memberCount,
+            // If the platform_id was in a different format than what worked, update it
+            platform_id: chatInfo.id.toString()
+          })
+          .eq('id', communityId);
+      } else {
+        console.error(`Failed to get member count: ${memberCountResult.description}`);
+      }
+    } else {
+      console.error(`Failed to get member count: ${await memberCountResponse.text()}`);
     }
     
     // For now, generate placeholder statistics
@@ -121,14 +144,6 @@ serve(async (req) => {
       engagement_rate: Math.random() * 0.5 + 0.1, // Placeholder (10-60%)
       member_count: memberCount
     };
-    
-    // Update community record with member count if available
-    if (memberCount > 0) {
-      await supabaseAdmin
-        .from('communities')
-        .update({ reach: memberCount })
-        .eq('id', communityId);
-    }
     
     // Return community analytics
     return new Response(
@@ -155,55 +170,33 @@ serve(async (req) => {
   }
 });
 
-// Helper function to create Supabase client in Deno
-const createClient = (url: string, key: string) => {
-  return {
-    from: (table: string) => ({
-      select: (columns: string = '*') => ({
-        limit: (n: number) => fetch(`${url}/rest/v1/${table}?select=${columns}&limit=${n}`, {
-          headers: {
-            'apikey': key,
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json'
-          }
-        }).then(res => res.json()),
-        eq: (column: string, value: any) => fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=eq.${value}`, {
-          headers: {
-            'apikey': key,
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json'
-          },
-        }).then(res => res.json()),
-        maybeSingle: () => fetch(`${url}/rest/v1/${table}?select=${columns}&limit=1`, {
-          headers: {
-            'apikey': key,
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json'
-          }
-        }).then(async res => {
-          const data = await res.json();
-          return { data: data.length > 0 ? data[0] : null, error: null };
-        }).catch(error => ({ data: null, error }))
-      }),
-      update: (data: any) => ({
-        eq: (column: string, value: any) => fetch(`${url}/rest/v1/${table}?${column}=eq.${value}`, {
-          method: 'PATCH',
-          headers: {
-            'apikey': key,
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify(data)
-        }).then(async res => {
-          if (!res.ok) {
-            const error = await res.json();
-            return { data: null, error };
-          }
-          const responseData = await res.json();
-          return { data: responseData, error: null };
-        })
-      })
-    })
-  };
-};
+// Normalize and process chat ID to work with Telegram API
+function normalizeTelegramChatId(chatId: string): string {
+  if (!chatId) return '';
+  
+  // Clean up the input
+  chatId = chatId.trim();
+  
+  // Handle group username (should start with @)
+  if (!chatId.startsWith('@') && !chatId.startsWith('-') && !chatId.startsWith('http') && isNaN(Number(chatId))) {
+    console.log(`Adding @ prefix to ${chatId}`);
+    chatId = '@' + chatId;
+  }
+  
+  // Handle URLs
+  if (chatId.includes('t.me/') || chatId.includes('telegram.me/')) {
+    const parts = chatId.split('/');
+    const username = parts[parts.length - 1].split('?')[0]; // Remove query parameters if any
+    
+    console.log(`Extracted username ${username} from URL ${chatId}`);
+    
+    // If username is numeric, it's likely a direct chat ID
+    if (!isNaN(Number(username))) {
+      return username;
+    }
+    
+    return '@' + username;
+  }
+  
+  return chatId;
+}

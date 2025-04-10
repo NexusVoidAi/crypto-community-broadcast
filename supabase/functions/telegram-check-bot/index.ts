@@ -82,26 +82,9 @@ serve(async (req) => {
     
     console.log(`Checking bot for Telegram chat: ${communityData.platform_id}`);
     
-    // Ensure we're using a valid chat ID format
-    let chatId = communityData.platform_id;
-    if (chatId.startsWith('@')) {
-      // It's a username, we can use it directly
-    } else if (!isNaN(Number(chatId))) {
-      // It's numeric, ensure it's treated as a string
-      chatId = chatId.toString();
-    } else {
-      // Try to extract numeric ID if it's a URL or something else
-      const numericMatch = chatId.match(/-\d+/);
-      if (numericMatch) {
-        chatId = numericMatch[0];
-      } else {
-        // Try to extract chat ID from URL using the utility function
-        const extractedId = extractChatIdFromUrl(chatId);
-        if (extractedId) {
-          chatId = extractedId;
-        }
-      }
-    }
+    // Normalize and process the chat ID
+    let chatId = normalizeTelegramChatId(communityData.platform_id);
+    console.log(`Normalized chat ID: ${chatId}`);
     
     // Get bot info first
     try {
@@ -129,7 +112,43 @@ serve(async (req) => {
       
       const botId = botInfoResult.result.id;
       
-      // Check if bot is a member of the chat
+      // Try to get chat info first to see if this is a valid chat
+      console.log(`Attempting to get chat info for: ${chatId}`);
+      const chatInfoResponse = await fetch(
+        `https://api.telegram.org/bot${botToken}/getChat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+          }),
+        }
+      );
+      
+      const chatInfoResult = await chatInfoResponse.json();
+      console.log("Chat info response:", JSON.stringify(chatInfoResult));
+      
+      if (!chatInfoResult.ok) {
+        // If chat not found and it looks like a username, try to update database with the correct ID
+        if (chatId.startsWith('@') && chatInfoResult.description?.includes("chat not found")) {
+          console.log(`Chat not found with username ${chatId}, trying to resolve username...`);
+          // We might need to store this information for later or suggest updating the community record
+        }
+        
+        return new Response(JSON.stringify({ 
+          botAdded: false,
+          error: chatInfoResult.description || "Failed to get chat information",
+          inviteLink: await generateBotInviteLink(botInfoResult.result.username, chatId),
+          suggestedFormat: getSuggestedChatIdFormat(chatId)
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // If we got chat info successfully, get bot's membership status
+      console.log("Chat found, checking bot membership status");
       const telegramResponse = await fetch(
         `https://api.telegram.org/bot${botToken}/getChatMember`,
         {
@@ -151,7 +170,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           botAdded: false,
           error: telegramResult.description,
-          inviteLink: await generateBotInviteLink(botInfoResult.result.username)
+          inviteLink: await generateBotInviteLink(botInfoResult.result.username, chatId),
+          chatInfo: chatInfoResult.result
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -162,7 +182,7 @@ serve(async (req) => {
       
       // If bot is member but not admin, try to get chat info and member count
       let memberCount = null;
-      let chatInfo = null;
+      let chatInfo = chatInfoResult.result;
       
       if (telegramResult.ok) {
         try {
@@ -184,25 +204,12 @@ serve(async (req) => {
               // Update community record with member count
               await supabaseAdmin
                 .from('communities')
-                .update({ reach: memberCount })
+                .update({ 
+                  reach: memberCount,
+                  // If the platform_id was in a different format than what worked, update it
+                  platform_id: chatInfoResult.result.id.toString()
+                })
                 .eq('id', communityId);
-            }
-          }
-          
-          // Get chat info
-          const chatInfoResponse = await fetch(
-            `https://api.telegram.org/bot${botToken}/getChat`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: chatId }),
-            }
-          );
-          
-          if (chatInfoResponse.ok) {
-            const chatInfoResult = await chatInfoResponse.json();
-            if (chatInfoResult.ok) {
-              chatInfo = chatInfoResult.result;
             }
           }
         } catch (error) {
@@ -217,11 +224,11 @@ serve(async (req) => {
         botInfo: botInfoResult.result,
         memberCount,
         chatInfo,
-        inviteLink: isAdmin ? null : await generateBotInviteLink(botInfoResult.result.username)
+        inviteLink: isAdmin ? null : await generateBotInviteLink(botInfoResult.result.username, chatId)
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking bot status:', error);
       return new Response(JSON.stringify({ 
         botAdded: false, 
@@ -230,7 +237,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error checking Telegram bot status:', error);
     return new Response(JSON.stringify({ botAdded: false, error: error.message }), {
       status: 500,
@@ -240,45 +247,65 @@ serve(async (req) => {
 });
 
 // Generate a link for users to add the bot to their group
-async function generateBotInviteLink(botUsername: string): Promise<string> {
+async function generateBotInviteLink(botUsername: string, chatId?: string): Promise<string> {
   if (!botUsername) {
     return "";
   }
+  
+  // If we have a valid chat ID that's not a username, we can't generate a direct invite
+  // so we'll just return the general bot invite link
   return `https://t.me/${botUsername}?startgroup=true`;
 }
 
-// Utility function to extract chat ID from Telegram URL
-function extractChatIdFromUrl(url: string): string | null {
-  let chatId: string | null = null;
-
-  try {
-    // Check if it's a private group or channel link (with "joinchat/")
-    if (url.includes("joinchat/")) {
-      // Telegram doesn't expose chat_id directly for private invite links
-      chatId = url.split("joinchat/")[1];
-      console.log(`Private chat invite hash extracted: ${chatId}`);
-    }
-    // Check if it's a public group or channel link
-    else if (url.includes("t.me/")) {
-      let path = url.split("t.me/")[1];
-
-      // Check if it contains a subpath like "/c/"
-      if (path.startsWith("c/")) {
-        // For "/c/" channels, there is a numeric ID followed by "/<message_id>"
-        chatId = "-" + path.split("/")[1]; // Prefix it with "-"
-      } else {
-        // For public channels or groups, we use the group name or channel name directly
-        chatId = path.split("/")[0]; // First part before any slash
-        console.log(`Public group or channel ID extracted: ${chatId}`);
-      }
-    } else {
-      console.log("Not a recognized Telegram URL format:", url);
-      return null;
-    }
-  } catch (error) {
-    console.error(`Failed to extract chat ID: ${error.message}`);
-    return null;
+// Normalize and process chat ID to work with Telegram API
+function normalizeTelegramChatId(chatId: string): string {
+  if (!chatId) return '';
+  
+  // Clean up the input
+  chatId = chatId.trim();
+  
+  // Handle group username (should start with @)
+  if (!chatId.startsWith('@') && !chatId.startsWith('-') && !chatId.startsWith('http') && isNaN(Number(chatId))) {
+    console.log(`Adding @ prefix to ${chatId}`);
+    chatId = '@' + chatId;
   }
-
+  
+  // Handle URLs
+  if (chatId.includes('t.me/') || chatId.includes('telegram.me/')) {
+    const parts = chatId.split('/');
+    const username = parts[parts.length - 1].split('?')[0]; // Remove query parameters if any
+    
+    console.log(`Extracted username ${username} from URL ${chatId}`);
+    
+    // If username is numeric, it's likely a direct chat ID
+    if (!isNaN(Number(username))) {
+      return username;
+    }
+    
+    return '@' + username;
+  }
+  
   return chatId;
+}
+
+// Get suggestion for correcting chat ID format
+function getSuggestedChatIdFormat(chatId: string): string {
+  if (!chatId) return '';
+  
+  // If doesn't start with @ and doesn't seem to be a numeric ID
+  if (!chatId.startsWith('@') && !chatId.startsWith('-') && isNaN(Number(chatId))) {
+    return `Try using "@${chatId}" for public groups or channels`;
+  }
+  
+  // If it's already a username format
+  if (chatId.startsWith('@')) {
+    return `The format looks correct. Make sure the group or channel exists and is public.`;
+  }
+  
+  // If it's a numeric ID
+  if (!isNaN(Number(chatId))) {
+    return `The format looks correct for a private chat ID. Make sure the bot has been added to this chat.`;
+  }
+  
+  return '';
 }

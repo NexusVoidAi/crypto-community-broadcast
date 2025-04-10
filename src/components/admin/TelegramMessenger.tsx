@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Send, Users, Check, Loader2, AlertCircle } from 'lucide-react';
+import { Send, Users, Check, Loader2, AlertCircle, AlertTriangle, Bot } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 type Community = {
   id: string;
@@ -25,14 +27,30 @@ const TelegramMessenger = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [botAvailable, setBotAvailable] = useState<boolean | null>(null);
   const [sendResults, setSendResults] = useState<{
     success: string[];
     failed: { name: string; error: string }[];
   } | null>(null);
   
   useEffect(() => {
+    checkBotConfiguration();
     fetchCommunities();
   }, []);
+  
+  const checkBotConfiguration = async () => {
+    try {
+      const { data: settings } = await supabase
+        .from('platform_settings')
+        .select('telegram_bot_token, telegram_bot_username')
+        .maybeSingle();
+      
+      setBotAvailable(Boolean(settings?.telegram_bot_token));
+    } catch (error) {
+      console.error('Error checking bot configuration:', error);
+      setBotAvailable(false);
+    }
+  };
   
   const fetchCommunities = async () => {
     setIsLoading(true);
@@ -82,6 +100,25 @@ const TelegramMessenger = () => {
     );
   };
   
+  const verifyBotStatus = async (communityId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('telegram-check-bot', {
+        body: { communityId }
+      });
+      
+      if (error) throw error;
+      
+      if (!data.botAdded) {
+        return { success: false, error: data.error || 'Bot not added to this community' };
+      }
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error verifying bot status:', error);
+      return { success: false, error: error.message || 'Unknown error' };
+    }
+  };
+  
   const sendMessage = async () => {
     const selectedCommunities = communities.filter(community => community.selected);
     
@@ -119,6 +156,17 @@ const TelegramMessenger = () => {
       // Send to each selected community
       for (const community of selectedCommunities) {
         try {
+          // First verify bot is in the community
+          const botStatus = await verifyBotStatus(community.id);
+          
+          if (!botStatus.success) {
+            failedSends.push({ 
+              name: community.name, 
+              error: botStatus.error || 'Bot not in community' 
+            });
+            continue;
+          }
+          
           if (!community.platform_id) {
             failedSends.push({ 
               name: community.name, 
@@ -177,6 +225,29 @@ const TelegramMessenger = () => {
       setIsSending(false);
     }
   };
+  
+  if (botAvailable === false) {
+    return (
+      <Card className="border border-border/50 bg-crypto-darkgray/50">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Send className="mr-2 h-5 w-5" /> Telegram Messenger
+          </CardTitle>
+          <CardDescription>
+            Send messages to ACHO AI Telegram communities
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert className="bg-amber-500/10 border-amber-500/30">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <AlertDescription className="ml-2">
+              Please configure a Telegram bot in Platform Settings before using this feature
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
   
   return (
     <Card className="border border-border/50 bg-crypto-darkgray/50">
@@ -254,8 +325,23 @@ const TelegramMessenger = () => {
                     className="flex-1 cursor-pointer"
                   >
                     <div className="font-medium">{community.name}</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground flex items-center">
                       {community.reach ? `${community.reach} members` : 'Unknown members'}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-5 w-5 ml-1 p-0">
+                            <Bot className="h-3 w-3" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-60 p-2">
+                          <div className="text-xs">
+                            <p className="font-medium">Platform ID:</p>
+                            <code className="bg-crypto-dark p-1 rounded block mt-1 overflow-x-auto">
+                              {community.platform_id || "Not set"}
+                            </code>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </Label>
                 </div>
