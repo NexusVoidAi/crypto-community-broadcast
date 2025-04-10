@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -69,9 +68,21 @@ serve(async (req) => {
       const chatId = message.chat.id;
       const text = message.text || '';
       
+      console.log(`Received message from chat ${chatId}: "${text}"`);
+      
+      // Handle hello command directly for testing
+      if (text === '/hello') {
+        console.log("Received /hello command, sending direct response");
+        await sendTelegramMessage(chatId, "Hello! I am up and running. 👋", botToken);
+        return new Response(JSON.stringify({ status: 'ok' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
       // Handle commands
       if (text.startsWith('/')) {
         const command = text.split(' ')[0]; // Extract command part
+        console.log(`Detected command: ${command}`);
         
         // Fetch command from database
         const { data: commandData, error: commandError } = await supabaseAdmin
@@ -82,7 +93,13 @@ serve(async (req) => {
           
         if (commandError) {
           console.error('Error fetching command:', commandError);
+          await sendTelegramMessage(chatId, "Sorry, there was an error processing your command.", botToken);
         } else if (commandData) {
+          console.log(`Found command in database: ${JSON.stringify(commandData)}`);
+          
+          // Send immediate response based on template
+          await sendTelegramMessage(chatId, commandData.response_template, botToken);
+          
           // Handle admin-only commands
           if (commandData.is_admin_only) {
             // Check if user is an admin by fetching platform_settings editor rights
@@ -91,47 +108,9 @@ serve(async (req) => {
           }
           
           // Special command handlers
-          if (command === '/list_communities') {
-            // Handle list_communities command
-            const { data: communities } = await supabaseAdmin
-              .from('communities')
-              .select('*')
-              .eq('platform', 'TELEGRAM');
-              
-            let response = commandData.response_template + '\n\n';
-            
-            if (communities && communities.length > 0) {
-              communities.forEach((community, index) => {
-                response += `${index + 1}. ${community.name}\n`;
-                response += `  Members: ${community.reach || 'N/A'}\n`;
-                response += `  Price: $${community.price_per_announcement} USDT\n`;
-                if (community.description) {
-                  response += `  Description: ${community.description.substring(0, 50)}...\n`;
-                }
-                response += '\n';
-              });
-            } else {
-              response += 'No communities available.';
-            }
-            
-            // Send response back to Telegram
-            await sendTelegramMessage(chatId, response, botToken);
-          } else if (command === '/check_admin_status') {
-            // New command to check if bot is admin in the current group
-            if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
-              const isAdmin = await isBotAdminInGroup(chatId, botToken, botInfo?.id);
-              
-              if (isAdmin) {
-                await sendTelegramMessage(chatId, "✅ I have administrator rights in this group.", botToken);
-              } else {
-                await sendTelegramMessage(chatId, "⚠️ I don't have administrator rights in this group. Please make me an administrator to use all features.", botToken);
-              }
-            } else {
-              await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
-            }
-          } else if (command === '/my_communities') {
+          if (command === '/my_communities') {
             // NEW COMMAND: List communities where the bot is present
-            await listBotCommunities(chatId, botToken);
+            await listBotCommunities(chatId, botToken, supabaseUrl, supabaseKey);
           } else if (command === '/generate_invite') {
             // NEW COMMAND: Generate invite link to add bot to groups
             const botUsername = botInfo?.username;
@@ -159,10 +138,21 @@ serve(async (req) => {
             } else {
               await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
             }
-          } else {
-            // Standard command response
-            await sendTelegramMessage(chatId, commandData.response_template, botToken);
-          }
+          } else if (command === '/check_admin_status') {
+            // Command to check if bot is admin in the current group
+            if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
+              const isAdmin = await isBotAdminInGroup(chatId, botToken, botInfo?.id);
+              
+              if (isAdmin) {
+                await sendTelegramMessage(chatId, "✅ I have administrator rights in this group.", botToken);
+              } else {
+                await sendTelegramMessage(chatId, "⚠️ I don't have administrator rights in this group. Please make me an administrator to use all features.", botToken);
+              }
+            } else {
+              await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
+            }
+          } 
+          // Other commands will just use their response template
         } else {
           console.log(`Unknown command received: ${command}`);
           await sendTelegramMessage(chatId, "Sorry, I don't understand that command.", botToken);
@@ -227,10 +217,8 @@ async function isBotAdminInGroup(chatId: string | number, botToken: string, botI
 }
 
 // NEW FUNCTION: List all communities where the bot is a member
-async function listBotCommunities(chatId: string | number, botToken: string) {
+async function listBotCommunities(chatId: string | number, botToken: string, supabaseUrl: string, supabaseKey: string) {
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
     // Get all communities from the database

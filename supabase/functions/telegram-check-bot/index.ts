@@ -29,6 +29,7 @@ serve(async (req) => {
     const { communityId } = body;
     
     if (!communityId) {
+      console.error("Missing communityId in request:", body);
       throw new Error('Missing community ID');
     }
     

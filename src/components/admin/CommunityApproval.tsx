@@ -89,34 +89,31 @@ const CommunityApproval = () => {
     setCheckingBot(community.id);
     
     try {
-      // Get the bot token
-      const { data: settings, error: settingsError } = await supabase
-        .from('platform_settings')
-        .select('telegram_bot_token')
-        .limit(1)
-        .single();
-        
-      if (settingsError) throw settingsError;
-      
-      if (!settings.telegram_bot_token) {
-        toast.error("Telegram bot token not configured");
-        return false;
-      }
-      
-      // Fixed: Now passing the communityId instead of token and chat_id directly
+      // Update: Now correctly passing the communityId
       const { data, error } = await supabase.functions.invoke("telegram-check-bot", {
         body: { 
           communityId: community.id
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error checking bot status:", error);
+        throw error;
+      }
       
       if (data.success) {
         toast.success("Bot is successfully added to the group");
         return true;
       } else {
-        toast.error(data.message || "Bot is not in the group");
+        toast.error(data.message || data.error || "Bot is not in the group");
+        
+        // Show more detailed information if available
+        if (data.inviteLink) {
+          toast.info(`Add the bot using this link: ${data.inviteLink}`);
+        }
+        if (data.suggestedFormat) {
+          toast.info(`Suggestion: ${data.suggestedFormat}`);
+        }
         return false;
       }
     } catch (error: any) {

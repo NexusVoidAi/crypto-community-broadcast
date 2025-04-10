@@ -25,11 +25,17 @@ serve(async (req) => {
       .select('telegram_bot_token')
       .maybeSingle();
       
-    if (settingsError || !settingsData || !settingsData.telegram_bot_token) {
+    if (settingsError) {
+      console.error("Error fetching platform settings:", settingsError);
+      throw new Error('Failed to fetch platform settings');
+    }
+    
+    if (!settingsData || !settingsData.telegram_bot_token) {
       throw new Error('Failed to fetch platform settings or missing bot token');
     }
     
     const botToken = settingsData.telegram_bot_token;
+    console.log("Got bot token, registering commands");
     
     // Define new commands to register
     const commands = [
@@ -56,28 +62,55 @@ serve(async (req) => {
         description: 'Get the number of members in this community',
         response_template: 'Counting members...',
         is_admin_only: false
+      },
+      // Add a test command to check if bot is working
+      {
+        command: '/hello',
+        description: 'Check if the bot is responding',
+        response_template: 'Hello! I am up and running. 👋',
+        is_admin_only: false
+      },
+      {
+        command: '/check_admin_status',
+        description: 'Check if the bot is an admin in this group',
+        response_template: 'Checking admin status...',
+        is_admin_only: false
       }
     ];
     
     // Insert commands to database
     for (const cmd of commands) {
+      console.log(`Processing command: ${cmd.command}`);
       // Check if command already exists
-      const { data: existingCommand } = await supabaseAdmin
+      const { data: existingCommands } = await supabaseAdmin
         .from('bot_commands')
         .select('*')
-        .eq('command', cmd.command)
-        .maybeSingle();
+        .eq('command', cmd.command);
       
-      if (!existingCommand) {
-        await supabaseAdmin
+      if (!existingCommands || existingCommands.length === 0) {
+        console.log(`Command ${cmd.command} does not exist, creating...`);
+        const { error: insertError } = await supabaseAdmin
           .from('bot_commands')
           .insert([cmd]);
+          
+        if (insertError) {
+          console.error(`Error inserting command ${cmd.command}:`, insertError);
+        } else {
+          console.log(`Command ${cmd.command} inserted successfully`);
+        }
       } else {
+        console.log(`Command ${cmd.command} already exists, updating...`);
         // Update existing command
-        await supabaseAdmin
+        const { error: updateError } = await supabaseAdmin
           .from('bot_commands')
           .update(cmd)
           .eq('command', cmd.command);
+          
+        if (updateError) {
+          console.error(`Error updating command ${cmd.command}:`, updateError);
+        } else {
+          console.log(`Command ${cmd.command} updated successfully`);
+        }
       }
     }
     
@@ -87,34 +120,47 @@ serve(async (req) => {
       description: cmd.description
     }));
     
-    const response = await fetch(
-      `https://api.telegram.org/bot${botToken}/setMyCommands`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          commands: telegramCommands
-        }),
+    console.log("Sending commands to Telegram API:", JSON.stringify(telegramCommands));
+    
+    try {
+      const response = await fetch(
+        `https://api.telegram.org/bot${botToken}/setMyCommands`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            commands: telegramCommands
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response from Telegram API:", errorText);
+        throw new Error(`Telegram API responded with status ${response.status}: ${errorText}`);
       }
-    );
-    
-    const result = await response.json();
-    
-    if (!result.ok) {
-      throw new Error(`Failed to register commands with Telegram: ${result.description}`);
+      
+      const result = await response.json();
+      console.log("Telegram API response:", JSON.stringify(result));
+      
+      if (!result.ok) {
+        throw new Error(`Failed to register commands with Telegram: ${result.description}`);
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Bot commands registered successfully',
+          registeredCommands: commands.length
+        }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error("Error registering commands with Telegram:", error);
+      throw error;
     }
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Bot commands registered successfully',
-        registeredCommands: commands.length
-      }), 
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-    
   } catch (error) {
     console.error('Error registering bot commands:', error);
     return new Response(
@@ -129,66 +175,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Helper function to create Supabase client in Deno
-const createClient = (url: string, key: string) => {
-  return {
-    from: (table: string) => ({
-      select: (columns: string = '*') => ({
-        eq: (column: string, value: any) => fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=eq.${value}`, {
-          headers: {
-            'apikey': key,
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json'
-          },
-        }).then(res => res.json()),
-        maybeSingle: () => fetch(`${url}/rest/v1/${table}?select=${columns}&limit=1`, {
-          headers: {
-            'apikey': key,
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json'
-          }
-        }).then(async res => {
-          const data = await res.json();
-          return { data: data.length > 0 ? data[0] : null, error: null };
-        }).catch(error => ({ data: null, error }))
-      }),
-      insert: (data: any) => fetch(`${url}/rest/v1/${table}`, {
-        method: 'POST',
-        headers: {
-          'apikey': key,
-          'Authorization': `Bearer ${key}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(data)
-      }).then(async res => {
-        if (!res.ok) {
-          const error = await res.json();
-          return { data: null, error };
-        }
-        const responseData = await res.json();
-        return { data: responseData, error: null };
-      }),
-      update: (data: any) => ({
-        eq: (column: string, value: any) => fetch(`${url}/rest/v1/${table}?${column}=eq.${value}`, {
-          method: 'PATCH',
-          headers: {
-            'apikey': key,
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify(data)
-        }).then(async res => {
-          if (!res.ok) {
-            const error = await res.json();
-            return { data: null, error };
-          }
-          const responseData = await res.json();
-          return { data: responseData, error: null };
-        })
-      })
-    })
-  };
-};

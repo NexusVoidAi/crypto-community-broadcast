@@ -11,17 +11,17 @@ import BotCommandsManagement from './BotCommandsManagement';
 import TelegramMessenger from './TelegramMessenger';
 
 const PlatformSettings = () => {
-  const [settings, setSettings({
+  const [settings, setSettings] = useState({
     id: 0,
     platform_fee: 1.0,
     telegram_bot_token: '',
     telegram_bot_username: '',
   });
   
-  const [isLoading, setIsLoading(true);
-  const [isSaving, setIsSaving(false);
-  const [activeTab, setActiveTab('general');
-  const [botConfigured, setBotConfigured(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('general');
+  const [botConfigured, setBotConfigured] = useState(false);
   
   useEffect(() => {
     fetchSettings();
