@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Send, Users, Check, Loader2, AlertCircle, AlertTriangle, Bot, Filter, CheckCircle, Image, Link, PanelRight, Plus, Trash2 } from 'lucide-react';
+import { Send, Users, Check, Loader2, AlertCircle, AlertTriangle, Bot, Filter, CheckCircle, Image, Link, PanelRight, Plus, Trash2, MessageSquare, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

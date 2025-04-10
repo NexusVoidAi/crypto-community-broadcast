@@ -22,6 +22,8 @@ serve(async (req) => {
       throw new Error('Missing announcement ID');
     }
     
+    console.log(`Processing announcement ID: ${announcementId}`);
+    
     // Create a Supabase client
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
     
@@ -31,7 +33,10 @@ serve(async (req) => {
       .select('telegram_bot_token, telegram_bot_username')
       .single();
       
-    if (settingsError) throw settingsError;
+    if (settingsError) {
+      console.error('Error fetching platform settings:', settingsError);
+      throw settingsError;
+    }
     
     if (!settings?.telegram_bot_token) {
       throw new Error('Telegram bot token not configured');
@@ -64,22 +69,32 @@ serve(async (req) => {
     // Get announcement data
     const { data: announcement, error: announcementError } = await supabaseAdmin
       .from('announcements')
-      .select('*, announcement_communities(community_id)')
+      .select('*, announcement_communities(community_id), announcement_media(url, type, caption)')
       .eq('id', announcementId)
       .single();
       
-    if (announcementError) throw announcementError;
+    if (announcementError) {
+      console.error('Error fetching announcement:', announcementError);
+      throw announcementError;
+    }
+
+    console.log('Fetched announcement data:', JSON.stringify(announcement));
     
     // Get communities data
-    const communityIds = announcement.announcement_communities.map((ac: any) => ac.community_id);
+    const communityIds = announcement.announcement_communities.map((ac) => ac.community_id);
     
     const { data: communities, error: communitiesError } = await supabaseAdmin
       .from('communities')
-      .select('id, platform, platform_id')
+      .select('id, platform, platform_id, name')
       .in('id', communityIds)
       .eq('platform', 'TELEGRAM');
       
-    if (communitiesError) throw communitiesError;
+    if (communitiesError) {
+      console.error('Error fetching communities:', communitiesError);
+      throw communitiesError;
+    }
+
+    console.log(`Found ${communities.length} Telegram communities for announcement`);
     
     // Format the announcement message
     let message = `📢 *${announcement.title}*\n\n${announcement.content}`;
@@ -94,11 +109,16 @@ serve(async (req) => {
         }]]
       };
     }
+
+    // Check if announcement has media
+    const hasMedia = announcement.announcement_media && announcement.announcement_media.length > 0;
     
     // Post to each Telegram group
     const postResults = await Promise.all(
       communities.map(async (community) => {
         try {
+          console.log(`Processing community ${community.name} (${community.platform_id})`);
+          
           // First check if bot is admin in the group
           let isAdmin = false;
           if (botInfo) {
@@ -106,33 +126,102 @@ serve(async (req) => {
               isAdmin = await isBotAdminInGroup(community.platform_id, botToken, botInfo.id);
               if (!isAdmin) {
                 console.log(`Bot is not admin in community ${community.platform_id}, but will still try to post`);
+              } else {
+                console.log(`Bot is admin in community ${community.platform_id}`);
               }
             } catch (error) {
               console.error(`Error checking admin status for ${community.id}:`, error);
             }
           }
           
-          // Send message to telegram group
-          const telegramResponse = await fetch(
-            `https://api.telegram.org/bot${botToken}/sendMessage`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                chat_id: community.platform_id,
-                text: message,
-                parse_mode: 'Markdown',
-                disable_web_page_preview: false,
-                reply_markup: inlineKeyboard
-              }),
-            }
-          );
+          let telegramResult;
           
-          const telegramResult = await telegramResponse.json();
+          // Send media messages if available
+          if (hasMedia) {
+            const firstMedia = announcement.announcement_media[0];
+            
+            if (announcement.announcement_media.length === 1) {
+              // Send single media
+              const endpoint = firstMedia.type.toLowerCase() === 'image' ? 'sendPhoto' : 'sendVideo';
+              
+              const telegramResponse = await fetch(
+                `https://api.telegram.org/bot${botToken}/${endpoint}`,
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: community.platform_id,
+                    [firstMedia.type.toLowerCase() === 'image' ? 'photo' : 'video']: firstMedia.url,
+                    caption: message,
+                    parse_mode: 'Markdown',
+                    reply_markup: inlineKeyboard
+                  })
+                }
+              );
+              
+              telegramResult = await telegramResponse.json();
+            } else {
+              // Send media group for multiple media
+              const mediaItems = announcement.announcement_media.map(item => ({
+                type: item.type.toLowerCase() === 'image' ? 'photo' : 'video',
+                media: item.url,
+                caption: item === announcement.announcement_media[0] ? message : item.caption || ''
+              }));
+              
+              const telegramResponse = await fetch(
+                `https://api.telegram.org/bot${botToken}/sendMediaGroup`,
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: community.platform_id,
+                    media: mediaItems
+                  })
+                }
+              );
+              
+              telegramResult = await telegramResponse.json();
+              
+              // Send buttons as separate message if we have CTA
+              if (inlineKeyboard) {
+                const buttonResponse = await fetch(
+                  `https://api.telegram.org/bot${botToken}/sendMessage`,
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      chat_id: community.platform_id,
+                      text: "Click below for more information:",
+                      reply_markup: inlineKeyboard
+                    })
+                  }
+                );
+              }
+            }
+          } else {
+            // Send text message
+            const telegramResponse = await fetch(
+              `https://api.telegram.org/bot${botToken}/sendMessage`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  chat_id: community.platform_id,
+                  text: message,
+                  parse_mode: 'Markdown',
+                  disable_web_page_preview: false,
+                  reply_markup: inlineKeyboard
+                }),
+              }
+            );
+            
+            telegramResult = await telegramResponse.json();
+          }
           
           if (!telegramResult.ok) {
+            console.error(`Telegram API error for ${community.name}:`, telegramResult.description);
             throw new Error(`Telegram error: ${telegramResult.description}`);
           }
           
@@ -148,12 +237,13 @@ serve(async (req) => {
           
           return {
             community_id: community.id,
+            community_name: community.name,
             success: true,
             isAdmin,
-            message_id: telegramResult.result.message_id
+            message_id: telegramResult.result?.message_id
           };
         } catch (error) {
-          console.error(`Error posting to community ${community.id}:`, error);
+          console.error(`Error posting to community ${community.id} (${community.name}):`, error);
           
           // Update announcement_communities with failed status
           await supabaseAdmin
@@ -167,6 +257,7 @@ serve(async (req) => {
           
           return {
             community_id: community.id,
+            community_name: community.name,
             success: false,
             error: error.message
           };
@@ -174,7 +265,17 @@ serve(async (req) => {
       })
     );
     
-    return new Response(JSON.stringify({ success: true, results: postResults }), {
+    const successCount = postResults.filter(r => r.success).length;
+    const failCount = postResults.filter(r => !r.success).length;
+    
+    console.log(`Announcement posting complete: ${successCount} successful, ${failCount} failed`);
+    
+    return new Response(JSON.stringify({ 
+      success: true, 
+      results: postResults,
+      successCount,
+      failCount
+    }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -204,7 +305,10 @@ async function isBotAdminInGroup(chatId: string | number, botToken: string, botI
     
     const chatMember = await chatMemberResponse.json();
     
-    if (!chatMember.ok) return false;
+    if (!chatMember.ok) {
+      console.error(`Error checking bot admin status: ${chatMember.description}`);
+      return false;
+    }
     
     return (
       chatMember.result.status === "administrator" || 
