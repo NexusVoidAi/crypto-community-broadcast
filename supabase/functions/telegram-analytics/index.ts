@@ -89,7 +89,45 @@ serve(async (req) => {
     if (!chatInfoResponse.ok) {
       const errorInfo = await chatInfoResponse.text();
       console.error(`Failed to get chat info: ${errorInfo}`);
-      throw new Error(`Chat not found or bot doesn't have access: ${errorInfo}`);
+      
+      // Try alternative formats if the first attempt failed
+      const alternativeFormats = generateAlternativeChatIdFormats(communityData.platform_id);
+      let chatInfoResult = null;
+      let successfulChatId = null;
+      
+      for (const altFormat of alternativeFormats) {
+        console.log(`Trying alternative chat ID format: ${altFormat}`);
+        
+        const altResponse = await fetch(
+          `https://api.telegram.org/bot${botToken}/getChat`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: altFormat }),
+          }
+        );
+        
+        if (altResponse.ok) {
+          const result = await altResponse.json();
+          if (result.ok) {
+            chatInfoResult = result;
+            successfulChatId = altFormat;
+            
+            // Update the community record with the working format
+            await supabaseAdmin
+              .from('communities')
+              .update({ platform_id: successfulChatId })
+              .eq('id', communityId);
+              
+            console.log(`Updated community with working chat ID format: ${successfulChatId}`);
+            break;
+          }
+        }
+      }
+      
+      if (!chatInfoResult) {
+        throw new Error(`Chat not found or bot doesn't have access: ${errorInfo}`);
+      }
     }
     
     const chatInfoResult = await chatInfoResponse.json();
@@ -170,6 +208,44 @@ serve(async (req) => {
   }
 });
 
+// Generate alternative formats to try for a chat ID
+function generateAlternativeChatIdFormats(chatId: string): string[] {
+  if (!chatId) return [];
+  
+  const formats = [];
+  chatId = chatId.trim();
+  
+  // Remove @ if it exists
+  if (chatId.startsWith('@')) {
+    formats.push(chatId.substring(1));
+  } else {
+    // Add @ if it doesn't exist and looks like a username
+    if (!chatId.startsWith('-') && isNaN(Number(chatId))) {
+      formats.push('@' + chatId);
+    }
+  }
+  
+  // Extract from URL
+  if (chatId.includes('t.me/') || chatId.includes('telegram.me/')) {
+    const parts = chatId.split('/');
+    const username = parts[parts.length - 1].split('?')[0];
+    formats.push(username);
+    formats.push('@' + username);
+  }
+  
+  // Try variations with and without hyphens for group ids
+  if (chatId.startsWith('-')) {
+    // Without the hyphen
+    formats.push(chatId.substring(1));
+  } else if (!isNaN(Number(chatId))) {
+    // With a hyphen, if it's a number
+    formats.push('-' + chatId);
+  }
+  
+  // Remove duplicates and the original format
+  return [...new Set(formats)].filter(format => format !== chatId);
+}
+
 // Normalize and process chat ID to work with Telegram API
 function normalizeTelegramChatId(chatId: string): string {
   if (!chatId) return '';
@@ -177,13 +253,7 @@ function normalizeTelegramChatId(chatId: string): string {
   // Clean up the input
   chatId = chatId.trim();
   
-  // Handle group username (should start with @)
-  if (!chatId.startsWith('@') && !chatId.startsWith('-') && !chatId.startsWith('http') && isNaN(Number(chatId))) {
-    console.log(`Adding @ prefix to ${chatId}`);
-    chatId = '@' + chatId;
-  }
-  
-  // Handle URLs
+  // Handle URLs - extract username or ID
   if (chatId.includes('t.me/') || chatId.includes('telegram.me/')) {
     const parts = chatId.split('/');
     const username = parts[parts.length - 1].split('?')[0]; // Remove query parameters if any
@@ -196,6 +266,12 @@ function normalizeTelegramChatId(chatId: string): string {
     }
     
     return '@' + username;
+  }
+  
+  // Handle group username (should start with @)
+  if (!chatId.startsWith('@') && !chatId.startsWith('-') && !chatId.startsWith('http') && isNaN(Number(chatId))) {
+    console.log(`Adding @ prefix to ${chatId}`);
+    chatId = '@' + chatId;
   }
   
   return chatId;
