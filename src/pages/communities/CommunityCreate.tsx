@@ -8,14 +8,30 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { MessagesSquare, Send, Users, AlertTriangle, Bot, Check, ExternalLink } from 'lucide-react';
+import { MessagesSquare, Send, Users, AlertTriangle, Bot, Check, ExternalLink, Globe, Plus, X } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Globe } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const REGIONS = [
   { value: 'global', label: 'Global' },
@@ -26,6 +42,7 @@ const REGIONS = [
   { value: 'south-america', label: 'South America' },
   { value: 'australia', label: 'Australia/Oceania' },
   { value: 'middle-east', label: 'Middle East' },
+  { value: 'other', label: 'Other' },
 ];
 
 const FOCUS_AREAS = [
@@ -40,6 +57,7 @@ const FOCUS_AREAS = [
   { value: 'metaverse', label: 'Metaverse' },
   { value: 'social', label: 'Social Media' },
   { value: 'payments', label: 'Payments' },
+  { value: 'other', label: 'Other' },
 ];
 
 const CommunityCreate: React.FC = () => {
@@ -55,8 +73,17 @@ const CommunityCreate: React.FC = () => {
   const [price, setPrice] = useState('25');
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [region, setRegion] = useState('global');
+  
+  // Convert region to an array for multi-select
+  const [regions, setRegions] = useState<string[]>(['global']);
+  const [customRegion, setCustomRegion] = useState('');
+  const [showCustomRegionInput, setShowCustomRegionInput] = useState(false);
+
+  // Convert focus areas to array (already was array)
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
+  const [customFocusArea, setCustomFocusArea] = useState('');
+  const [showCustomFocusAreaInput, setShowCustomFocusAreaInput] = useState(false);
+  
   const [verificationResult, setVerificationResult] = useState<{
     isValid?: boolean;
     botAdded?: boolean;
@@ -71,7 +98,38 @@ const CommunityCreate: React.FC = () => {
     chatInfo?: any;
   } | null>(null);
 
-  const handleFocusAreaChange = (value: string) => {
+  const addCustomRegion = () => {
+    if (customRegion.trim()) {
+      const newRegionValue = customRegion.toLowerCase().replace(/\s+/g, '-');
+      setRegions(prev => [...prev, newRegionValue]);
+      setCustomRegion('');
+      setShowCustomRegionInput(false);
+    }
+  };
+
+  const removeRegion = (region: string) => {
+    setRegions(prev => prev.filter(r => r !== region));
+  };
+
+  const addCustomFocusArea = () => {
+    if (customFocusArea.trim()) {
+      const newFocusAreaValue = customFocusArea.toLowerCase().replace(/\s+/g, '-');
+      setFocusAreas(prev => [...prev, newFocusAreaValue]);
+      setCustomFocusArea('');
+      setShowCustomFocusAreaInput(false);
+    }
+  };
+
+  const removeFocusArea = (area: string) => {
+    setFocusAreas(prev => prev.filter(a => a !== area));
+  };
+
+  const toggleFocusArea = (value: string) => {
+    if (value === 'other') {
+      setShowCustomFocusAreaInput(true);
+      return;
+    }
+    
     setFocusAreas(current =>
       current.includes(value)
         ? current.filter(item => item !== value)
@@ -119,7 +177,7 @@ const CommunityCreate: React.FC = () => {
           price_per_announcement: parseFloat(price) || 25.00,
           owner_id: user?.id,
           approval_status: 'DRAFT',
-          region: region,
+          region: regions,
           focus_areas: focusAreas
         })
         .select()
@@ -219,8 +277,8 @@ const CommunityCreate: React.FC = () => {
       return false;
     }
 
-    if (!region) {
-      toast.error('Please select a region for your community');
+    if (regions.length === 0) {
+      toast.error('Please select at least one region for your community');
       return false;
     }
     
@@ -301,7 +359,7 @@ const CommunityCreate: React.FC = () => {
           reach: finalReach,
           price_per_announcement: parseFloat(price) || 25.00,
           owner_id: user?.id,
-          region: region,
+          region: regions,
           focus_areas: focusAreas
         })
         .select();
@@ -334,6 +392,17 @@ const CommunityCreate: React.FC = () => {
     
     // Reset verification when changing the platform ID
     setVerificationResult(null);
+  };
+
+  // Function to get label from value
+  const getRegionLabel = (value: string) => {
+    const region = REGIONS.find(r => r.value === value);
+    return region ? region.label : value;
+  };
+
+  const getFocusAreaLabel = (value: string) => {
+    const area = FOCUS_AREAS.find(a => a.value === value);
+    return area ? area.label : value;
   };
 
   return (
@@ -486,59 +555,166 @@ const CommunityCreate: React.FC = () => {
                 </>
               )}
               
-              <div className="space-y-2">
+              {/* Multiple Regions Selection */}
+              <div className="space-y-3">
                 <Label htmlFor="region" className="flex items-center">
-                  Community Region <span className="text-red-500 ml-1">*</span>
+                  Community Regions <span className="text-red-500 ml-1">*</span>
+                  <span className="text-xs text-muted-foreground ml-2">(Select one or more)</span>
                 </Label>
-                <RadioGroup
-                  value={region}
-                  onValueChange={setRegion}
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-2"
-                >
-                  {REGIONS.map((regionOption) => (
-                    <div 
-                      key={regionOption.value} 
-                      className="flex items-center space-x-2 border border-border/50 rounded-md px-4 py-2 cursor-pointer hover:bg-crypto-dark/40"
-                      onClick={() => setRegion(regionOption.value)}
+                
+                <div className="flex flex-wrap gap-2">
+                  {regions.map(region => (
+                    <Badge 
+                      key={region}
+                      variant="secondary" 
+                      className="px-3 py-1.5 bg-crypto-dark"
                     >
-                      <RadioGroupItem value={regionOption.value} id={`region-${regionOption.value}`} />
-                      <Label 
-                        htmlFor={`region-${regionOption.value}`}
-                        className="cursor-pointer flex items-center text-sm"
+                      {getRegionLabel(region)}
+                      <button 
+                        type="button"
+                        onClick={() => removeRegion(region)}
+                        className="ml-2 hover:text-red-400"
                       >
-                        <Globe className="mr-2 h-3.5 w-3.5 text-blue-400" />
-                        {regionOption.label}
-                      </Label>
-                    </div>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
                   ))}
-                </RadioGroup>
+                </div>
+                
+                <div className="flex gap-2 items-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" type="button" className="bg-crypto-dark border-border/50">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Region
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="bg-crypto-dark border-border/50">
+                      {REGIONS.map((region) => (
+                        <DropdownMenuItem 
+                          key={region.value}
+                          className="cursor-pointer"
+                          onClick={() => {
+                            if (region.value === 'other') {
+                              setShowCustomRegionInput(true);
+                            } else if (!regions.includes(region.value)) {
+                              setRegions(prev => [...prev, region.value]);
+                            }
+                          }}
+                        >
+                          <Globe className="mr-2 h-4 w-4 text-blue-400" />
+                          {region.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  
+                  {showCustomRegionInput && (
+                    <div className="flex-1 flex gap-2">
+                      <Input
+                        value={customRegion}
+                        onChange={(e) => setCustomRegion(e.target.value)}
+                        placeholder="Enter custom region name"
+                        className="bg-crypto-dark border-border/50 flex-1"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={addCustomRegion}
+                        disabled={!customRegion.trim()}
+                      >
+                        Add
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="ghost"
+                        onClick={() => setShowCustomRegionInput(false)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
               
-              <div className="space-y-2">
+              {/* Multiple Focus Areas Selection */}
+              <div className="space-y-3">
                 <Label className="flex items-center">
-                  Focus Areas <span className="text-red-500 ml-1">*</span> <span className="text-xs text-muted-foreground ml-2">(Select at least one)</span>
+                  Focus Areas <span className="text-red-500 ml-1">*</span> 
+                  <span className="text-xs text-muted-foreground ml-2">(Select one or more)</span>
                 </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
-                  {FOCUS_AREAS.map((area) => (
-                    <div
-                      key={area.value}
-                      className={`flex items-center space-x-2 border ${focusAreas.includes(area.value) ? 'border-crypto-green/50 bg-crypto-green/10' : 'border-border/50'} 
-                        rounded-md px-4 py-2 cursor-pointer hover:bg-crypto-dark/40`}
-                      onClick={() => handleFocusAreaChange(area.value)}
+                
+                <div className="flex flex-wrap gap-2">
+                  {focusAreas.map(area => (
+                    <Badge 
+                      key={area}
+                      variant="secondary" 
+                      className="px-3 py-1.5 bg-crypto-dark"
                     >
-                      <Checkbox 
-                        id={`focus-${area.value}`} 
-                        checked={focusAreas.includes(area.value)}
-                        onCheckedChange={() => handleFocusAreaChange(area.value)}
-                      />
-                      <Label 
-                        htmlFor={`focus-${area.value}`}
-                        className="cursor-pointer w-full text-sm"
+                      {getFocusAreaLabel(area)}
+                      <button 
+                        type="button"
+                        onClick={() => removeFocusArea(area)}
+                        className="ml-2 hover:text-red-400"
                       >
-                        {area.label}
-                      </Label>
-                    </div>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
                   ))}
+                </div>
+                
+                <div className="flex gap-2 items-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" type="button" className="bg-crypto-dark border-border/50">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Focus Area
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="bg-crypto-dark border-border/50">
+                      {FOCUS_AREAS.map((area) => (
+                        <DropdownMenuItem 
+                          key={area.value}
+                          className="cursor-pointer"
+                          onClick={() => {
+                            if (area.value === 'other') {
+                              setShowCustomFocusAreaInput(true);
+                            } else if (!focusAreas.includes(area.value)) {
+                              setFocusAreas(prev => [...prev, area.value]);
+                            }
+                          }}
+                        >
+                          {area.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  
+                  {showCustomFocusAreaInput && (
+                    <div className="flex-1 flex gap-2">
+                      <Input
+                        value={customFocusArea}
+                        onChange={(e) => setCustomFocusArea(e.target.value)}
+                        placeholder="Enter custom focus area"
+                        className="bg-crypto-dark border-border/50 flex-1"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={addCustomFocusArea}
+                        disabled={!customFocusArea.trim()}
+                      >
+                        Add
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="ghost"
+                        onClick={() => setShowCustomFocusAreaInput(false)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
               
