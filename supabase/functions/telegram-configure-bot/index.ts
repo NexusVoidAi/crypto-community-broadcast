@@ -13,10 +13,34 @@ serve(async (req) => {
   }
 
   try {
-    const { token, username } = await req.json();
+    const body = await req.json();
+    const token = body.token;
     
-    if (!token || !username) {
-      throw new Error('Missing bot token or username');
+    if (!token) {
+      throw new Error('Missing bot token');
+    }
+    
+    // Get bot username directly from Telegram
+    let username;
+    try {
+      const getMeResponse = await fetch(
+        `https://api.telegram.org/bot${token}/getMe`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+      
+      const getMeResult = await getMeResponse.json();
+      if (getMeResult.ok) {
+        username = getMeResult.result.username;
+        console.log(`Retrieved bot username: ${username}`);
+      } else {
+        throw new Error(`Failed to get bot info: ${getMeResult.description}`);
+      }
+    } catch (error) {
+      console.error("Error getting bot info:", error);
+      throw new Error(`Could not get bot info: ${error.message}`);
     }
     
     // Set up webhook to receive updates
@@ -53,7 +77,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       success: true,
       webhook: webhookUrl,
-      result: telegramResult 
+      result: telegramResult,
+      username: username
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

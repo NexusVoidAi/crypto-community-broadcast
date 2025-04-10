@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -104,11 +103,10 @@ const CommunityApproval = () => {
         return false;
       }
       
-      // Check if the bot is in the group
+      // Fixed: Now passing the communityId instead of token and chat_id directly
       const { data, error } = await supabase.functions.invoke("telegram-check-bot", {
         body: { 
-          token: settings.telegram_bot_token,
-          chat_id: community.platform_id
+          communityId: community.id
         }
       });
       

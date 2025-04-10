@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,17 +11,17 @@ import BotCommandsManagement from './BotCommandsManagement';
 import TelegramMessenger from './TelegramMessenger';
 
 const PlatformSettings = () => {
-  const [settings, setSettings] = useState({
+  const [settings, setSettings({
     id: 0,
     platform_fee: 1.0,
     telegram_bot_token: '',
     telegram_bot_username: '',
   });
   
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('general');
-  const [botConfigured, setBotConfigured] = useState(false);
+  const [isLoading, setIsLoading(true);
+  const [isSaving, setIsSaving(false);
+  const [activeTab, setActiveTab('general');
+  const [botConfigured, setBotConfigured(false);
   
   useEffect(() => {
     fetchSettings();
@@ -52,73 +51,87 @@ const PlatformSettings = () => {
     }
   };
   
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      // Check if settings exist
-      const { data: existingData, error: existingError } = await supabase
-        .from('platform_settings')
-        .select('id')
-        .maybeSingle();
-      
-      if (existingError && existingError.code !== 'PGRST116') {
-        throw existingError;
-      }
-      
-      let result;
-      
-      if (existingData) {
-        // Update existing settings
-        result = await supabase
-          .from('platform_settings')
-          .update({
-            platform_fee: settings.platform_fee,
-            telegram_bot_token: settings.telegram_bot_token,
-            telegram_bot_username: settings.telegram_bot_username,
-          })
-          .eq('id', existingData.id);
-      } else {
-        // Insert new settings
-        result = await supabase
-          .from('platform_settings')
-          .insert({
-            platform_fee: settings.platform_fee,
-            telegram_bot_token: settings.telegram_bot_token,
-            telegram_bot_username: settings.telegram_bot_username,
-          });
-      }
-      
-      if (result.error) {
-        throw result.error;
-      }
-      
-      // Configure bot webhook after saving token
-      if (settings.telegram_bot_token) {
-        try {
-          const response = await supabase.functions.invoke('telegram-configure-bot', {
-            body: { token: settings.telegram_bot_token },
-          });
-          
-          if (response.error) {
-            throw new Error(response.error.message || 'Failed to configure bot webhook');
-          }
-          
-          setBotConfigured(true);
-          toast.success('Bot webhook configured successfully!');
-        } catch (webhookError: any) {
-          console.error('Failed to configure bot webhook:', webhookError);
-          toast.error(`Bot webhook configuration failed: ${webhookError.message}`);
-        }
-      }
-      
-      toast.success('Platform settings saved successfully');
-    } catch (error: any) {
-      console.error('Error saving platform settings:', error);
-      toast.error(`Failed to save settings: ${error.message}`);
-    } finally {
-      setIsSaving(false);
+const handleSave = async () => {
+  setIsSaving(true);
+  try {
+    // Check if settings exist
+    const { data: existingData, error: existingError } = await supabase
+      .from('platform_settings')
+      .select('id')
+      .maybeSingle();
+    
+    if (existingError && existingError.code !== 'PGRST116') {
+      throw existingError;
     }
-  };
+    
+    // Configure bot webhook after getting token
+    let botUsername = settings.telegram_bot_username;
+    if (settings.telegram_bot_token) {
+      try {
+        const response = await supabase.functions.invoke('telegram-configure-bot', {
+          body: { token: settings.telegram_bot_token },
+        });
+        
+        if (response.error) {
+          throw new Error(response.error.message || 'Failed to configure bot webhook');
+        }
+        
+        // Get the username from the response
+        if (response.data && response.data.username) {
+          botUsername = response.data.username;
+        }
+        
+        setBotConfigured(true);
+        toast.success('Bot webhook configured successfully!');
+      } catch (webhookError: any) {
+        console.error('Failed to configure bot webhook:', webhookError);
+        toast.error(`Bot webhook configuration failed: ${webhookError.message}`);
+      }
+    }
+    
+    let result;
+    
+    if (existingData) {
+      // Update existing settings
+      result = await supabase
+        .from('platform_settings')
+        .update({
+          platform_fee: settings.platform_fee,
+          telegram_bot_token: settings.telegram_bot_token,
+          telegram_bot_username: botUsername || settings.telegram_bot_username,
+        })
+        .eq('id', existingData.id);
+    } else {
+      // Insert new settings
+      result = await supabase
+        .from('platform_settings')
+        .insert({
+          platform_fee: settings.platform_fee,
+          telegram_bot_token: settings.telegram_bot_token,
+          telegram_bot_username: botUsername || settings.telegram_bot_username,
+        });
+    }
+    
+    if (result.error) {
+      throw result.error;
+    }
+    
+    // Update local state with the potentially new username
+    if (botUsername !== settings.telegram_bot_username) {
+      setSettings(prev => ({
+        ...prev,
+        telegram_bot_username: botUsername
+      }));
+    }
+    
+    toast.success('Platform settings saved successfully');
+  } catch (error: any) {
+    console.error('Error saving platform settings:', error);
+    toast.error(`Failed to save settings: ${error.message}`);
+  } finally {
+    setIsSaving(false);
+  }
+};
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

@@ -103,7 +103,7 @@ serve(async (req) => {
       
       if (!botInfoResult.ok) {
         return new Response(JSON.stringify({ 
-          botAdded: false,
+          success: false,
           error: "Failed to get bot information: " + botInfoResult.description 
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -127,25 +127,73 @@ serve(async (req) => {
         }
       );
       
-      const chatInfoResult = await chatInfoResponse.json();
-      console.log("Chat info response:", JSON.stringify(chatInfoResult));
-      
-      if (!chatInfoResult.ok) {
-        // If chat not found and it looks like a username, try to update database with the correct ID
-        if (chatId.startsWith('@') && chatInfoResult.description?.includes("chat not found")) {
-          console.log(`Chat not found with username ${chatId}, trying to resolve username...`);
-          // We might need to store this information for later or suggest updating the community record
+      let chatInfoResult;
+
+      // If the first attempt fails, try alternative formats
+      if (!chatInfoResponse.ok) {
+        const errorInfo = await chatInfoResponse.text();
+        console.log(`Initial chat info failed: ${errorInfo}. Trying alternative formats.`);
+
+        // Try alternative formats
+        const alternativeFormats = generateAlternativeChatIdFormats(communityData.platform_id);
+        let successfulChatId = null;
+        
+        for (const altFormat of alternativeFormats) {
+          console.log(`Trying alternative chat ID format: ${altFormat}`);
+          
+          const altResponse = await fetch(
+            `https://api.telegram.org/bot${botToken}/getChat`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: altFormat }),
+            }
+          );
+          
+          if (altResponse.ok) {
+            const result = await altResponse.json();
+            if (result.ok) {
+              chatInfoResult = result;
+              successfulChatId = altFormat;
+              chatId = altFormat; // Update chatId to the working format
+              
+              // Update the community record with the working format
+              await supabaseAdmin
+                .from('communities')
+                .update({ platform_id: successfulChatId })
+                .eq('id', communityId);
+                
+              console.log(`Updated community with working chat ID format: ${successfulChatId}`);
+              break;
+            }
+          }
         }
         
-        return new Response(JSON.stringify({ 
-          botAdded: false,
-          error: chatInfoResult.description || "Failed to get chat information",
-          inviteLink: await generateBotInviteLink(botInfoResult.result.username, chatId),
-          suggestedFormat: getSuggestedChatIdFormat(chatId)
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        if (!chatInfoResult) {
+          return new Response(JSON.stringify({ 
+            success: false,
+            error: "Chat not found. Please check the group ID or make sure the bot has been added to the group.",
+            inviteLink: await generateBotInviteLink(botInfoResult.result.username, communityData.platform_id),
+            suggestedFormat: getSuggestedChatIdFormat(communityData.platform_id)
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      } else {
+        chatInfoResult = await chatInfoResponse.json();
+        if (!chatInfoResult.ok) {
+          return new Response(JSON.stringify({ 
+            success: false,
+            error: chatInfoResult.description || "Failed to get chat information", 
+            inviteLink: await generateBotInviteLink(botInfoResult.result.username, chatId),
+            suggestedFormat: getSuggestedChatIdFormat(chatId)
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
       }
+      
+      console.log("Chat info:", JSON.stringify(chatInfoResult));
       
       // If we got chat info successfully, get bot's membership status
       console.log("Chat found, checking bot membership status");
@@ -168,7 +216,7 @@ serve(async (req) => {
       
       if (!telegramResult.ok) {
         return new Response(JSON.stringify({ 
-          botAdded: false,
+          success: false,
           error: telegramResult.description,
           inviteLink: await generateBotInviteLink(botInfoResult.result.username, chatId),
           chatInfo: chatInfoResult.result
@@ -201,15 +249,16 @@ serve(async (req) => {
             if (memberCountResult.ok) {
               memberCount = memberCountResult.result;
               
-              // Update community record with member count
+              // Update community record with member count and verified platform_id
               await supabaseAdmin
                 .from('communities')
                 .update({ 
                   reach: memberCount,
-                  // If the platform_id was in a different format than what worked, update it
-                  platform_id: chatInfoResult.result.id.toString()
+                  platform_id: chatId  // Use the verified working chat ID
                 })
                 .eq('id', communityId);
+              
+              console.log(`Updated community with member count ${memberCount} and platform_id ${chatId}`);
             }
           }
         } catch (error) {
@@ -218,7 +267,7 @@ serve(async (req) => {
       }
       
       return new Response(JSON.stringify({ 
-        botAdded: true,
+        success: true,
         isAdmin,
         status: telegramResult.result.status,
         botInfo: botInfoResult.result,
@@ -231,7 +280,7 @@ serve(async (req) => {
     } catch (error: any) {
       console.error('Error checking bot status:', error);
       return new Response(JSON.stringify({ 
-        botAdded: false, 
+        success: false, 
         error: error.message 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -239,7 +288,7 @@ serve(async (req) => {
     }
   } catch (error: any) {
     console.error('Error checking Telegram bot status:', error);
-    return new Response(JSON.stringify({ botAdded: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -257,6 +306,44 @@ async function generateBotInviteLink(botUsername: string, chatId?: string): Prom
   return `https://t.me/${botUsername}?startgroup=true`;
 }
 
+// Generate alternative formats to try for a chat ID
+function generateAlternativeChatIdFormats(chatId: string): string[] {
+  if (!chatId) return [];
+  
+  const formats = [];
+  chatId = chatId.trim();
+  
+  // Remove @ if it exists
+  if (chatId.startsWith('@')) {
+    formats.push(chatId.substring(1));
+  } else {
+    // Add @ if it doesn't exist and looks like a username
+    if (!chatId.startsWith('-') && isNaN(Number(chatId))) {
+      formats.push('@' + chatId);
+    }
+  }
+  
+  // Extract from URL
+  if (chatId.includes('t.me/') || chatId.includes('telegram.me/')) {
+    const parts = chatId.split('/');
+    const username = parts[parts.length - 1].split('?')[0];
+    formats.push(username);
+    formats.push('@' + username);
+  }
+  
+  // Try variations with and without hyphens for group ids
+  if (chatId.startsWith('-')) {
+    // Without the hyphen
+    formats.push(chatId.substring(1));
+  } else if (!isNaN(Number(chatId))) {
+    // With a hyphen, if it's a number
+    formats.push('-' + chatId);
+  }
+  
+  // Remove duplicates and the original format
+  return [...new Set(formats)].filter(format => format !== chatId);
+}
+
 // Normalize and process chat ID to work with Telegram API
 function normalizeTelegramChatId(chatId: string): string {
   if (!chatId) return '';
@@ -264,13 +351,7 @@ function normalizeTelegramChatId(chatId: string): string {
   // Clean up the input
   chatId = chatId.trim();
   
-  // Handle group username (should start with @)
-  if (!chatId.startsWith('@') && !chatId.startsWith('-') && !chatId.startsWith('http') && isNaN(Number(chatId))) {
-    console.log(`Adding @ prefix to ${chatId}`);
-    chatId = '@' + chatId;
-  }
-  
-  // Handle URLs
+  // Handle URLs - extract username or ID
   if (chatId.includes('t.me/') || chatId.includes('telegram.me/')) {
     const parts = chatId.split('/');
     const username = parts[parts.length - 1].split('?')[0]; // Remove query parameters if any
@@ -283,6 +364,12 @@ function normalizeTelegramChatId(chatId: string): string {
     }
     
     return '@' + username;
+  }
+  
+  // Handle group username (should start with @)
+  if (!chatId.startsWith('@') && !chatId.startsWith('-') && !chatId.startsWith('http') && isNaN(Number(chatId))) {
+    console.log(`Adding @ prefix to ${chatId}`);
+    chatId = '@' + chatId;
   }
   
   return chatId;

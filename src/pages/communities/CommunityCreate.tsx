@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -343,8 +342,9 @@ const CommunityCreate: React.FC = () => {
                     id="platformId"
                     value={platformId}
                     onChange={handlePlatformIdChange}
-                    placeholder={platform === 'TELEGRAM' ? "e.g., @crypto_traders or -1001234567890" : "e.g., https://discord.gg/..."}
+                    placeholder={platform === 'TELEGRAM' ? "e.g., @crypto_traders, t.me/channel, or -1001234567890" : "e.g., https://discord.gg/..."}
                     className="bg-crypto-dark border-border/50"
+                    normalizeTelegramId={platform === 'TELEGRAM'}
                     required
                   />
                   {platform === 'TELEGRAM' && (
