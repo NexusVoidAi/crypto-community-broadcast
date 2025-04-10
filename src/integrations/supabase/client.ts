@@ -55,7 +55,7 @@ export type ExtendedDatabase = Database & {
           approval_status?: string;
           created_at: string;
           updated_at?: string;
-          region?: string;
+          region?: string[];
           focus_areas?: string[];
         };
         Insert: {
@@ -70,7 +70,7 @@ export type ExtendedDatabase = Database & {
           approval_status?: string;
           created_at?: string;
           updated_at?: string;
-          region?: string;
+          region?: string[];
           focus_areas?: string[];
         };
         Update: {
@@ -85,7 +85,7 @@ export type ExtendedDatabase = Database & {
           approval_status?: string;
           created_at?: string;
           updated_at?: string;
-          region?: string;
+          region?: string[];
           focus_areas?: string[];
         };
       };
