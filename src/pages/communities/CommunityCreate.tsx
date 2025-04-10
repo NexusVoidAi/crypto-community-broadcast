@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,8 @@ const CommunityCreate: React.FC = () => {
       username: string;
       first_name: string;
     };
+    memberCount?: number;
+    chatInfo?: any;
   } | null>(null);
 
   const handleTelegramVerification = async () => {
@@ -103,15 +106,26 @@ const CommunityCreate: React.FC = () => {
       const data = response.data;
 
       if (data.botAdded) {
+        // Update member count if available
+        if (data.memberCount) {
+          setReach(data.memberCount.toString());
+        }
+        
         setVerificationResult({
           isValid: true,
           botAdded: true,
           isAdmin: data.isAdmin,
-          botInfo: data.botInfo
+          botInfo: data.botInfo,
+          memberCount: data.memberCount,
+          chatInfo: data.chatInfo
         });
         
         if (data.isAdmin) {
-          toast.success('Verification successful! The bot is in the group with admin rights.');
+          if (data.memberCount) {
+            toast.success(`Verification successful! The bot is in the group with admin rights. Member count: ${data.memberCount}`);
+          } else {
+            toast.success('Verification successful! The bot is in the group with admin rights.');
+          }
         } else {
           toast.warning('Bot is in the group, but needs admin rights for all features.');
         }
@@ -192,6 +206,15 @@ const CommunityCreate: React.FC = () => {
           </div>
         )}
 
+        {verificationResult?.memberCount && (
+          <div className="mt-2">
+            <p className="text-sm text-green-400">
+              <Users className="h-4 w-4 inline mr-1" />
+              Detected {verificationResult.memberCount} members in this community
+            </p>
+          </div>
+        )}
+
         {verificationResult?.botAdded && !verificationResult.isAdmin && (
           <Alert className="mt-3 bg-orange-500/10 border-orange-500/30">
             <AlertTriangle className="h-4 w-4 text-orange-500 mr-2" />
@@ -214,6 +237,9 @@ const CommunityCreate: React.FC = () => {
     setIsLoading(true);
     
     try {
+      // Use the auto-detected member count if available
+      const finalReach = verificationResult?.memberCount || parseInt(reach) || 0;
+      
       const { data, error } = await supabase
         .from('communities')
         .insert({
@@ -221,7 +247,7 @@ const CommunityCreate: React.FC = () => {
           description,
           platform,
           platform_id: platformId,
-          reach: parseInt(reach) || 0,
+          reach: finalReach,
           price_per_announcement: parseFloat(price) || 25.00,
           owner_id: user?.id
         })
@@ -344,7 +370,6 @@ const CommunityCreate: React.FC = () => {
                     onChange={handlePlatformIdChange}
                     placeholder={platform === 'TELEGRAM' ? "e.g., @crypto_traders, t.me/channel, or -1001234567890" : "e.g., https://discord.gg/..."}
                     className="bg-crypto-dark border-border/50"
-                    normalizeTelegramId={platform === 'TELEGRAM'}
                     required
                   />
                   {platform === 'TELEGRAM' && (
@@ -392,6 +417,7 @@ const CommunityCreate: React.FC = () => {
                             {verificationResult.isAdmin 
                               ? "Verification successful! The bot is in your group with admin rights."
                               : "The bot is in your group, but doesn't have admin rights. Please make the bot an admin for full functionality."}
+                            {verificationResult.memberCount ? ` Group has ${verificationResult.memberCount} members.` : ''}
                           </AlertDescription>
                         </>
                       ) : (
@@ -415,12 +441,16 @@ const CommunityCreate: React.FC = () => {
                     <Input
                       id="reach"
                       type="number"
-                      value={reach}
+                      value={verificationResult?.memberCount ? verificationResult.memberCount.toString() : reach}
                       onChange={(e) => setReach(e.target.value)}
                       placeholder="Number of members"
                       className="pl-10 bg-crypto-dark border-border/50"
+                      readOnly={verificationResult?.memberCount !== undefined}
                     />
                   </div>
+                  {verificationResult?.memberCount && (
+                    <p className="text-xs text-green-400">Member count auto-detected from the group</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">

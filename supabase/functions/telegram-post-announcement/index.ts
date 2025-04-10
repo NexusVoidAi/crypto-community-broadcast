@@ -85,7 +85,7 @@ serve(async (req) => {
     
     const { data: communities, error: communitiesError } = await supabaseAdmin
       .from('communities')
-      .select('id, platform, platform_id, name')
+      .select('id, platform, platform_id, name, reach')
       .in('id', communityIds)
       .eq('platform', 'TELEGRAM');
       
@@ -132,6 +132,26 @@ serve(async (req) => {
             } catch (error) {
               console.error(`Error checking admin status for ${community.id}:`, error);
             }
+          }
+          
+          // Get current member count to ensure it's up to date
+          let memberCount = community.reach;
+          try {
+            const memberCountResult = await getChatMemberCount(botToken, community.platform_id);
+            if (memberCountResult && memberCountResult.ok) {
+              memberCount = memberCountResult.result;
+              
+              // Update community with the latest member count
+              if (memberCount !== community.reach) {
+                console.log(`Updating community ${community.id} member count from ${community.reach} to ${memberCount}`);
+                await supabaseAdmin
+                  .from('communities')
+                  .update({ reach: memberCount })
+                  .eq('id', community.id);
+              }
+            }
+          } catch (error) {
+            console.error(`Error getting member count for ${community.id}:`, error);
           }
           
           let telegramResult;
@@ -230,7 +250,8 @@ serve(async (req) => {
             .from('announcement_communities')
             .update({
               delivered: true,
-              delivery_log: telegramResult
+              delivery_log: telegramResult,
+              reach_at_delivery: memberCount
             })
             .eq('announcement_id', announcementId)
             .eq('community_id', community.id);
@@ -240,7 +261,8 @@ serve(async (req) => {
             community_name: community.name,
             success: true,
             isAdmin,
-            message_id: telegramResult.result?.message_id
+            message_id: telegramResult.result?.message_id,
+            member_count: memberCount
           };
         } catch (error) {
           console.error(`Error posting to community ${community.id} (${community.name}):`, error);
@@ -317,6 +339,25 @@ async function isBotAdminInGroup(chatId: string | number, botToken: string, botI
   } catch (error) {
     console.error("Error checking bot admin status:", error);
     return false;
+  }
+}
+
+// Get chat member count
+async function getChatMemberCount(botToken: string, chatId: number | string) {
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${botToken}/getChatMemberCount`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId })
+      }
+    );
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting chat member count:", error);
+    return null;
   }
 }
 

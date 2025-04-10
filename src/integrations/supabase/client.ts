@@ -42,6 +42,21 @@ export type ExtendedDatabase = Database & {
           updated_at?: string;
         };
       } & Database['public']['Tables'];
+      communities: {
+        Row: {
+          id: string;
+          name: string;
+          description?: string;
+          platform: string;
+          platform_id: string;
+          reach?: number;
+          price_per_announcement?: number;
+          owner_id: string;
+          approval_status?: string;
+          created_at: string;
+          updated_at?: string;
+        };
+      };
     };
   } & Database['public'];
 };
