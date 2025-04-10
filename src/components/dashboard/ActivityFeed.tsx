@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { ActivityItem } from './types';
 import { formatDistanceToNow } from 'date-fns';
 import { Bell, Check, AlertTriangle, Info, Ban, ArrowRight } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ActivityFeedProps {
   activities: ActivityItem[];
@@ -54,6 +55,8 @@ const getStatusColor = (status: string) => {
 };
 
 const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities }) => {
+  const isMobile = useIsMobile();
+
   return (
     <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
       <CardHeader className="pb-2">
@@ -64,25 +67,25 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities }) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {activities.length > 0 ? (
-            activities.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-4 pb-4 last:pb-0 border-b border-border/30 last:border-0">
-                <div className="p-2 rounded-full bg-crypto-dark/60">
+          {activities && activities.length > 0 ? (
+            activities.map((activity, index) => (
+              <div key={activity.id || index} className="flex items-start gap-4 pb-4 last:pb-0 border-b border-border/30 last:border-0">
+                <div className="p-2 rounded-full bg-crypto-dark/60 shrink-0">
                   {getTypeIcon(activity.type)}
                 </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">{activity.title}</p>
-                    <Badge variant="outline" className={`${getStatusColor(activity.status)}`}>
+                <div className="flex-1 space-y-1 min-w-0">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <p className="font-medium truncate">{activity.title}</p>
+                    <Badge variant="outline" className={`${getStatusColor(activity.status)} shrink-0`}>
                       {activity.status}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{activity.description}</p>
-                  <div className="flex items-center justify-between pt-1">
+                  <p className="text-sm text-muted-foreground line-clamp-2">{activity.description}</p>
+                  <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
                     <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                      {activity.timestamp ? formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true }) : 'Recently'}
                     </p>
-                    <button className="text-xs text-crypto-blue hover:underline flex items-center">
+                    <button className="text-xs text-crypto-blue hover:underline flex items-center whitespace-nowrap">
                       View Details <ArrowRight className="ml-1 h-3 w-3" />
                     </button>
                   </div>

@@ -13,11 +13,40 @@ import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Globe } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+const REGIONS = [
+  { value: 'global', label: 'Global' },
+  { value: 'north-america', label: 'North America' },
+  { value: 'europe', label: 'Europe' },
+  { value: 'asia', label: 'Asia' },
+  { value: 'africa', label: 'Africa' },
+  { value: 'south-america', label: 'South America' },
+  { value: 'australia', label: 'Australia/Oceania' },
+  { value: 'middle-east', label: 'Middle East' },
+];
+
+const FOCUS_AREAS = [
+  { value: 'defi', label: 'DeFi' },
+  { value: 'nft', label: 'NFTs' },
+  { value: 'web3', label: 'Web3' },
+  { value: 'ai', label: 'AI' },
+  { value: 'gaming', label: 'Gaming/GameFi' },
+  { value: 'dao', label: 'DAOs' },
+  { value: 'education', label: 'Education' },
+  { value: 'trading', label: 'Trading' },
+  { value: 'metaverse', label: 'Metaverse' },
+  { value: 'social', label: 'Social Media' },
+  { value: 'payments', label: 'Payments' },
+];
 
 const CommunityCreate: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [platform, setPlatform] = useState<'TELEGRAM' | 'DISCORD' | 'WHATSAPP'>('TELEGRAM');
@@ -26,6 +55,8 @@ const CommunityCreate: React.FC = () => {
   const [price, setPrice] = useState('25');
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [region, setRegion] = useState('global');
+  const [focusAreas, setFocusAreas] = useState<string[]>([]);
   const [verificationResult, setVerificationResult] = useState<{
     isValid?: boolean;
     botAdded?: boolean;
@@ -39,6 +70,14 @@ const CommunityCreate: React.FC = () => {
     memberCount?: number;
     chatInfo?: any;
   } | null>(null);
+
+  const handleFocusAreaChange = (value: string) => {
+    setFocusAreas(current =>
+      current.includes(value)
+        ? current.filter(item => item !== value)
+        : [...current, value]
+    );
+  };
 
   const handleTelegramVerification = async () => {
     if (!platformId) {
@@ -79,7 +118,9 @@ const CommunityCreate: React.FC = () => {
           reach: parseInt(reach) || 0,
           price_per_announcement: parseFloat(price) || 25.00,
           owner_id: user?.id,
-          approval_status: 'DRAFT'
+          approval_status: 'DRAFT',
+          region: region,
+          focus_areas: focusAreas
         })
         .select()
         .single();
@@ -177,6 +218,16 @@ const CommunityCreate: React.FC = () => {
       toast.error('Please verify that the bot is added to your Telegram group before creating the community');
       return false;
     }
+
+    if (!region) {
+      toast.error('Please select a region for your community');
+      return false;
+    }
+    
+    if (focusAreas.length === 0) {
+      toast.error('Please select at least one focus area for your community');
+      return false;
+    }
     
     return true;
   };
@@ -249,7 +300,9 @@ const CommunityCreate: React.FC = () => {
           platform_id: platformId,
           reach: finalReach,
           price_per_announcement: parseFloat(price) || 25.00,
-          owner_id: user?.id
+          owner_id: user?.id,
+          region: region,
+          focus_areas: focusAreas
         })
         .select();
         
@@ -363,7 +416,7 @@ const CommunityCreate: React.FC = () => {
                 <Label htmlFor="platformId" className="flex items-center">
                   Channel/Group ID or URL <span className="text-red-500 ml-1">*</span>
                 </Label>
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 flex-col sm:flex-row gap-2 sm:gap-0">
                   <Input
                     id="platformId"
                     value={platformId}
@@ -378,7 +431,7 @@ const CommunityCreate: React.FC = () => {
                       variant="outline"
                       onClick={handleTelegramVerification}
                       disabled={isVerifying || !platformId}
-                      className="whitespace-nowrap"
+                      className="whitespace-nowrap sm:w-auto w-full"
                     >
                       {isVerifying ? (
                         <>
@@ -433,6 +486,62 @@ const CommunityCreate: React.FC = () => {
                 </>
               )}
               
+              <div className="space-y-2">
+                <Label htmlFor="region" className="flex items-center">
+                  Community Region <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <RadioGroup
+                  value={region}
+                  onValueChange={setRegion}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-2"
+                >
+                  {REGIONS.map((regionOption) => (
+                    <div 
+                      key={regionOption.value} 
+                      className="flex items-center space-x-2 border border-border/50 rounded-md px-4 py-2 cursor-pointer hover:bg-crypto-dark/40"
+                      onClick={() => setRegion(regionOption.value)}
+                    >
+                      <RadioGroupItem value={regionOption.value} id={`region-${regionOption.value}`} />
+                      <Label 
+                        htmlFor={`region-${regionOption.value}`}
+                        className="cursor-pointer flex items-center text-sm"
+                      >
+                        <Globe className="mr-2 h-3.5 w-3.5 text-blue-400" />
+                        {regionOption.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="flex items-center">
+                  Focus Areas <span className="text-red-500 ml-1">*</span> <span className="text-xs text-muted-foreground ml-2">(Select at least one)</span>
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+                  {FOCUS_AREAS.map((area) => (
+                    <div
+                      key={area.value}
+                      className={`flex items-center space-x-2 border ${focusAreas.includes(area.value) ? 'border-crypto-green/50 bg-crypto-green/10' : 'border-border/50'} 
+                        rounded-md px-4 py-2 cursor-pointer hover:bg-crypto-dark/40`}
+                      onClick={() => handleFocusAreaChange(area.value)}
+                    >
+                      <Checkbox 
+                        id={`focus-${area.value}`} 
+                        checked={focusAreas.includes(area.value)}
+                        onCheckedChange={() => handleFocusAreaChange(area.value)}
+                      />
+                      <Label 
+                        htmlFor={`focus-${area.value}`}
+                        className="cursor-pointer w-full text-sm"
+                      >
+                        {area.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="reach">Community Size</Label>
@@ -471,17 +580,18 @@ const CommunityCreate: React.FC = () => {
                 </div>
               </div>
               
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end space-x-3 pt-4 flex-col sm:flex-row gap-3 sm:gap-0">
                 <Button
                   type="button" 
                   variant="outline"
                   onClick={() => navigate('/communities')}
+                  className="sm:order-1 order-2"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90"
+                  className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90 sm:order-2 order-1"
                   disabled={isLoading || (platform === 'TELEGRAM' && !verificationResult?.botAdded)}
                 >
                   {isLoading ? 'Creating...' : 'Create Community'}

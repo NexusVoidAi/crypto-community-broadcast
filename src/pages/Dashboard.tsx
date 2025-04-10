@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -37,10 +38,12 @@ import {
 } from '@/components/ui/table';
 import DashboardNav from '@/components/dashboard/DashboardNav';
 import AppLayout from '@/components/layout/AppLayout';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("overview");
   const [profile, setProfile] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -166,9 +169,9 @@ const Dashboard = () => {
     const activities: ActivityItem[] = [];
     
     // Add payment activities
-    payments.slice(0, 3).forEach(payment => {
+    payments.slice(0, 3).forEach((payment, index) => {
       activities.push({
-        id: payment.id,
+        id: payment.id || `payment-${index}`,
         timestamp: payment.created_at,
         title: 'Payment processed',
         description: `Payment of $${payment.amount} ${payment.currency} for announcement`,
@@ -178,9 +181,9 @@ const Dashboard = () => {
     });
     
     // Add campaign activities
-    campaigns.slice(0, 3).forEach(campaign => {
+    campaigns.slice(0, 3).forEach((campaign, index) => {
       activities.push({
-        id: campaign.id,
+        id: campaign.id || `campaign-${index}`,
         timestamp: new Date().toISOString(), // Using current time as placeholder
         title: `Campaign "${campaign.title}" ${campaign.status === 'ACTIVE' ? 'is active' : 'status updated'}`,
         description: `Campaign status: ${campaign.status}`,
@@ -190,7 +193,7 @@ const Dashboard = () => {
     });
     
     // Sort by timestamp (newest first) and limit to 5
-    activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    activities.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
     setRecentActivities(activities.slice(0, 5));
   }, [payments, campaigns]);
 
@@ -235,11 +238,16 @@ const Dashboard = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ACTIVE':
+      case 'PUBLISHED':
         return 'bg-green-500/10 text-green-500 border-green-500/20';
       case 'PENDING':
+      case 'PENDING_VALIDATION':
         return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
       case 'REJECTED':
+      case 'VALIDATION_FAILED':
         return 'bg-red-500/10 text-red-500 border-red-500/20';
+      case 'DRAFT':
+        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
       default:
         return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
     }
@@ -275,15 +283,17 @@ const Dashboard = () => {
           <CardDescription>Your campaign performance for the last 7 days</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-              <XAxis dataKey="date" stroke="#94a3b8" />
-              <YAxis stroke="#94a3b8" />
-              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', color: '#fff' }} />
-              <Line type="monotone" dataKey="value" stroke="#8884d8" activeDot={{ r: 8 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                <XAxis dataKey="date" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" />
+                <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', color: '#fff' }} />
+                <Line type="monotone" dataKey="value" stroke="#8884d8" activeDot={{ r: 8 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
       
@@ -296,22 +306,32 @@ const Dashboard = () => {
             <CardDescription>Get started with common tasks</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'}`}>
               <div>
                 <p className="font-medium">Create new campaign</p>
                 <p className="text-sm text-muted-foreground">Start a new announcement campaign</p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigate('/announcements/create')}>
+              <Button 
+                variant="outline" 
+                size={isMobile ? "default" : "sm"} 
+                onClick={() => navigate('/announcements/create')}
+                className={isMobile ? "w-full" : ""}
+              >
                 <Megaphone className="h-4 w-4 mr-2" />
                 Create
               </Button>
             </div>
-            <div className="flex items-center justify-between">
+            <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'}`}>
               <div>
                 <p className="font-medium">Add a community</p>
                 <p className="text-sm text-muted-foreground">Register a new community</p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigate('/communities/create')}>
+              <Button 
+                variant="outline" 
+                size={isMobile ? "default" : "sm"} 
+                onClick={() => navigate('/communities/create')}
+                className={isMobile ? "w-full" : ""}
+              >
                 <ShoppingBag className="h-4 w-4 mr-2" />
                 Add
               </Button>
@@ -324,67 +344,79 @@ const Dashboard = () => {
 
   const renderCampaignsContent = () => (
     <div className="mt-4">
-      <div className="mb-4 flex justify-between">
+      <div className="mb-4 flex justify-between flex-wrap gap-3">
         <h2 className="text-xl font-semibold">Your Campaigns</h2>
         <CreateAnnouncementButton />
       </div>
       
       <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border/50 hover:bg-crypto-darkgray/30">
-                <TableHead className="w-[300px]">Campaign</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Communities</TableHead>
-                <TableHead>Impressions</TableHead>
-                <TableHead className="text-right">Spent</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/50 hover:bg-crypto-darkgray/30">
+                  <TableHead className="w-[300px]">Campaign</TableHead>
+                  <TableHead>Status</TableHead>
+                  {!isMobile && (
+                    <>
+                      <TableHead>Communities</TableHead>
+                      <TableHead>Impressions</TableHead>
+                      <TableHead className="text-right">Spent</TableHead>
+                    </>
+                  )}
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : campaigns.length > 0 ? (
-                campaigns.map((campaign) => (
-                  <TableRow key={campaign.id} className="border-border/50 hover:bg-crypto-darkgray/30">
-                    <TableCell className="font-medium">{campaign.title}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={getStatusColor(campaign.status)}>
-                        {campaign.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{campaign.communities?.length || 0}</TableCell>
-                    <TableCell>{campaign.impressions?.toLocaleString() || 0}</TableCell>
-                    <TableCell className="text-right">${campaign.spent.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-1">
-                        <Button variant="ghost" size="icon" title="View">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Edit">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Analytics">
-                          <BarChart2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={isMobile ? 3 : 6} className="text-center h-24">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                    No campaigns found. Create your first campaign!
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                ) : campaigns.length > 0 ? (
+                  campaigns.map((campaign) => (
+                    <TableRow key={campaign.id} className="border-border/50 hover:bg-crypto-darkgray/30">
+                      <TableCell className="font-medium">{campaign.title}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={getStatusColor(campaign.status)}>
+                          {campaign.status}
+                        </Badge>
+                      </TableCell>
+                      {!isMobile && (
+                        <>
+                          <TableCell>{campaign.communities?.length || 0}</TableCell>
+                          <TableCell>{campaign.impressions?.toLocaleString() || 0}</TableCell>
+                          <TableCell className="text-right">${campaign.spent.toLocaleString()}</TableCell>
+                        </>
+                      )}
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-1">
+                          <Button variant="ghost" size="icon" title="View">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Edit">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {!isMobile && (
+                            <Button variant="ghost" size="icon" title="Analytics">
+                              <BarChart2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={isMobile ? 3 : 6} className="text-center h-24 text-muted-foreground">
+                      No campaigns found. Create your first campaign!
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -392,7 +424,7 @@ const Dashboard = () => {
 
   const renderMarketplaceContent = () => (
     <div className="mt-4">
-      <div className="mb-4 flex justify-between">
+      <div className="mb-4 flex justify-between flex-wrap gap-3">
         <h2 className="text-xl font-semibold">Community Marketplace</h2>
         <Button
           onClick={() => navigate('/communities/create')}
@@ -408,6 +440,7 @@ const Dashboard = () => {
           <Button
             onClick={() => navigate('/communities')}
             variant="outline"
+            className={isMobile ? "w-full" : ""}
           >
             Browse Communities
           </Button>
@@ -427,21 +460,21 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="p-4 border border-border/50 rounded-md bg-crypto-darkgray/80">
               <h3 className="font-medium text-center mb-3">Total Spent</h3>
-              <div className="text-center text-3xl font-bold text-crypto-green">
+              <div className="text-center text-2xl md:text-3xl font-bold text-crypto-green">
                 ${payments.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)} USDT
               </div>
               <p className="text-xs text-muted-foreground text-center mt-2">Lifetime spending</p>
             </div>
             <div className="p-4 border border-border/50 rounded-md bg-crypto-darkgray/80">
               <h3 className="font-medium text-center mb-3">Pending Payments</h3>
-              <div className="text-center text-3xl font-bold text-yellow-500">
+              <div className="text-center text-2xl md:text-3xl font-bold text-yellow-500">
                 ${payments.filter((p: any) => p.status === 'PENDING').reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)} USDT
               </div>
               <p className="text-xs text-muted-foreground text-center mt-2">Payments awaiting confirmation</p>
             </div>
             <div className="p-4 border border-border/50 rounded-md bg-crypto-darkgray/80">
               <h3 className="font-medium text-center mb-3">Community Earnings</h3>
-              <div className="text-center text-3xl font-bold text-crypto-blue">$0 USDT</div>
+              <div className="text-center text-2xl md:text-3xl font-bold text-crypto-blue">$0 USDT</div>
               <p className="text-xs text-muted-foreground text-center mt-2">Revenue from your communities</p>
             </div>
           </div>
@@ -455,13 +488,13 @@ const Dashboard = () => {
                   <TableHead>Transaction</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {!isMobile && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-4">
+                    <TableCell colSpan={isMobile ? 4 : 5} className="text-center py-4">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
@@ -479,16 +512,18 @@ const Dashboard = () => {
                           {payment.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="h-8">
-                          Details
-                        </Button>
-                      </TableCell>
+                      {!isMobile && (
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="h-8">
+                            Details
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                    <TableCell colSpan={isMobile ? 4 : 5} className="text-center py-4 text-muted-foreground">
                       No transaction history
                     </TableCell>
                   </TableRow>
@@ -520,13 +555,14 @@ const Dashboard = () => {
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <h1 className="text-2xl font-bold">Dashboard</h1>
           {isAdmin && (
             <Button
               onClick={() => navigate('/admin')}
               variant="outline"
               className="flex items-center"
+              size={isMobile ? "default" : "default"}
             >
               <Shield className="mr-2 h-4 w-4" />
               Admin Dashboard

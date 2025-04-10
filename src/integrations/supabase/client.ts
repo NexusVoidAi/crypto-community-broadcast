@@ -55,6 +55,38 @@ export type ExtendedDatabase = Database & {
           approval_status?: string;
           created_at: string;
           updated_at?: string;
+          region?: string;
+          focus_areas?: string[];
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string;
+          platform: string;
+          platform_id?: string;
+          reach?: number;
+          price_per_announcement?: number;
+          owner_id: string;
+          approval_status?: string;
+          created_at?: string;
+          updated_at?: string;
+          region?: string;
+          focus_areas?: string[];
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string;
+          platform?: string;
+          platform_id?: string;
+          reach?: number;
+          price_per_announcement?: number;
+          owner_id?: string;
+          approval_status?: string;
+          created_at?: string;
+          updated_at?: string;
+          region?: string;
+          focus_areas?: string[];
         };
       };
     };
