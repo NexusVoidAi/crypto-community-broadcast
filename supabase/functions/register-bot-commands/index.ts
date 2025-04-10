@@ -123,7 +123,8 @@ serve(async (req) => {
     console.log("Sending commands to Telegram API:", JSON.stringify(telegramCommands));
     
     try {
-      const response = await fetch(
+      // First, register global commands (available in private chats)
+      const globalResponse = await fetch(
         `https://api.telegram.org/bot${botToken}/setMyCommands`,
         {
           method: 'POST',
@@ -131,22 +132,106 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            commands: telegramCommands
+            commands: telegramCommands.filter(cmd => 
+              !cmd.command.includes('community_stats') && 
+              !cmd.command.includes('member_count') &&
+              !cmd.command.includes('check_admin_status')
+            )
           }),
         }
       );
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error response from Telegram API:", errorText);
-        throw new Error(`Telegram API responded with status ${response.status}: ${errorText}`);
+      if (!globalResponse.ok) {
+        const errorText = await globalResponse.text();
+        console.error("Error response from Telegram API (global commands):", errorText);
+        throw new Error(`Telegram API responded with status ${globalResponse.status}: ${errorText}`);
       }
       
-      const result = await response.json();
-      console.log("Telegram API response:", JSON.stringify(result));
+      const globalResult = await globalResponse.json();
+      console.log("Telegram API response (global commands):", JSON.stringify(globalResult));
       
-      if (!result.ok) {
-        throw new Error(`Failed to register commands with Telegram: ${result.description}`);
+      // Now register group-specific commands
+      const groupResponse = await fetch(
+        `https://api.telegram.org/bot${botToken}/setMyCommands`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            commands: telegramCommands.filter(cmd => 
+              !cmd.command.includes('my_communities') && 
+              !cmd.command.includes('generate_invite')
+            ),
+            scope: {
+              type: 'all_group_chats'
+            }
+          }),
+        }
+      );
+      
+      if (!groupResponse.ok) {
+        const errorText = await groupResponse.text();
+        console.error("Error response from Telegram API (group commands):", errorText);
+      } else {
+        const groupResult = await groupResponse.json();
+        console.log("Telegram API response (group commands):", JSON.stringify(groupResult));
+      }
+      
+      // Additionally, let's update our bot's description and about info
+      const aboutText = "I help manage ACHO AI communities and distribute announcements. Add me to your group to connect with the ACHO platform!";
+      
+      try {
+        const aboutResponse = await fetch(
+          `https://api.telegram.org/bot${botToken}/setMyDescription`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              description: aboutText
+            }),
+          }
+        );
+        
+        if (!aboutResponse.ok) {
+          console.error("Error setting bot description:", await aboutResponse.text());
+        } else {
+          console.log("Bot description updated successfully");
+        }
+      } catch (error) {
+        console.error("Error updating bot description:", error);
+      }
+      
+      // Also get and store the bot's username
+      try {
+        const botInfoResponse = await fetch(
+          `https://api.telegram.org/bot${botToken}/getMe`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        
+        if (botInfoResponse.ok) {
+          const botInfo = await botInfoResponse.json();
+          if (botInfo.ok && botInfo.result.username) {
+            // Store the bot username in platform_settings
+            await supabaseAdmin
+              .from('platform_settings')
+              .update({
+                telegram_bot_username: botInfo.result.username
+              })
+              .eq('id', settingsData.id || 1);
+              
+            console.log(`Updated bot username in platform settings: ${botInfo.result.username}`);
+          }
+        }
+      } catch (error) {
+        console.error("Error getting bot info:", error);
       }
       
       return new Response(

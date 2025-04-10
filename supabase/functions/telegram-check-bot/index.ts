@@ -174,6 +174,7 @@ serve(async (req) => {
           return new Response(JSON.stringify({ 
             success: false,
             error: "Chat not found. Please check the group ID or make sure the bot has been added to the group.",
+            botAdded: false,
             inviteLink: await generateBotInviteLink(botInfoResult.result.username, communityData.platform_id),
             suggestedFormat: getSuggestedChatIdFormat(communityData.platform_id)
           }), {
@@ -185,6 +186,7 @@ serve(async (req) => {
         if (!chatInfoResult.ok) {
           return new Response(JSON.stringify({ 
             success: false,
+            botAdded: false,
             error: chatInfoResult.description || "Failed to get chat information", 
             inviteLink: await generateBotInviteLink(botInfoResult.result.username, chatId),
             suggestedFormat: getSuggestedChatIdFormat(chatId)
@@ -218,6 +220,7 @@ serve(async (req) => {
       if (!telegramResult.ok) {
         return new Response(JSON.stringify({ 
           success: false,
+          botAdded: false,
           error: telegramResult.description,
           inviteLink: await generateBotInviteLink(botInfoResult.result.username, chatId),
           chatInfo: chatInfoResult.result
@@ -228,12 +231,25 @@ serve(async (req) => {
       
       // Check if bot has admin rights
       const isAdmin = ['administrator', 'creator'].includes(telegramResult.result.status);
+      const isMember = telegramResult.result.status !== 'left' && telegramResult.result.status !== 'kicked';
+      
+      if (!isMember) {
+        return new Response(JSON.stringify({ 
+          success: false,
+          botAdded: false,
+          error: "Bot is not a member of this group",
+          status: telegramResult.result.status,
+          inviteLink: await generateBotInviteLink(botInfoResult.result.username, chatId)
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
       
       // If bot is member but not admin, try to get chat info and member count
       let memberCount = null;
       let chatInfo = chatInfoResult.result;
       
-      if (telegramResult.ok) {
+      if (isMember) {
         try {
           // Get member count
           const memberCountResponse = await fetch(
@@ -269,6 +285,7 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({ 
         success: true,
+        botAdded: true,
         isAdmin,
         status: telegramResult.result.status,
         botInfo: botInfoResult.result,
@@ -282,6 +299,7 @@ serve(async (req) => {
       console.error('Error checking bot status:', error);
       return new Response(JSON.stringify({ 
         success: false, 
+        botAdded: false,
         error: error.message 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -289,7 +307,7 @@ serve(async (req) => {
     }
   } catch (error: any) {
     console.error('Error checking Telegram bot status:', error);
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, botAdded: false, error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

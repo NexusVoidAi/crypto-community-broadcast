@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Send, Users, Check, Loader2, AlertCircle, AlertTriangle, Bot } from 'lucide-react';
+import { Send, Users, Check, Loader2, AlertCircle, AlertTriangle, Bot, Filter, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 
 type Community = {
   id: string;
@@ -19,7 +19,9 @@ type Community = {
   platform_id: string;
   reach: number | null;
   price_per_announcement: number;
+  approval_status: string;
   selected?: boolean;
+  botStatus?: 'VERIFIED' | 'UNVERIFIED' | 'CHECKING';
 };
 
 const TelegramMessenger = () => {
@@ -28,6 +30,7 @@ const TelegramMessenger = () => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [botAvailable, setBotAvailable] = useState<boolean | null>(null);
+  const [showOnlyVerified, setShowOnlyVerified] = useState(true);
   const [sendResults, setSendResults] = useState<{
     success: string[];
     failed: { name: string; error: string }[];
@@ -57,8 +60,9 @@ const TelegramMessenger = () => {
     try {
       const { data, error } = await supabase
         .from('communities')
-        .select('id, name, platform, platform_id, reach, price_per_announcement')
+        .select('id, name, platform, platform_id, reach, price_per_announcement, approval_status')
         .eq('platform', 'TELEGRAM')
+        .eq('approval_status', 'APPROVED') // Only show approved communities
         .order('name');
         
       if (error) throw error;
@@ -66,10 +70,16 @@ const TelegramMessenger = () => {
       // Add selected property to each community
       const communitiesWithSelection = (data || []).map(community => ({
         ...community,
-        selected: false
+        selected: false,
+        botStatus: 'UNVERIFIED' as 'VERIFIED' | 'UNVERIFIED' | 'CHECKING'
       }));
       
       setCommunities(communitiesWithSelection);
+      
+      // Verify bot status for each community in the background
+      for (const community of communitiesWithSelection) {
+        verifyBotStatus(community.id);
+      }
     } catch (error: any) {
       console.error('Error fetching communities:', error);
       toast.error(`Failed to load communities: ${error.message}`);
@@ -90,7 +100,13 @@ const TelegramMessenger = () => {
   
   const selectAll = () => {
     setCommunities(
-      communities.map(community => ({ ...community, selected: true }))
+      communities.map(community => {
+        // Only select communities where the bot is verified
+        if (showOnlyVerified && community.botStatus !== 'VERIFIED') {
+          return community;
+        }
+        return { ...community, selected: true };
+      })
     );
   };
   
@@ -102,20 +118,46 @@ const TelegramMessenger = () => {
   
   const verifyBotStatus = async (communityId: string) => {
     try {
+      // Mark as checking
+      setCommunities(prev => 
+        prev.map(c => 
+          c.id === communityId 
+            ? { ...c, botStatus: 'CHECKING' } 
+            : c
+        )
+      );
+      
       const { data, error } = await supabase.functions.invoke('telegram-check-bot', {
         body: { communityId }
       });
       
       if (error) throw error;
       
-      if (!data.botAdded) {
-        return { success: false, error: data.error || 'Bot not added to this community' };
-      }
+      const isVerified = data.success && data.status !== 'left' && data.status !== 'kicked';
       
-      return { success: true };
+      // Update the community's bot status
+      setCommunities(prev => 
+        prev.map(c => 
+          c.id === communityId 
+            ? { ...c, botStatus: isVerified ? 'VERIFIED' : 'UNVERIFIED' } 
+            : c
+        )
+      );
+      
+      return isVerified;
     } catch (error: any) {
       console.error('Error verifying bot status:', error);
-      return { success: false, error: error.message || 'Unknown error' };
+      
+      // Mark as unverified on error
+      setCommunities(prev => 
+        prev.map(c => 
+          c.id === communityId 
+            ? { ...c, botStatus: 'UNVERIFIED' } 
+            : c
+        )
+      );
+      
+      return false;
     }
   };
   
@@ -159,10 +201,10 @@ const TelegramMessenger = () => {
           // First verify bot is in the community
           const botStatus = await verifyBotStatus(community.id);
           
-          if (!botStatus.success) {
+          if (!botStatus) {
             failedSends.push({ 
               name: community.name, 
-              error: botStatus.error || 'Bot not in community' 
+              error: 'Bot not added to this community' 
             });
             continue;
           }
@@ -226,6 +268,10 @@ const TelegramMessenger = () => {
     }
   };
   
+  const filteredCommunities = communities.filter(community => 
+    !showOnlyVerified || community.botStatus === 'VERIFIED'
+  );
+  
   if (botAvailable === false) {
     return (
       <Card className="border border-border/50 bg-crypto-darkgray/50">
@@ -280,23 +326,35 @@ const TelegramMessenger = () => {
               <Users className="mr-2 h-4 w-4" />
               Select Communities
             </Label>
-            <div className="space-x-2">
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={selectAll}
-                disabled={isLoading}
-              >
-                Select All
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={deselectAll}
-                disabled={isLoading}
-              >
-                Deselect All
-              </Button>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="verified-only"
+                  checked={showOnlyVerified}
+                  onCheckedChange={setShowOnlyVerified}
+                />
+                <Label htmlFor="verified-only" className="text-sm cursor-pointer">
+                  Show only bot-verified communities
+                </Label>
+              </div>
+              <div className="space-x-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={selectAll}
+                  disabled={isLoading}
+                >
+                  Select All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={deselectAll}
+                  disabled={isLoading}
+                >
+                  Deselect All
+                </Button>
+              </div>
             </div>
           </div>
           
@@ -304,13 +362,15 @@ const TelegramMessenger = () => {
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : communities.length === 0 ? (
+          ) : filteredCommunities.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No Telegram communities available.
+              {communities.length === 0 
+                ? "No Telegram communities available." 
+                : "No bot-verified communities available. Try turning off the filter."}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-              {communities.map((community) => (
+              {filteredCommunities.map((community) => (
                 <div
                   key={community.id}
                   className="flex items-center space-x-2 border border-border/30 rounded-md p-2 hover:bg-crypto-dark/50"
@@ -324,7 +384,15 @@ const TelegramMessenger = () => {
                     htmlFor={`community-${community.id}`}
                     className="flex-1 cursor-pointer"
                   >
-                    <div className="font-medium">{community.name}</div>
+                    <div className="font-medium flex items-center">
+                      {community.name}
+                      {community.botStatus === 'VERIFIED' && (
+                        <CheckCircle className="h-3 w-3 text-green-500 ml-1" />
+                      )}
+                      {community.botStatus === 'CHECKING' && (
+                        <Loader2 className="h-3 w-3 animate-spin ml-1" />
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground flex items-center">
                       {community.reach ? `${community.reach} members` : 'Unknown members'}
                       <Popover>
@@ -339,6 +407,16 @@ const TelegramMessenger = () => {
                             <code className="bg-crypto-dark p-1 rounded block mt-1 overflow-x-auto">
                               {community.platform_id || "Not set"}
                             </code>
+                            <p className="font-medium mt-2">Bot Status:</p>
+                            <span className={`${
+                              community.botStatus === 'VERIFIED' 
+                                ? 'text-green-500' 
+                                : community.botStatus === 'CHECKING' 
+                                  ? 'text-yellow-500' 
+                                  : 'text-red-500'
+                            }`}>
+                              {community.botStatus}
+                            </span>
                           </div>
                         </PopoverContent>
                       </Popover>

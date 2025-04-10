@@ -84,78 +84,86 @@ serve(async (req) => {
         const command = text.split(' ')[0]; // Extract command part
         console.log(`Detected command: ${command}`);
         
-        // Fetch command from database
-        const { data: commandData, error: commandError } = await supabaseAdmin
-          .from('bot_commands')
-          .select('*')
-          .eq('command', command)
-          .maybeSingle();
-          
-        if (commandError) {
-          console.error('Error fetching command:', commandError);
-          await sendTelegramMessage(chatId, "Sorry, there was an error processing your command.", botToken);
-        } else if (commandData) {
-          console.log(`Found command in database: ${JSON.stringify(commandData)}`);
-          
-          // Send immediate response based on template
-          await sendTelegramMessage(chatId, commandData.response_template, botToken);
-          
-          // Handle admin-only commands
-          if (commandData.is_admin_only) {
-            // Check if user is an admin by fetching platform_settings editor rights
-            // For now, we'll just log and proceed
-            console.log(`Admin command '${command}' received`);
-          }
-          
-          // Special command handlers
-          if (command === '/my_communities') {
-            // NEW COMMAND: List communities where the bot is present
-            await listBotCommunities(chatId, botToken, supabaseUrl, supabaseKey);
-          } else if (command === '/generate_invite') {
-            // NEW COMMAND: Generate invite link to add bot to groups
-            const botUsername = botInfo?.username;
-            if (botUsername) {
-              const inviteUrl = `https://t.me/${botUsername}?startgroup=true`;
-              await sendTelegramMessage(
-                chatId, 
-                `Use this link to add me to your group:\n\n${inviteUrl}\n\nAfter adding me, please make me an administrator to enable all features.`, 
-                botToken
-              );
-            } else {
-              await sendTelegramMessage(chatId, "Couldn't generate invite link. Please try again later.", botToken);
+        try {
+          // Fetch command from database
+          const { data: commandData, error: commandError } = await supabaseAdmin
+            .from('bot_commands')
+            .select('*')
+            .eq('command', command)
+            .maybeSingle();
+            
+          if (commandError) {
+            console.error('Error fetching command:', commandError);
+            await sendTelegramMessage(chatId, "Sorry, there was an error processing your command.", botToken);
+          } else if (commandData) {
+            console.log(`Found command in database: ${JSON.stringify(commandData)}`);
+            
+            // Verify the command is allowed in this context
+            const isAdmin = message.from ? await isUserAdminInChat(chatId, message.from.id, botToken) : false;
+            
+            if (commandData.is_admin_only && !isAdmin) {
+              await sendTelegramMessage(chatId, "This command is only available to group administrators.", botToken);
+              return new Response(JSON.stringify({ status: 'ok' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
             }
-          } else if (command === '/community_stats') {
-            // NEW COMMAND: Get community statistics
-            if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
-              await getCommunityStats(chatId, botToken);
-            } else {
-              await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
-            }
-          } else if (command === '/member_count') {
-            // NEW COMMAND: Get number of members in the community
-            if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
-              await getMemberCount(chatId, botToken);
-            } else {
-              await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
-            }
-          } else if (command === '/check_admin_status') {
-            // Command to check if bot is admin in the current group
-            if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
-              const isAdmin = await isBotAdminInGroup(chatId, botToken, botInfo?.id);
-              
-              if (isAdmin) {
-                await sendTelegramMessage(chatId, "✅ I have administrator rights in this group.", botToken);
+            
+            // Send immediate response based on template
+            await sendTelegramMessage(chatId, commandData.response_template, botToken);
+            
+            // Special command handlers
+            if (command === '/my_communities') {
+              // List communities where the bot is present
+              await listBotCommunities(chatId, botToken, supabaseUrl, supabaseKey);
+            } else if (command === '/generate_invite') {
+              // Generate invite link to add bot to groups
+              const botUsername = botInfo?.username;
+              if (botUsername) {
+                const inviteUrl = `https://t.me/${botUsername}?startgroup=true`;
+                await sendTelegramMessage(
+                  chatId, 
+                  `Use this link to add me to your group:\n\n${inviteUrl}\n\nAfter adding me, please make me an administrator to enable all features.`, 
+                  botToken
+                );
               } else {
-                await sendTelegramMessage(chatId, "⚠️ I don't have administrator rights in this group. Please make me an administrator to use all features.", botToken);
+                await sendTelegramMessage(chatId, "Couldn't generate invite link. Please try again later.", botToken);
               }
-            } else {
-              await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
-            }
-          } 
-          // Other commands will just use their response template
-        } else {
-          console.log(`Unknown command received: ${command}`);
-          await sendTelegramMessage(chatId, "Sorry, I don't understand that command.", botToken);
+            } else if (command === '/community_stats') {
+              // Get community statistics
+              if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
+                await getCommunityStats(chatId, botToken);
+              } else {
+                await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
+              }
+            } else if (command === '/member_count') {
+              // Get number of members in the community
+              if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
+                await getMemberCount(chatId, botToken);
+              } else {
+                await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
+              }
+            } else if (command === '/check_admin_status') {
+              // Command to check if bot is admin in the current group
+              if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
+                const isAdmin = await isBotAdminInGroup(chatId, botToken, botInfo?.id);
+                
+                if (isAdmin) {
+                  await sendTelegramMessage(chatId, "✅ I have administrator rights in this group.", botToken);
+                } else {
+                  await sendTelegramMessage(chatId, "⚠️ I don't have administrator rights in this group. Please make me an administrator to use all features.", botToken);
+                }
+              } else {
+                await sendTelegramMessage(chatId, "This command can only be used in groups.", botToken);
+              }
+            } 
+            // Other commands will just use their response template
+          } else {
+            console.log(`Unknown command received: ${command}`);
+            await sendTelegramMessage(chatId, "Sorry, I don't understand that command.", botToken);
+          }
+        } catch (error) {
+          console.error(`Error processing command ${text}:`, error);
+          await sendTelegramMessage(chatId, "Sorry, there was an error processing your command.", botToken);
         }
       }
     }
@@ -173,6 +181,32 @@ serve(async (req) => {
     });
   }
 });
+
+// Check if a user is an admin in a chat
+async function isUserAdminInChat(chatId: string | number, userId: number, botToken: string): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${botToken}/getChatMember`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          chat_id: chatId, 
+          user_id: userId 
+        }),
+      }
+    );
+    
+    const result = await response.json();
+    if (!result.ok) return false;
+    
+    const status = result.result.status;
+    return status === 'administrator' || status === 'creator';
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
+}
 
 // Helper function to check if bot is admin in group
 async function isBotAdminInGroup(chatId: string | number, botToken: string, botId?: number) {
@@ -204,7 +238,10 @@ async function isBotAdminInGroup(chatId: string | number, botToken: string, botI
     
     const chatMember = await chatMemberResponse.json();
     
-    if (!chatMember.ok) return false;
+    if (!chatMember.ok) {
+      console.log(`Failed to get chat member: ${JSON.stringify(chatMember)}`);
+      return false;
+    }
     
     return (
       chatMember.result.status === "administrator" || 
@@ -225,7 +262,8 @@ async function listBotCommunities(chatId: string | number, botToken: string, sup
     const { data: communities, error } = await supabaseAdmin
       .from('communities')
       .select('*')
-      .eq('platform', 'TELEGRAM');
+      .eq('platform', 'TELEGRAM')
+      .eq('approval_status', 'APPROVED'); // Only list approved communities
 
     if (error) {
       console.error("Error fetching communities:", error);
@@ -394,6 +432,8 @@ async function sendTelegramMessage(chatId: string | number, text: string, botTok
       botToken = settings[0].telegram_bot_token;
     }
     
+    console.log(`Sending message to chat ${chatId}: "${text.substring(0, 50)}..."`);
+    
     // Send message via Telegram API
     const response = await fetch(
       `https://api.telegram.org/bot${botToken}/sendMessage`,
@@ -412,10 +452,13 @@ async function sendTelegramMessage(chatId: string | number, text: string, botTok
     
     if (!response.ok) {
       const errorData = await response.json();
+      console.error(`Telegram API error: ${JSON.stringify(errorData)}`);
       throw new Error(`Telegram API error: ${JSON.stringify(errorData)}`);
     }
     
-    return await response.json();
+    const result = await response.json();
+    console.log(`Message sent successfully, message_id: ${result.result?.message_id}`);
+    return result;
   } catch (error) {
     console.error('Error sending Telegram message:', error);
     throw error;
