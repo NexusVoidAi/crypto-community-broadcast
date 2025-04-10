@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -83,8 +84,15 @@ serve(async (req) => {
     // Format the announcement message
     let message = `📢 *${announcement.title}*\n\n${announcement.content}`;
     
+    // Add buttons if CTA is provided
+    let inlineKeyboard;
     if (announcement.cta_text && announcement.cta_url) {
-      message += `\n\n[${announcement.cta_text}](${announcement.cta_url})`;
+      inlineKeyboard = {
+        inline_keyboard: [[{
+          text: announcement.cta_text,
+          url: announcement.cta_url
+        }]]
+      };
     }
     
     // Post to each Telegram group
@@ -116,7 +124,8 @@ serve(async (req) => {
                 chat_id: community.platform_id,
                 text: message,
                 parse_mode: 'Markdown',
-                disable_web_page_preview: false
+                disable_web_page_preview: false,
+                reply_markup: inlineKeyboard
               }),
             }
           );

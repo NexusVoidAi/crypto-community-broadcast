@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Send, Users, Check, Loader2, AlertCircle, AlertTriangle, Bot, Filter, CheckCircle } from 'lucide-react';
+import { Send, Users, Check, Loader2, AlertCircle, AlertTriangle, Bot, Filter, CheckCircle, Image, Link, PanelRight, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 
 type Community = {
   id: string;
@@ -24,6 +27,17 @@ type Community = {
   botStatus?: 'VERIFIED' | 'UNVERIFIED' | 'CHECKING';
 };
 
+type Button = {
+  text: string;
+  url: string;
+};
+
+type MediaItem = {
+  type: 'image' | 'video';
+  url: string;
+  caption?: string;
+};
+
 const TelegramMessenger = () => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +49,13 @@ const TelegramMessenger = () => {
     success: string[];
     failed: { name: string; error: string }[];
   } | null>(null);
+  
+  // New state for enhanced message features
+  const [buttons, setButtons] = useState<Button[]>([]);
+  const [newButton, setNewButton] = useState<Button>({ text: '', url: '' });
+  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [newMedia, setNewMedia] = useState<MediaItem>({ type: 'image', url: '', caption: '' });
+  const [activeTab, setActiveTab] = useState('text');
   
   useEffect(() => {
     checkBotConfiguration();
@@ -161,6 +182,56 @@ const TelegramMessenger = () => {
     }
   };
   
+  // Button management
+  const addButton = () => {
+    if (!newButton.text || !newButton.url) {
+      toast.error('Button text and URL are required');
+      return;
+    }
+    
+    // Validate URL
+    try {
+      new URL(newButton.url);
+    } catch (e) {
+      toast.error('Please enter a valid URL starting with http:// or https://');
+      return;
+    }
+    
+    setButtons([...buttons, newButton]);
+    setNewButton({ text: '', url: '' });
+  };
+  
+  const removeButton = (index: number) => {
+    const updatedButtons = [...buttons];
+    updatedButtons.splice(index, 1);
+    setButtons(updatedButtons);
+  };
+  
+  // Media management
+  const addMedia = () => {
+    if (!newMedia.url) {
+      toast.error('Media URL is required');
+      return;
+    }
+    
+    // Validate URL
+    try {
+      new URL(newMedia.url);
+    } catch (e) {
+      toast.error('Please enter a valid URL starting with http:// or https://');
+      return;
+    }
+    
+    setMedia([...media, newMedia]);
+    setNewMedia({ type: 'image', url: '', caption: '' });
+  };
+  
+  const removeMedia = (index: number) => {
+    const updatedMedia = [...media];
+    updatedMedia.splice(index, 1);
+    setMedia(updatedMedia);
+  };
+  
   const sendMessage = async () => {
     const selectedCommunities = communities.filter(community => community.selected);
     
@@ -169,8 +240,8 @@ const TelegramMessenger = () => {
       return;
     }
     
-    if (!message.trim()) {
-      toast.error('Please enter a message to send');
+    if (!message.trim() && media.length === 0) {
+      toast.error('Please enter a message or add media to send');
       return;
     }
     
@@ -217,22 +288,90 @@ const TelegramMessenger = () => {
             continue;
           }
           
-          const response = await fetch(
-            `https://api.telegram.org/bot${botToken}/sendMessage`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                chat_id: community.platform_id,
-                text: message,
-                parse_mode: 'HTML',
-              }),
-            }
-          );
+          let result;
           
-          const result = await response.json();
+          // Send message based on content type
+          if (media.length > 0) {
+            // Handle media messages
+            const firstMedia = media[0];
+            const inlineKeyboard = buttons.length > 0 ? {
+              inline_keyboard: [buttons.map(btn => ({ text: btn.text, url: btn.url }))]
+            } : undefined;
+            
+            const endpoint = firstMedia.type === 'image' ? 
+              `sendPhoto` : 
+              `sendVideo`;
+            
+            const response = await fetch(
+              `https://api.telegram.org/bot${botToken}/${endpoint}`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  chat_id: community.platform_id,
+                  [firstMedia.type === 'image' ? 'photo' : 'video']: firstMedia.url,
+                  caption: message || firstMedia.caption || '',
+                  parse_mode: 'HTML',
+                  reply_markup: inlineKeyboard
+                }),
+              }
+            );
+            
+            result = await response.json();
+            
+            // If there are more media items, send as a media group
+            if (media.length > 1) {
+              const mediaItems = media.map(item => ({
+                type: item.type === 'image' ? 'photo' : 'video',
+                media: item.url,
+                caption: item.caption || ''
+              }));
+              
+              const mediaResponse = await fetch(
+                `https://api.telegram.org/bot${botToken}/sendMediaGroup`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    chat_id: community.platform_id,
+                    media: mediaItems
+                  }),
+                }
+              );
+              
+              const mediaResult = await mediaResponse.json();
+              if (!mediaResult.ok) {
+                console.warn('Additional media may not have been sent:', mediaResult.description);
+              }
+            }
+          } else {
+            // Handle text-only messages with buttons
+            const inlineKeyboard = buttons.length > 0 ? {
+              inline_keyboard: [buttons.map(btn => ({ text: btn.text, url: btn.url }))]
+            } : undefined;
+            
+            const response = await fetch(
+              `https://api.telegram.org/bot${botToken}/sendMessage`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  chat_id: community.platform_id,
+                  text: message,
+                  parse_mode: 'HTML',
+                  reply_markup: inlineKeyboard
+                }),
+              }
+            );
+            
+            result = await response.json();
+          }
           
           if (result.ok) {
             successfulSends.push(community.name);
@@ -265,6 +404,14 @@ const TelegramMessenger = () => {
       toast.error(`Error: ${error.message}`);
     } finally {
       setIsSending(false);
+    }
+  };
+  
+  const clearMessageContents = () => {
+    if (window.confirm("Are you sure you want to clear all message content?")) {
+      setMessage('');
+      setButtons([]);
+      setMedia([]);
     }
   };
   
@@ -306,18 +453,207 @@ const TelegramMessenger = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="message">Message</Label>
-          <Textarea
-            id="message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Enter your message to send to selected communities..."
-            className="min-h-[120px] bg-crypto-dark border-border/50"
-          />
-          <p className="text-xs text-muted-foreground">
-            You can use HTML formatting tags like &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, etc.
-          </p>
+        {/* Message composition area */}
+        <div className="space-y-3">
+          <Label>Message Composition</Label>
+          <Tabs defaultValue="text" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="text" className="flex items-center">
+                <MessageSquare className="h-4 w-4 mr-1" /> Text
+              </TabsTrigger>
+              <TabsTrigger value="media" className="flex items-center">
+                <Image className="h-4 w-4 mr-1" /> Media
+              </TabsTrigger>
+              <TabsTrigger value="buttons" className="flex items-center">
+                <PanelRight className="h-4 w-4 mr-1" /> Buttons
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="text" className="space-y-2">
+              <Textarea
+                id="message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Enter your message to send to selected communities..."
+                className="min-h-[120px] bg-crypto-dark border-border/50"
+              />
+              <p className="text-xs text-muted-foreground">
+                You can use HTML formatting tags like &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, etc.
+              </p>
+            </TabsContent>
+            
+            <TabsContent value="media" className="space-y-4">
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="mediaType">Type</Label>
+                    <select
+                      id="mediaType"
+                      value={newMedia.type}
+                      onChange={(e) => setNewMedia({...newMedia, type: e.target.value as 'image' | 'video'})}
+                      className="w-full rounded-md border border-border/50 bg-crypto-dark p-2"
+                    >
+                      <option value="image">Image</option>
+                      <option value="video">Video</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="mediaUrl">URL</Label>
+                    <Input 
+                      id="mediaUrl"
+                      type="text"
+                      placeholder="https://example.com/image.jpg"
+                      value={newMedia.url}
+                      onChange={(e) => setNewMedia({...newMedia, url: e.target.value})}
+                      className="bg-crypto-dark"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="mediaCaption">Caption (Optional)</Label>
+                  <Input 
+                    id="mediaCaption"
+                    type="text"
+                    placeholder="Image caption"
+                    value={newMedia.caption || ''}
+                    onChange={(e) => setNewMedia({...newMedia, caption: e.target.value})}
+                    className="bg-crypto-dark"
+                  />
+                </div>
+                <Button 
+                  onClick={addMedia}
+                  variant="outline"
+                  size="sm"
+                  className="mt-1"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add Media
+                </Button>
+              </div>
+              
+              <Separator />
+              
+              {media.length > 0 ? (
+                <div className="space-y-2">
+                  <h4 className="font-medium">Added Media ({media.length})</h4>
+                  <div className="space-y-2">
+                    {media.map((item, index) => (
+                      <div 
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-crypto-dark/50 border border-border/30 rounded"
+                      >
+                        <div className="flex items-center">
+                          {item.type === 'image' ? 
+                            <Image className="h-4 w-4 mr-2" /> : 
+                            <Video className="h-4 w-4 mr-2" />
+                          }
+                          <div>
+                            <p className="text-sm truncate w-64">{item.url}</p>
+                            {item.caption && (
+                              <p className="text-xs text-muted-foreground">Caption: {item.caption}</p>
+                            )}
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => removeMedia(index)}
+                          className="h-8 w-8 text-red-500 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No media added yet</p>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="buttons" className="space-y-4">
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="buttonText">Button Text</Label>
+                    <Input 
+                      id="buttonText"
+                      type="text"
+                      placeholder="Click here"
+                      value={newButton.text}
+                      onChange={(e) => setNewButton({...newButton, text: e.target.value})}
+                      className="bg-crypto-dark"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="buttonUrl">URL</Label>
+                    <Input 
+                      id="buttonUrl"
+                      type="text"
+                      placeholder="https://example.com"
+                      value={newButton.url}
+                      onChange={(e) => setNewButton({...newButton, url: e.target.value})}
+                      className="bg-crypto-dark"
+                    />
+                  </div>
+                </div>
+                <Button 
+                  onClick={addButton}
+                  variant="outline"
+                  size="sm"
+                  className="mt-1"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add Button
+                </Button>
+              </div>
+              
+              <Separator />
+              
+              {buttons.length > 0 ? (
+                <div className="space-y-2">
+                  <h4 className="font-medium">Added Buttons ({buttons.length})</h4>
+                  <div className="space-y-2">
+                    {buttons.map((button, index) => (
+                      <div 
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-crypto-dark/50 border border-border/30 rounded"
+                      >
+                        <div className="flex items-center">
+                          <Link className="h-4 w-4 mr-2" />
+                          <div>
+                            <p className="text-sm font-medium">{button.text}</p>
+                            <p className="text-xs text-muted-foreground truncate w-64">{button.url}</p>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => removeButton(index)}
+                          className="h-8 w-8 text-red-500 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No buttons added yet</p>
+              )}
+            </TabsContent>
+          </Tabs>
+          
+          {(message.trim() || buttons.length > 0 || media.length > 0) && (
+            <div className="flex justify-end">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearMessageContents}
+                className="text-red-500 hover:text-red-600"
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> Clear All
+              </Button>
+            </div>
+          )}
         </div>
         
         <div className="space-y-2">
@@ -460,7 +796,8 @@ const TelegramMessenger = () => {
       <CardFooter className="flex justify-end">
         <Button
           onClick={sendMessage}
-          disabled={isLoading || isSending || communities.filter(c => c.selected).length === 0 || !message.trim()}
+          disabled={isLoading || isSending || communities.filter(c => c.selected).length === 0 || 
+            (!message.trim() && media.length === 0)}
           className="bg-crypto-blue hover:bg-crypto-blue/90"
         >
           {isSending ? (
