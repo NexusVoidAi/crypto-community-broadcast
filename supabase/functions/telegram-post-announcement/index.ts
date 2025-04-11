@@ -96,10 +96,6 @@ serve(async (req) => {
     let messageText = `*${announcement.title}*\n\n`;
     messageText += announcement.content;
     
-    if (announcement.cta_url && announcement.cta_text) {
-      messageText += `\n\n[${announcement.cta_text}](${announcement.cta_url})`;
-    }
-    
     // Track successful and failed deliveries
     const results = [];
     
@@ -118,77 +114,77 @@ serve(async (req) => {
         const chatId = community.community.platform_id;
         console.log(`Sending message to chat ID: ${chatId}`);
         
+        // Create inline keyboard for CTA button if it exists
+        const inlineKeyboard = announcement.cta_url && announcement.cta_text ? {
+          inline_keyboard: [[{ text: announcement.cta_text, url: announcement.cta_url }]]
+        } : undefined;
+
+        console.log("CTA data:", { 
+          hasUrl: !!announcement.cta_url, 
+          hasText: !!announcement.cta_text,
+          keyboard: inlineKeyboard 
+        });
+        
         let responseData;
         
         // Check if the announcement has media
         if (announcement.media_url) {
-          // Determine media type from URL (simple check)
+          console.log("Media URL detected:", announcement.media_url);
+          
+          // Determine media type from URL
           const isVideo = /\.(mp4|mov|avi|wmv|flv|mkv)$/i.test(announcement.media_url);
           const isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(announcement.media_url);
+          const fileType = isVideo ? "video" : isImage ? "image" : "document";
           
-          // Create inline keyboard for buttons if CTA exists
-          const inlineKeyboard = announcement.cta_url && announcement.cta_text ? {
-            inline_keyboard: [[{ text: announcement.cta_text, url: announcement.cta_url }]]
-          } : undefined;
+          console.log(`Detected media type: ${fileType}`);
+          
+          let endpoint = "";
+          let bodyParams = {};
           
           if (isVideo) {
-            // Send as video
-            const response = await fetch(
-              `https://api.telegram.org/bot${botToken}/sendVideo`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: chatId,
-                  video: announcement.media_url,
-                  caption: `*${announcement.title}*\n\n${announcement.content}`,
-                  parse_mode: 'Markdown',
-                  reply_markup: inlineKeyboard
-                })
-              }
-            );
-            responseData = await response.json();
+            endpoint = "sendVideo";
+            bodyParams = {
+              chat_id: chatId,
+              video: announcement.media_url,
+              caption: `*${announcement.title}*\n\n${announcement.content}`,
+              parse_mode: 'Markdown',
+              reply_markup: inlineKeyboard
+            };
           } else if (isImage) {
-            // Send as photo
-            const response = await fetch(
-              `https://api.telegram.org/bot${botToken}/sendPhoto`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: chatId,
-                  photo: announcement.media_url,
-                  caption: `*${announcement.title}*\n\n${announcement.content}`,
-                  parse_mode: 'Markdown',
-                  reply_markup: inlineKeyboard
-                })
-              }
-            );
-            responseData = await response.json();
+            endpoint = "sendPhoto";
+            bodyParams = {
+              chat_id: chatId,
+              photo: announcement.media_url,
+              caption: `*${announcement.title}*\n\n${announcement.content}`,
+              parse_mode: 'Markdown',
+              reply_markup: inlineKeyboard
+            };
           } else {
-            // Send as document/file
-            const response = await fetch(
-              `https://api.telegram.org/bot${botToken}/sendDocument`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: chatId,
-                  document: announcement.media_url,
-                  caption: `*${announcement.title}*\n\n${announcement.content}`,
-                  parse_mode: 'Markdown',
-                  reply_markup: inlineKeyboard
-                })
-              }
-            );
-            responseData = await response.json();
+            endpoint = "sendDocument";
+            bodyParams = {
+              chat_id: chatId,
+              document: announcement.media_url,
+              caption: `*${announcement.title}*\n\n${announcement.content}`,
+              parse_mode: 'Markdown',
+              reply_markup: inlineKeyboard
+            };
           }
+          
+          console.log(`Sending to endpoint: ${endpoint}`, JSON.stringify(bodyParams));
+          
+          const response = await fetch(
+            `https://api.telegram.org/bot${botToken}/${endpoint}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(bodyParams)
+            }
+          );
+          
+          responseData = await response.json();
+          console.log(`Media API response:`, responseData);
         } else {
           // No media, just send text with optional button
-          const inlineKeyboard = announcement.cta_url && announcement.cta_text ? {
-            inline_keyboard: [[{ text: announcement.cta_text, url: announcement.cta_url }]]
-          } : undefined;
-          
           const response = await fetch(
             `https://api.telegram.org/bot${botToken}/sendMessage`,
             {
@@ -205,9 +201,8 @@ serve(async (req) => {
           );
           
           responseData = await response.json();
+          console.log("Text message API response:", responseData);
         }
-        
-        console.log("Telegram API response:", responseData);
         
         if (responseData.ok) {
           // Update announcement_communities with delivery status

@@ -20,7 +20,11 @@ import {
   Send, 
   MessagesSquare,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Eye,
+  MousePointer,
+  Clock,
+  BarChart3
 } from 'lucide-react';
 import {
   Dialog,
@@ -63,6 +67,13 @@ interface AnnouncementCommunity {
   };
 }
 
+interface CommunityStats {
+  member_count: number;
+  active_users: number;
+  total_messages: number;
+  engagement_rate: number;
+}
+
 const CommunityDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -73,6 +84,8 @@ const CommunityDetail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  const [communityStats, setCommunityStats] = useState<CommunityStats | null>(null);
   
   // Form state
   const [name, setName] = useState('');
@@ -86,6 +99,84 @@ const CommunityDetail: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const isOwner = community && user && community.owner_id === user.id;
+
+  // Function to track announcement views
+  const trackView = async (announcementId: string) => {
+    if (!id || !announcementId) return;
+    
+    try {
+      await supabase.functions.invoke('telegram-analytics', {
+        body: {
+          communityId: id,
+          announcementId,
+          action: 'view'
+        }
+      });
+      
+      // Update local state
+      setAnnouncements(prev => 
+        prev.map(item => 
+          item.announcement_id === announcementId 
+            ? { ...item, views: (item.views || 0) + 1 } 
+            : item
+        )
+      );
+    } catch (error) {
+      console.error("Error tracking view:", error);
+    }
+  };
+
+  // Function to track announcement clicks
+  const trackClick = async (announcementId: string) => {
+    if (!id || !announcementId) return;
+    
+    try {
+      await supabase.functions.invoke('telegram-analytics', {
+        body: {
+          communityId: id,
+          announcementId,
+          action: 'click'
+        }
+      });
+      
+      // Update local state
+      setAnnouncements(prev => 
+        prev.map(item => 
+          item.announcement_id === announcementId 
+            ? { ...item, clicks: (item.clicks || 0) + 1 } 
+            : item
+        )
+      );
+    } catch (error) {
+      console.error("Error tracking click:", error);
+    }
+  };
+  
+  const fetchAnalytics = async () => {
+    if (!id) return;
+
+    setIsLoadingAnalytics(true);
+    try {
+      const { data: response, error } = await supabase.functions.invoke('telegram-analytics', {
+        body: { communityId: id }
+      });
+
+      if (error) throw error;
+      
+      if (response && response.success) {
+        setCommunityStats(response.stats);
+        
+        // Update announcements with latest metrics
+        if (response.announcements && response.announcements.length > 0) {
+          setAnnouncements(response.announcements);
+        }
+      }
+    } catch (error: any) {
+      toast.error(`Error loading analytics: ${error.message}`);
+    } finally {
+      setIsLoadingAnalytics(false);
+    }
+  };
   
   useEffect(() => {
     const fetchCommunityData = async () => {
@@ -479,7 +570,7 @@ const CommunityDetail: React.FC = () => {
                 <TabsTrigger value="announcements">
                   <Send className="mr-2 h-4 w-4" /> Announcements
                 </TabsTrigger>
-                <TabsTrigger value="analytics">
+                <TabsTrigger value="analytics" onClick={fetchAnalytics}>
                   <LineChart className="mr-2 h-4 w-4" /> Analytics
                 </TabsTrigger>
               </TabsList>
@@ -499,6 +590,7 @@ const CommunityDetail: React.FC = () => {
                           <div 
                             key={item.id} 
                             className="p-4 border border-border/50 rounded-md"
+                            onClick={() => trackView(item.announcement_id)}
                           >
                             <div className="flex justify-between items-start mb-2">
                               <h3 className="font-medium">{item.announcement.title}</h3>
@@ -517,10 +609,25 @@ const CommunityDetail: React.FC = () => {
                               {item.announcement.content}
                             </p>
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>{formatDate(item.created_at)}</span>
+                              <span>{formatDate(item.announcement.created_at)}</span>
                               <div className="flex space-x-4">
-                                <span>👁️ {item.views || 0} views</span>
-                                <span>👆 {item.clicks || 0} clicks</span>
+                                <span className="flex items-center">
+                                  <Eye className="h-3 w-3 mr-1" /> {item.views || 0} views
+                                </span>
+                                <span className="flex items-center">
+                                  <MousePointer className="h-3 w-3 mr-1" /> {item.clicks || 0} clicks
+                                </span>
+                                <Button 
+                                  variant="link" 
+                                  size="sm" 
+                                  className="p-0 h-auto text-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    trackClick(item.announcement_id);
+                                  }}
+                                >
+                                  Record Click
+                                </Button>
                               </div>
                             </div>
                           </div>
@@ -542,19 +649,121 @@ const CommunityDetail: React.FC = () => {
               <TabsContent value="analytics" className="mt-0">
                 <Card className="border border-border/50 bg-crypto-darkgray/50">
                   <CardHeader>
-                    <CardTitle>Performance Analytics</CardTitle>
-                    <CardDescription>
-                      Engagement metrics for your community
-                    </CardDescription>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Performance Analytics</CardTitle>
+                        <CardDescription>
+                          Engagement metrics for your community
+                        </CardDescription>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={fetchAnalytics} 
+                        disabled={isLoadingAnalytics}
+                      >
+                        {isLoadingAnalytics ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        ) : (
+                          <Clock className="h-4 w-4 mr-1" />
+                        )}
+                        Refresh
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-center py-8 text-muted-foreground">
-                      <LineChart className="mx-auto h-12 w-12 opacity-30 mb-4" />
-                      <p className="mb-2">Analytics will be available soon</p>
-                      <p className="text-sm">
-                        We're working on detailed analytics for your community.
-                      </p>
-                    </div>
+                    {isLoadingAnalytics ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : communityStats ? (
+                      <div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                          <div className="bg-crypto-dark/50 p-4 rounded-md">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="text-xs text-muted-foreground">Members</h3>
+                              <Users className="h-4 w-4 text-blue-400" />
+                            </div>
+                            <p className="text-xl font-bold">{communityStats.member_count.toLocaleString()}</p>
+                          </div>
+                          
+                          <div className="bg-crypto-dark/50 p-4 rounded-md">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="text-xs text-muted-foreground">Active Users</h3>
+                              <Users className="h-4 w-4 text-green-400" />
+                            </div>
+                            <p className="text-xl font-bold">{communityStats.active_users.toLocaleString()}</p>
+                          </div>
+                          
+                          <div className="bg-crypto-dark/50 p-4 rounded-md">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="text-xs text-muted-foreground">Messages</h3>
+                              <MessagesSquare className="h-4 w-4 text-purple-400" />
+                            </div>
+                            <p className="text-xl font-bold">{communityStats.total_messages.toLocaleString()}</p>
+                          </div>
+                          
+                          <div className="bg-crypto-dark/50 p-4 rounded-md">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="text-xs text-muted-foreground">Engagement</h3>
+                              <BarChart3 className="h-4 w-4 text-amber-400" />
+                            </div>
+                            <p className="text-xl font-bold">
+                              {(communityStats.engagement_rate * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <h3 className="text-md font-medium mb-3">Announcements Performance</h3>
+                        
+                        {announcements.length > 0 ? (
+                          <div className="space-y-3">
+                            {announcements.slice(0, 5).map(item => (
+                              <div key={item.id} className="p-3 bg-crypto-dark/30 rounded-md border border-border/30">
+                                <div className="text-sm font-medium mb-1">{item.announcement.title}</div>
+                                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                  <span>{formatDate(item.created_at)}</span>
+                                  <div className="flex space-x-4">
+                                    <span className="flex items-center">
+                                      <Eye className="h-3 w-3 mr-1" /> {item.views || 0}
+                                    </span>
+                                    <span className="flex items-center">
+                                      <MousePointer className="h-3 w-3 mr-1" /> {item.clicks || 0}
+                                    </span>
+                                    {item.views > 0 && item.clicks > 0 && (
+                                      <span className="flex items-center">
+                                        <BarChart3 className="h-3 w-3 mr-1" /> 
+                                        {((item.clicks / item.views) * 100).toFixed(1)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-sm text-muted-foreground">
+                            No announcement data available yet
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <LineChart className="mx-auto h-12 w-12 opacity-30 mb-4" />
+                        <p className="mb-2">No analytics data available</p>
+                        <p className="text-sm">
+                          Click the refresh button to load analytics data for this community.
+                        </p>
+                        <Button
+                          variant="outline"
+                          className="mt-4"
+                          onClick={fetchAnalytics}
+                        >
+                          <Clock className="h-4 w-4 mr-2" />
+                          Load Analytics
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

@@ -29,16 +29,68 @@ serve(async (req) => {
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
   
   try {
-    const { communityId } = await req.json();
+    const { communityId, announcementId, action } = await req.json();
     
+    // Create Supabase client
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+    
+    // If this is a tracking request for views or clicks
+    if (announcementId && action) {
+      console.log(`Tracking ${action} for announcement ${announcementId} in community ${communityId}`);
+      
+      // Find the announcement_community record
+      const { data: acData, error: acError } = await supabaseAdmin
+        .from('announcement_communities')
+        .select('id, views, clicks')
+        .eq('announcement_id', announcementId)
+        .eq('community_id', communityId)
+        .single();
+        
+      if (acError || !acData) {
+        console.error("Error finding announcement_community:", acError);
+        return new Response(
+          JSON.stringify({ success: false, error: "Announcement-community relation not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Update the views or clicks count
+      const updateData = action === 'view' 
+        ? { views: (acData.views || 0) + 1 }
+        : { clicks: (acData.clicks || 0) + 1 };
+        
+      const { error: updateError } = await supabaseAdmin
+        .from('announcement_communities')
+        .update(updateData)
+        .eq('id', acData.id);
+        
+      if (updateError) {
+        console.error("Error updating metrics:", updateError);
+        return new Response(
+          JSON.stringify({ success: false, error: "Failed to update metrics" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: `${action} tracked successfully`,
+          data: {
+            ...acData,
+            ...updateData
+          }
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    // If this is a general analytics request
     if (!communityId) {
       throw new Error('Missing community ID');
     }
     
     console.log(`Generating analytics for community ID: ${communityId}`);
-    
-    // Create Supabase client
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
     
     // Get platform settings for bot token
     const { data: settingsData, error: settingsError } = await supabaseAdmin
@@ -169,8 +221,30 @@ serve(async (req) => {
       console.error(`Failed to get member count: ${await memberCountResponse.text()}`);
     }
     
+    // Get announcement metrics for this community
+    const { data: announcementData, error: announcementError } = await supabaseAdmin
+      .from('announcement_communities')
+      .select(`
+        id,
+        announcement_id,
+        views,
+        clicks,
+        created_at,
+        announcement:announcements (
+          title,
+          content,
+          status,
+          created_at
+        )
+      `)
+      .eq('community_id', communityId)
+      .order('created_at', { ascending: false });
+      
+    if (announcementError) {
+      console.error("Error fetching announcement metrics:", announcementError);
+    }
+    
     // For now, generate placeholder statistics
-    // In a real implementation, we would analyze stored message data
     const stats: ChatStats = {
       chat_id: chatId,
       total_messages: Math.floor(Math.random() * 1000) + 100, // Placeholder
@@ -188,7 +262,8 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         stats,
-        chatInfo
+        chatInfo,
+        announcements: announcementData || []
       }), 
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

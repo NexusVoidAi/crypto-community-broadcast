@@ -4,7 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Check, ArrowLeft, CreditCard } from 'lucide-react';
+import { Check, ArrowLeft, CreditCard, Image, Link } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import CopperXPayment from '@/components/payments/CopperXPayment';
@@ -38,6 +38,7 @@ const Preview = () => {
 
         if (announcementError) throw announcementError;
         setAnnouncement(announcementData);
+        console.log("Loaded announcement:", announcementData);
 
         // Fetch communities linked to this announcement
         const { data: communityData, error: communityError } = await supabase
@@ -156,19 +157,40 @@ const Preview = () => {
               <CardTitle>Announcement Preview</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <h2 className="text-2xl font-bold">{announcement.title}</h2>
+                
+                {announcement.media_url && (
+                  <div className="relative rounded-md overflow-hidden border border-border">
+                    <div className="bg-crypto-dark/50 py-1 px-2 absolute top-2 right-2 rounded text-xs flex items-center">
+                      <Image className="h-3 w-3 mr-1" />
+                      Media included
+                    </div>
+                    <img 
+                      src={announcement.media_url} 
+                      alt="Announcement media" 
+                      className="w-full max-h-[300px] object-contain bg-crypto-dark/50"
+                    />
+                  </div>
+                )}
+                
                 <p className="text-muted-foreground">{announcement.content}</p>
+                
                 {announcement.cta_text && announcement.cta_url && (
-                  <Button asChild>
-                    <a href={announcement.cta_url} target="_blank" rel="noopener noreferrer">
-                      {announcement.cta_text}
-                    </a>
-                  </Button>
+                  <div className="mt-4">
+                    <div className="text-xs text-muted-foreground mb-2 flex items-center">
+                      <Link className="h-3 w-3 mr-1" /> Call-to-Action Button:
+                    </div>
+                    <Button asChild>
+                      <a href={announcement.cta_url} target="_blank" rel="noopener noreferrer">
+                        {announcement.cta_text}
+                      </a>
+                    </Button>
+                  </div>
                 )}
               </div>
 
-              <div>
+              <div className="mt-4 pt-4 border-t border-border">
                 <h3 className="text-lg font-medium mb-2">Selected Communities:</h3>
                 {communities.length > 0 ? (
                   <ul className="list-disc pl-5">
