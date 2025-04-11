@@ -1,795 +1,907 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
-  ArrowRight, 
-  Loader2, 
+  AlertCircle, 
   Check, 
+  AlertTriangle, 
+  Sparkles, 
+  Loader2, 
   X, 
-  Upload, 
-  MessageSquare, 
-  AlertTriangle,
-  Wand2,
-  Info
+  Image as ImageIcon,
+  Upload,
+  Trash2,
 } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  validateAnnouncementWithAI, 
-  serializeValidationResult,
-  getSuggestions,
-  enhanceAnnouncementWithAI,
-  ValidationResult
-} from '@/services/validation';
 import SuggestionsList from './SuggestionsList';
-import CopperXPayment from '../payments/CopperXPayment';
+import { toast } from 'sonner';
+import { useSearchParams } from 'react-router-dom';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-type Community = {
+// Form validation schema
+const formSchema = z.object({
+  title: z.string().min(5, {
+    message: "Title must be at least 5 characters.",
+  }),
+  content: z.string().min(15, {
+    message: "Content must be at least 15 characters.",
+  }),
+  cta_text: z.string().optional(),
+  cta_url: z.string().url().optional().or(z.literal('')),
+  campaign_id: z.string().optional(),
+});
+
+interface Community {
   id: string;
   name: string;
-  platform: 'TELEGRAM' | 'DISCORD' | 'WHATSAPP';
-  price_per_announcement: number;
+  platform: string;
+  platform_id: string;
   reach: number;
-  selected?: boolean;
-};
+  price_per_announcement: number;
+}
 
-type AnnouncementFormProps = {
-  className?: string;
-};
-
-const AnnouncementForm: React.FC<AnnouncementFormProps> = ({ className }) => {
+const AnnouncementForm: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const campaignId = searchParams.get('campaign');
   
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [ctaText, setCtaText] = useState('');
-  const [ctaUrl, setCtaUrl] = useState('');
-  const [step, setStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
-  const [communities, setCommunities] = useState<Community[]>([]);
-  const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
-  const [announcementId, setAnnouncementId] = useState<string | null>(null);
-  const [loadingCommunities, setLoadingCommunities] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [platformFee, setPlatformFee] = useState<number>(1);
-  const [showCryptoPayment, setShowCryptoPayment] = useState(false);
-  const [titleWordCount, setTitleWordCount] = useState(0);
-  const [contentWordCount, setContentWordCount] = useState(0);
-
-  // Add new state for handling AI enhancement
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationResults, setValidationResults] = useState<any>(null);
   const [isEnhancing, setIsEnhancing] = useState(false);
-
-  // Calculate word count
-  useEffect(() => {
-    setTitleWordCount(title.trim().split(/\s+/).filter(word => word !== '').length);
-  }, [title]);
-
-  useEffect(() => {
-    setContentWordCount(content.trim().split(/\s+/).filter(word => word !== '').length);
-  }, [content]);
-
-  useEffect(() => {
-    // Fetch platform fee
-    const fetchPlatformFee = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('platform_settings')
-          .select('platform_fee')
-          .maybeSingle();
-          
-        if (error && error.code !== 'PGRST116') throw error;
-        
-        if (data) {
-          setPlatformFee(data.platform_fee);
-        }
-      } catch (error: any) {
-        console.error("Error fetching platform fee:", error);
-        // Use default fee if there's an error
-      }
-    };
-    
-    fetchPlatformFee();
-  }, []);
-
+  const [step, setStep] = useState('create'); // create, communities, review
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false);
+  const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [announcement, setAnnouncement] = useState<any>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // File upload state
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
+  
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      content: "",
+      cta_text: "",
+      cta_url: "",
+      campaign_id: campaignId || "",
+    },
+  });
+  
+  // Fetch communities on component mount
   useEffect(() => {
     const fetchCommunities = async () => {
-      if (step !== 2) return;
-      
-      setLoadingCommunities(true);
-      
       try {
         const { data, error } = await supabase
           .from('communities')
           .select('*')
-          .order('name');
+          .eq('approval_status', 'APPROVED')
+          .order('name', { ascending: true });
           
         if (error) throw error;
-        
         setCommunities(data || []);
       } catch (error: any) {
-        toast.error(`Error loading communities: ${error.message}`);
-      } finally {
-        setLoadingCommunities(false);
+        console.error('Error fetching communities:', error.message);
+        toast.error('Failed to load communities');
       }
     };
     
     fetchCommunities();
-  }, [step]);
-
-  const handleValidate = async () => {
-    // Check minimum word counts
-    if (titleWordCount < 5) {
-      toast.error('Title must contain at least 5 words');
-      return;
-    }
-
-    if (contentWordCount < 15) {
-      toast.error('Content must contain at least 15 words');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // First, save the announcement as draft
-      let announcement;
-      
-      if (!announcementId) {
-        // Create new announcement
-        const { data, error } = await supabase
-          .from('announcements')
-          .insert({
-            title,
-            content,
-            cta_text: ctaText,
-            cta_url: ctaUrl,
-            status: 'DRAFT',
-            user_id: user?.id
-          })
-          .select()
-          .single();
-          
-        if (error) throw error;
-        announcement = data;
-        setAnnouncementId(data.id);
-      } else {
-        // Update existing announcement
-        const { data, error } = await supabase
-          .from('announcements')
-          .update({
-            title,
-            content,
-            cta_text: ctaText,
-            cta_url: ctaUrl
-          })
-          .eq('id', announcementId)
-          .select()
-          .single();
-          
-        if (error) throw error;
-        announcement = data;
-      }
-      
-      // Call Gemini validation service
-      const validationResult = await validateAnnouncementWithAI(title, content);
-      
-      // Update announcement with validation result - serialize to ensure it's JSON compatible
-      const { error: updateError } = await supabase
-        .from('announcements')
-        .update({
-          validation_result: serializeValidationResult(validationResult),
-          status: validationResult.isValid ? 'PENDING_VALIDATION' : 'VALIDATION_FAILED'
-        })
-        .eq('id', announcement.id);
-        
-      if (updateError) throw updateError;
-      
-      setValidationResult(validationResult);
-      
-      // Generate suggestions from validation result
-      const suggestionList = getSuggestions(validationResult);
-      setSuggestions(suggestionList);
-      setShowSuggestions(true);
-      
-      if (validationResult.isValid) {
-        toast.success('Announcement validated successfully!');
-      } else {
-        toast.error('Announcement failed validation checks');
-      }
-    } catch (error: any) {
-      toast.error(`Error validating announcement: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const toggleCommunitySelection = (communityId: string) => {
-    setSelectedCommunities(prev => {
-      if (prev.includes(communityId)) {
-        return prev.filter(id => id !== communityId);
-      } else {
-        return [...prev, communityId];
-      }
-    });
-  };
-
-  const calculateTotalCost = () => {
+  }, []);
+  
+  // Calculate total price based on selected communities
+  const calculateTotalPrice = (): number => {
     return communities
       .filter(community => selectedCommunities.includes(community.id))
-      .reduce((sum, community) => sum + Number(community.price_per_announcement), 0);
+      .reduce((total, community) => total + community.price_per_announcement, 0);
   };
-
-  const handlePreviewAndPay = async () => {
-    if (selectedCommunities.length === 0) {
-      toast.error('Please select at least one community');
+  
+  // Handle file upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File is too large. Maximum size is 10MB.');
       return;
     }
     
-    setIsLoading(true);
+    // Check file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Unsupported file type. Please upload an image, video, or PDF.');
+      return;
+    }
     
+    setUploadedFile(file);
+    
+    // Generate preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFilePreview(e.target?.result as string || null);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // For non-images, just show the file name
+      setFilePreview(null);
+    }
+  };
+  
+  // Upload file to Supabase Storage
+  const uploadFileToStorage = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+    
+    setIsUploading(true);
     try {
-      // First, update the announcement status
-      const { error: updateError } = await supabase
+      // Create a unique file path
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
         .from('announcements')
-        .update({
-          status: 'PENDING_VALIDATION'
-        })
-        .eq('id', announcementId);
+        .upload(filePath, file);
         
-      if (updateError) throw updateError;
+      if (error) throw error;
       
-      // Create announcement-community links
-      const communityLinks = selectedCommunities.map(communityId => ({
-        announcement_id: announcementId,
-        community_id: communityId
-      }));
-      
-      const { error: linkError } = await supabase
-        .from('announcement_communities')
-        .insert(communityLinks);
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('announcements')
+        .getPublicUrl(filePath);
         
-      if (linkError) throw linkError;
+      return publicUrlData.publicUrl;
+    } catch (error: any) {
+      console.error('Error uploading file:', error.message);
+      toast.error('Failed to upload file');
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+  
+  // Remove uploaded file
+  const handleRemoveFile = () => {
+    setUploadedFile(null);
+    setFilePreview(null);
+    setUploadedFileUrl(null);
+  };
+  
+  // Handle form submission
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!user) {
+      toast.error('You must be logged in to create an announcement');
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      let mediaUrl = uploadedFileUrl;
       
-      // Calculate total with platform fee
-      const communityTotal = calculateTotalCost();
-      const totalWithFee = communityTotal + platformFee;
+      // Upload file if there's one and it hasn't been uploaded yet
+      if (uploadedFile && !uploadedFileUrl) {
+        mediaUrl = await uploadFileToStorage(uploadedFile);
+      }
       
-      // Create a payment record
-      const { data: payment, error: paymentError } = await supabase
-        .from('payments')
+      // Save announcement
+      const { data, error } = await supabase
+        .from('announcements')
         .insert({
-          amount: totalWithFee,
-          currency: 'USDT',
-          user_id: user?.id,
-          announcement_id: announcementId,
-          status: 'PENDING'
+          title: values.title,
+          content: values.content,
+          cta_text: values.cta_text || null,
+          cta_url: values.cta_url || null,
+          media_url: mediaUrl,
+          user_id: user.id,
+          status: 'DRAFT'
         })
         .select()
         .single();
         
-      if (paymentError) throw paymentError;
+      if (error) throw error;
       
-      toast.success('Announcement prepared for preview');
+      setAnnouncement(data);
       
-      // Navigate to preview page with the announcement ID
-      navigate(`/announcements/preview?id=${announcementId}`);
+      // Move to communities selection
+      setStep('communities');
+      toast.success('Announcement draft saved!');
     } catch (error: any) {
-      toast.error(`Error preparing preview: ${error.message}`);
+      console.error('Error creating announcement:', error.message);
+      toast.error('Failed to create announcement');
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCryptoPayment = () => {
-    setShowCryptoPayment(true);
-  };
-
-  const handlePaymentSuccess = async (txHash: string) => {
-    try {
-      // Update the payment status
-      const { error: paymentError } = await supabase
-        .from('payments')
-        .update({
-          status: 'PAID',
-          transaction_hash: txHash
-        })
-        .eq('announcement_id', announcementId);
-        
-      if (paymentError) throw paymentError;
-      
-      // Update the announcement status
-      const { error: announcementError } = await supabase
-        .from('announcements')
-        .update({
-          status: 'PUBLISHED',
-          payment_status: 'PAID'
-        })
-        .eq('id', announcementId);
-        
-      if (announcementError) throw announcementError;
-      
-      toast.success('Payment successful! Your announcement is published.');
-      navigate('/');
-    } catch (error: any) {
-      toast.error(`Error updating payment status: ${error.message}`);
+      setIsSaving(false);
     }
   };
   
-  // Update the handleEnhanceWithAI function to check word count
-  const handleEnhanceWithAI = async () => {
-    // Check minimum word counts before enhancing
-    if (titleWordCount < 5) {
-      toast.error('Title must contain at least 5 words before AI enhancement');
-      return;
-    }
-
-    if (contentWordCount < 15) {
-      toast.error('Content must contain at least 15 words before AI enhancement');
-      return;
-    }
-
-    setIsEnhancing(true);
-
+  // Toggle community selection
+  const toggleCommunitySelection = (communityId: string) => {
+    setSelectedCommunities(prev => 
+      prev.includes(communityId)
+        ? prev.filter(id => id !== communityId)
+        : [...prev, communityId]
+    );
+  };
+  
+  // Handle validation request
+  const handleValidate = async () => {
+    if (!announcement) return;
+    
+    setIsValidating(true);
     try {
-      const enhanced = await enhanceAnnouncementWithAI(title, content);
+      const { data, error } = await supabase.functions.invoke('validate-announcement', {
+        body: { announcementId: announcement.id }
+      });
       
-      // Update to use correct property names
-      setTitle(enhanced.enhancedTitle);
-      setContent(enhanced.enhancedContent);
+      if (error) throw error;
       
-      toast.success('Announcement enhanced successfully!');
-      setShowSuggestions(false);
+      setValidationResults(data);
+      
+      // If validation passed, move to review step
+      if (data.passed) {
+        setStep('review');
+      } else {
+        toast.error('Announcement validation failed. Please review the issues.');
+      }
     } catch (error: any) {
-      toast.error(`Error enhancing announcement: ${error.message}`);
+      console.error('Error validating announcement:', error.message);
+      toast.error('Failed to validate announcement');
+    } finally {
+      setIsValidating(false);
+    }
+  };
+  
+  // Handle AI enhancement
+  const handleEnhance = async () => {
+    if (!announcement) return;
+    
+    setIsEnhancing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('enhance-announcement', {
+        body: { announcementId: announcement.id }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.suggestions) {
+        setAiSuggestions(data.suggestions);
+      }
+    } catch (error: any) {
+      console.error('Error enhancing announcement:', error.message);
+      toast.error('Failed to enhance announcement');
     } finally {
       setIsEnhancing(false);
     }
   };
-
-  const renderStep = () => {
+  
+  // Apply AI suggestion
+  const applySuggestion = async (suggestion: string) => {
+    if (!announcement) return;
+    
+    setAiSuggestionsLoading(true);
+    try {
+      // Update the content in the form
+      form.setValue('content', suggestion);
+      
+      // Also update in the database
+      const { error } = await supabase
+        .from('announcements')
+        .update({ content: suggestion })
+        .eq('id', announcement.id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setAnnouncement({ ...announcement, content: suggestion });
+      
+      toast.success('Applied AI suggestion!');
+    } catch (error: any) {
+      console.error('Error applying suggestion:', error.message);
+      toast.error('Failed to apply suggestion');
+    } finally {
+      setAiSuggestionsLoading(false);
+    }
+  };
+  
+  // Submit final announcement
+  const handleSubmitAnnouncement = async () => {
+    if (!announcement || selectedCommunities.length === 0) return;
+    
+    setIsLoading(true);
+    try {
+      // Update announcement status
+      const { error } = await supabase
+        .from('announcements')
+        .update({ status: 'PENDING_APPROVAL' })
+        .eq('id', announcement.id);
+        
+      if (error) throw error;
+      
+      // Create announcement-community relations
+      const communityRelations = selectedCommunities.map(communityId => ({
+        announcement_id: announcement.id,
+        community_id: communityId
+      }));
+      
+      const { error: relationsError } = await supabase
+        .from('announcement_communities')
+        .insert(communityRelations);
+        
+      if (relationsError) throw relationsError;
+      
+      // Navigate to preview page
+      navigate(`/announcements/preview?id=${announcement.id}`);
+      toast.success('Announcement submitted!');
+    } catch (error: any) {
+      console.error('Error submitting announcement:', error.message);
+      toast.error('Failed to submit announcement');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Render form based on current step
+  const renderStepContent = () => {
     switch (step) {
-      case 1:
+      case 'create':
         return (
-          <>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Label htmlFor="title">Announcement Title</Label>
-                    <span className={`ml-2 text-xs ${titleWordCount >= 5 ? 'text-crypto-green' : 'text-red-500'}`}>
-                      ({titleWordCount}/5 words minimum)
-                    </span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div>
-                            <Info className="h-4 w-4 ml-1 text-muted-foreground" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Title must contain at least 5 words</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-crypto-blue hover:text-crypto-blue/80"
-                          onClick={() => handleEnhanceWithAI()}
-                          disabled={isEnhancing || titleWordCount < 5 || contentWordCount < 15}
-                        >
-                          {isEnhancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Enhance with AI (requires min 5 words for title, 15 for content)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Input
-                  id="title"
-                  placeholder="Enter a clear, attention-grabbing title (min 5 words)"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  className={titleWordCount < 5 && title.trim() ? 'border-red-400' : ''}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Label htmlFor="content">Announcement Content</Label>
-                    <span className={`ml-2 text-xs ${contentWordCount >= 15 ? 'text-crypto-green' : 'text-red-500'}`}>
-                      ({contentWordCount}/15 words minimum)
-                    </span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div>
-                            <Info className="h-4 w-4 ml-1 text-muted-foreground" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Content must contain at least 15 words</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-crypto-blue hover:text-crypto-blue/80"
-                          onClick={() => handleEnhanceWithAI()}
-                          disabled={isEnhancing || titleWordCount < 5 || contentWordCount < 15}
-                        >
-                          {isEnhancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Enhance with AI (requires min 5 words for title, 15 for content)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Textarea
-                  id="content"
-                  placeholder="Share your announcement message. Keep it clear and concise. (min 15 words)"
-                  className={`min-h-[150px] ${contentWordCount < 15 && content.trim() ? 'border-red-400' : ''}`}
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="media" className="flex items-center">
-                  Media (Optional)
-                </Label>
-                <div className="border border-dashed border-border rounded-md p-6 flex flex-col items-center justify-center text-muted-foreground">
-                  <Upload className="h-8 w-8 mb-2" />
-                  <p className="text-sm mb-1">Drag & drop or click to upload</p>
-                  <p className="text-xs">JPG, PNG, GIF or MP4 (max 10MB)</p>
-                  <Button variant="ghost" size="sm" className="mt-2">
-                    Upload File
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="ctaText">CTA Button Text (Optional)</Label>
-                  <Input
-                    id="ctaText"
-                    placeholder="e.g., Learn More"
-                    value={ctaText}
-                    onChange={(e) => setCtaText(e.target.value)}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <Card className="border border-border/50 bg-crypto-darkgray/50">
+                <CardHeader>
+                  <CardTitle>Create Announcement</CardTitle>
+                  <CardDescription>
+                    Fill out the form below to create your announcement.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Enter a compelling title" 
+                            {...field} 
+                            className="bg-crypto-dark border-border/50"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Title should be clear and attention-grabbing.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="ctaUrl">CTA URL (Optional)</Label>
-                  <Input
-                    id="ctaUrl"
-                    placeholder="https://example.com"
-                    value={ctaUrl}
-                    onChange={(e) => setCtaUrl(e.target.value)}
+                  
+                  <FormField
+                    control={form.control}
+                    name="content"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Content</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter your announcement content" 
+                            {...field} 
+                            className="min-h-[150px] bg-crypto-dark border-border/50"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Be concise but informative. Remember to include all important details.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-              </div>
-            </div>
-            
-            {validationResult && !showSuggestions && (
-              <div className={cn(
-                "mt-6 p-4 rounded-md",
-                validationResult.isValid 
-                  ? "bg-crypto-green/10 border border-crypto-green/30" 
-                  : "bg-red-500/10 border border-red-500/30"
-              )}>
-                <div className="flex items-center mb-2">
-                  {validationResult.isValid ? (
-                    <Check className="h-5 w-5 text-crypto-green mr-2" />
-                  ) : (
-                    <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
-                  )}
-                  <h3 className="font-medium">
-                    {validationResult.isValid ? "Validation passed" : "Validation failed"}
-                  </h3>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <span className="text-sm mr-2">AI confidence score:</span>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div 
-                        className={cn(
-                          "h-2 rounded-full", 
-                          validationResult.score >= 0.8 ? "bg-crypto-green" : 
-                          validationResult.score >= 0.6 ? "bg-yellow-500" : "bg-red-500"
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <FormLabel htmlFor="media">Media (Optional)</FormLabel>
+                      <div className="mt-2">
+                        {!uploadedFile ? (
+                          <div className="border border-dashed border-border/70 rounded-md p-6 text-center bg-crypto-dark/50">
+                            <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
+                            <p className="text-sm text-muted-foreground mb-4">Upload an image, video, or document</p>
+                            <label className="relative cursor-pointer">
+                              <Button variant="secondary" type="button" className="relative z-10">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Select File
+                              </Button>
+                              <input 
+                                type="file" 
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                                onChange={handleFileUpload}
+                                accept="image/*,video/*,application/pdf"
+                              />
+                            </label>
+                          </div>
+                        ) : (
+                          <div className="border border-border/70 rounded-md p-4 bg-crypto-dark/30">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center">
+                                <ImageIcon className="h-5 w-5 text-muted-foreground mr-2" />
+                                <p className="text-sm font-medium truncate">{uploadedFile.name}</p>
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                type="button"
+                                onClick={handleRemoveFile}
+                                className="h-8 w-8"
+                              >
+                                <Trash2 className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            </div>
+                            
+                            {filePreview && (
+                              <div className="mt-2">
+                                <img 
+                                  src={filePreview} 
+                                  alt="Preview" 
+                                  className="rounded-md max-h-40 mx-auto"
+                                />
+                              </div>
+                            )}
+                            
+                            {isUploading && (
+                              <div className="flex items-center mt-2 text-xs text-muted-foreground">
+                                <Loader2 className="animate-spin h-3 w-3 mr-1" />
+                                Uploading...
+                              </div>
+                            )}
+                          </div>
                         )}
-                        style={{ width: `${validationResult.score * 100}%` }}
-                      ></div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Supported formats: JPEG, PNG, GIF, MP4, PDF. Maximum size: 10MB.
+                      </p>
                     </div>
-                    <span className="text-sm ml-2">{Math.round(validationResult.score * 100)}%</span>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">Call to Action (Optional)</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="cta_text"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Button Text</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="e.g., Learn More" 
+                                  {...field} 
+                                  className="bg-crypto-dark border-border/50"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="cta_url"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Button URL</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="https://example.com" 
+                                  {...field} 
+                                  className="bg-crypto-dark border-border/50"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                    
+                    {campaignId && (
+                      <FormField
+                        control={form.control}
+                        name="campaign_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Campaign ID</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                readOnly 
+                                className="bg-crypto-dark border-border/50"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              This announcement is linked to a campaign.
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
-                  
-                  {validationResult.issues.length > 0 && (
-                    <div className="text-sm">
-                      <p>Issues found:</p>
-                      <ul className="list-disc pl-5 mt-1 space-y-1">
-                        {validationResult.issues.map((issue, i) => (
-                          <li key={i} className="text-red-400">{issue}</li>
-                        ))}
-                      </ul>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    type="submit" 
+                    className="bg-crypto-blue hover:bg-crypto-blue/90"
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Continue to Community Selection'
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </form>
+          </Form>
+        );
+        
+      case 'communities':
+        return (
+          <Card className="border border-border/50 bg-crypto-darkgray/50">
+            <CardHeader>
+              <CardTitle>Select Communities</CardTitle>
+              <CardDescription>
+                Choose which communities you want to publish this announcement to.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {errorMessage && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
+              )}
+              
+              <Tabs defaultValue="all">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="telegram">Telegram</TabsTrigger>
+                  <TabsTrigger value="discord">Discord</TabsTrigger>
+                  <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+                </TabsList>
+                
+                {['all', 'telegram', 'discord', 'whatsapp'].map(platform => (
+                  <TabsContent key={platform} value={platform} className="pt-4">
+                    {communities.length > 0 ? (
+                      <div className="space-y-4">
+                        {communities
+                          .filter(community => 
+                            platform === 'all' || 
+                            community.platform.toLowerCase() === platform.toLowerCase()
+                          )
+                          .map(community => (
+                            <div 
+                              key={community.id} 
+                              className={`p-4 border rounded-md flex justify-between items-center cursor-pointer transition-colors ${
+                                selectedCommunities.includes(community.id) 
+                                  ? 'border-crypto-blue/80 bg-crypto-blue/10' 
+                                  : 'border-border/50 bg-crypto-dark/40 hover:bg-crypto-dark/60'
+                              }`}
+                              onClick={() => toggleCommunitySelection(community.id)}
+                            >
+                              <div>
+                                <h3 className="font-medium">{community.name}</h3>
+                                <div className="flex items-center text-sm text-muted-foreground mt-1">
+                                  <span className="mr-4">{community.platform}</span>
+                                  <span>{community.reach.toLocaleString()} members</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center">
+                                <div className="mr-4 text-right">
+                                  <span className="block text-crypto-green font-medium">
+                                    ${community.price_per_announcement}
+                                  </span>
+                                </div>
+                                <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${
+                                  selectedCommunities.includes(community.id) 
+                                    ? 'bg-crypto-blue border-crypto-blue' 
+                                    : 'border-muted-foreground'
+                                }`}>
+                                  {selectedCommunities.includes(community.id) && (
+                                    <Check className="h-4 w-4 text-white" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No communities available.</p>
+                      </div>
+                    )}
+                  </TabsContent>
+                ))}
+              </Tabs>
+              
+              {selectedCommunities.length > 0 && (
+                <div className="bg-crypto-darkgray p-4 rounded-md border border-border/50">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Selected:</p>
+                      <p className="font-medium">{selectedCommunities.length} communities</p>
                     </div>
-                  )}
-                  
-                  {validationResult.feedback && (
-                    <div className="text-sm mt-2 p-2 bg-muted/50 rounded">
-                      <p className="font-medium mb-1">AI Feedback:</p>
-                      <p className="text-muted-foreground">{validationResult.feedback}</p>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Price:</p>
+                      <p className="text-crypto-green font-medium">
+                        ${calculateTotalPrice().toFixed(2)}
+                      </p>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            )}
-            
-            {showSuggestions && validationResult && (
-              <SuggestionsList 
-                suggestions={suggestions}
-                isValid={validationResult.isValid}
-                onEdit={() => setShowSuggestions(false)}
-                onEditWithAI={handleEnhanceWithAI}
-                onContinue={() => {
-                  setShowSuggestions(false);
-                  setStep(2);
-                }}
-              />
-            )}
-            
-            {!showSuggestions && (
-              <div className="mt-6 flex justify-end">
-                <Button
-                  onClick={handleValidate}
-                  disabled={isLoading || titleWordCount < 5 || contentWordCount < 15}
-                  className="bg-crypto-blue hover:bg-crypto-blue/90"
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setStep('create')}
                 >
-                  {isLoading ? (
+                  Back
+                </Button>
+                <Button 
+                  className="bg-crypto-blue hover:bg-crypto-blue/90"
+                  disabled={selectedCommunities.length === 0 || isValidating}
+                  onClick={handleValidate}
+                >
+                  {isValidating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Validating
+                      Validating...
                     </>
                   ) : (
-                    <>
-                      Validate & Continue
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
+                    'Continue to Review'
                   )}
                 </Button>
               </div>
-            )}
-          </>
+            </CardContent>
+          </Card>
         );
-      case 2:
+        
+      case 'review':
         return (
-          <div className="space-y-6">
-            {showCryptoPayment ? (
-              <CopperXPayment
-                amount={calculateTotalCost() + platformFee}
-                currency="USDT"
-                onSuccess={handlePaymentSuccess}
-                onCancel={() => setShowCryptoPayment(false)}
-              />
-            ) : (
-              <>
-                <div className="rounded-md border border-border p-4 bg-crypto-darkgray">
-                  <h3 className="text-lg font-medium mb-2">Your Announcement</h3>
-                  <div className="space-y-2">
-                    <p className="font-medium">{title}</p>
-                    <p className="text-sm text-muted-foreground">{content}</p>
-                    {(ctaText && ctaUrl) && (
-                      <Button variant="outline" size="sm" className="mt-2">
-                        {ctaText}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Select Communities</h3>
-                  
-                  {loadingCommunities ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : communities.length > 0 ? (
-                    <>
-                      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                        {communities.map((community) => (
-                          <Card 
-                            key={community.id} 
-                            className={cn(
-                              "border cursor-pointer transition-colors",
-                              selectedCommunities.includes(community.id)
-                                ? "border-crypto-green/70 bg-crypto-green/5"
-                                : "border-border/50 bg-crypto-darkgray/50"
-                            )}
-                            onClick={() => toggleCommunitySelection(community.id)}
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h4 className="font-medium flex items-center">
-                                    {selectedCommunities.includes(community.id) && (
-                                      <Check className="h-4 w-4 text-crypto-green mr-2" />
-                                    )}
-                                    {community.name}
-                                  </h4>
-                                  <div className="flex items-center mt-1">
-                                    <Badge variant="outline" className="mr-2">
-                                      {community.platform}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      {community.reach?.toLocaleString() || 0} members
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <p className="font-medium text-crypto-green">${community.price_per_announcement}</p>
-                                  <button className="text-xs text-crypto-blue hover:underline mt-1">
-                                    {selectedCommunities.includes(community.id) ? 'Deselect' : 'Select'}
-                                  </button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                      
-                      {selectedCommunities.length > 0 && (
-                        <div className="mt-6 p-4 border border-border rounded-md bg-crypto-darkgray/70">
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground">Selected Communities:</span>
-                              <span>{selectedCommunities.length}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground">Communities Cost:</span>
-                              <span>${calculateTotalCost().toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground">Platform Fee:</span>
-                              <span>${platformFee.toFixed(2)}</span>
-                            </div>
-                            <Separator className="my-2" />
-                            <div className="flex justify-between items-center font-bold">
-                              <span>Total:</span>
-                              <span className="text-crypto-green">${(calculateTotalCost() + platformFee).toFixed(2)}</span>
-                            </div>
-                          </div>
-                        </div>
+          <Card className="border border-border/50 bg-crypto-darkgray/50">
+            <CardHeader>
+              <CardTitle>Review & Submit</CardTitle>
+              <CardDescription>
+                Review your announcement before submitting.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {announcement && (
+                <>
+                  {validationResults && (
+                    <Alert variant={validationResults.passed ? "default" : "destructive"} className="mb-4">
+                      {validationResults.passed ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4" />
                       )}
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground mb-4">No communities available</p>
-                    </div>
+                      <AlertTitle>
+                        {validationResults.passed ? 'Validation Passed' : 'Validation Issues'}
+                      </AlertTitle>
+                      <AlertDescription>
+                        {validationResults.passed 
+                          ? 'Your announcement has passed our validation checks.' 
+                          : validationResults.message || 'Please review and address the validation issues.'}
+                      </AlertDescription>
+                    </Alert>
                   )}
                   
-                  <div className="mt-6 flex justify-between">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setStep(1)}
-                    >
-                      Back to Edit
-                    </Button>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Title</h3>
+                      <p className="font-medium">{announcement.title}</p>
+                    </div>
                     
-                    <div className="space-x-2">
-                      <Button
-                        variant="outline"
-                        onClick={handleCryptoPayment}
-                        disabled={selectedCommunities.length === 0 || isLoading}
-                        className="border-crypto-green/50 text-crypto-green"
-                      >
-                        Pay with CopperX
-                      </Button>
-                      
-                      <Button 
-                        onClick={handlePreviewAndPay}
-                        className="bg-crypto-blue hover:bg-crypto-blue/90"
-                        disabled={selectedCommunities.length === 0 || isLoading}
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processing
-                          </>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <h3 className="text-sm font-medium text-muted-foreground">Content</h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-xs"
+                          onClick={handleEnhance}
+                          disabled={isEnhancing}
+                        >
+                          {isEnhancing ? (
+                            <>
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              Enhancing...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="mr-1 h-3 w-3" />
+                              Enhance with AI
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <div className="p-4 rounded-md border border-border/50 bg-crypto-dark/30">
+                        <p className="whitespace-pre-wrap">{announcement.content}</p>
+                      </div>
+                    </div>
+                    
+                    {announcement.media_url && (
+                      <div>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-1">Media</h3>
+                        {announcement.media_url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+                          <img 
+                            src={announcement.media_url} 
+                            alt="Media" 
+                            className="rounded-md max-h-60 mx-auto"
+                          />
                         ) : (
-                          <>
-                            Preview & Pay
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </>
+                          <div className="p-3 rounded-md border border-border/50 bg-crypto-dark/30 flex items-center">
+                            <ImageIcon className="h-5 w-5 mr-2 text-muted-foreground" />
+                            <a 
+                              href={announcement.media_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-sm text-blue-400 hover:underline truncate"
+                            >
+                              View attached media
+                            </a>
+                          </div>
                         )}
-                      </Button>
+                      </div>
+                    )}
+                    
+                    {(announcement.cta_text || announcement.cta_url) && (
+                      <div>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-1">Call to Action</h3>
+                        <div className="flex space-x-2 items-center">
+                          {announcement.cta_text && (
+                            <Button variant="secondary" size="sm" disabled>
+                              {announcement.cta_text}
+                            </Button>
+                          )}
+                          {announcement.cta_url && (
+                            <span className="text-xs text-muted-foreground truncate">
+                              {announcement.cta_url}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Selected Communities</h3>
+                      <div className="space-y-2">
+                        {communities
+                          .filter(community => selectedCommunities.includes(community.id))
+                          .map(community => (
+                            <div 
+                              key={community.id} 
+                              className="p-3 rounded-md border border-border/50 bg-crypto-dark/30 flex justify-between items-center"
+                            >
+                              <div className="flex items-center">
+                                <span className="font-medium">{community.name}</span>
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  ({community.reach.toLocaleString()} members)
+                                </span>
+                              </div>
+                              <span className="text-crypto-green font-medium">
+                                ${community.price_per_announcement}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-crypto-dark/30 p-4 rounded-md border border-border/50">
+                      <div className="flex justify-between items-center">
+                        <p className="font-medium">Total Price:</p>
+                        <p className="text-crypto-green font-bold text-lg">
+                          ${calculateTotalPrice().toFixed(2)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
+                  
+                  {aiSuggestions.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="text-md font-medium mb-3">AI Content Suggestions</h3>
+                      <SuggestionsList 
+                        suggestions={aiSuggestions} 
+                        onApply={applySuggestion}
+                        isLoading={aiSuggestionsLoading}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+            <CardFooter className="flex flex-col sm:flex-row gap-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setStep('communities')}
+                className="sm:w-1/2 w-full"
+              >
+                Back
+              </Button>
+              <Button 
+                className="bg-crypto-blue hover:bg-crypto-blue/90 sm:w-1/2 w-full"
+                onClick={handleSubmitAnnouncement}
+                disabled={isLoading || !announcement || selectedCommunities.length === 0}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit & Continue to Payment'
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
         );
+        
       default:
         return null;
     }
   };
-
+  
   return (
-    <Card className={cn("border border-border/50 glassmorphism bg-crypto-darkgray/50", className)}>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <MessageSquare className="h-5 w-5" />
-          <span>{step === 1 ? 'Create Announcement' : 'Select Communities'}</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-6">
-          <div className="flex items-center">
-            <div className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-full border-2",
-              step >= 1 ? "border-crypto-blue bg-crypto-blue text-white" : "border-border text-muted-foreground"
-            )}>
-              1
-            </div>
-            <div className={cn(
-              "flex-1 h-1 mx-2",
-              step >= 2 ? "bg-crypto-blue" : "bg-border"
-            )}></div>
-            <div className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-full border-2",
-              step >= 2 ? "border-crypto-blue bg-crypto-blue text-white" : "border-border text-muted-foreground"
-            )}>
-              2
-            </div>
-            <div className={cn(
-              "flex-1 h-1 mx-2",
-              step >= 3 ? "bg-crypto-blue" : "bg-border"
-            )}></div>
-            <div className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-full border-2",
-              step >= 3 ? "border-crypto-blue bg-crypto-blue text-white" : "border-border text-muted-foreground"
-            )}>
-              3
-            </div>
-          </div>
-          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span>Compose</span>
-            <span>Select Communities</span>
-            <span>Preview & Pay</span>
-          </div>
-        </div>
-        <Separator className="mb-6" />
-        {renderStep()}
-      </CardContent>
-    </Card>
+    <div className="max-w-3xl mx-auto">
+      {renderStepContent()}
+    </div>
   );
 };
 

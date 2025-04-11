@@ -1,47 +1,77 @@
 
 project_id = "mwdbxjhszysjbmvgwcrl"
-
 [api]
-enabled = true
-port = 54321
-schemas = ["public", "storage", "graphql_public"]
+  enabled = true
+  port = 54321
+  schemas = ["public", "storage", "graphql_public"]
+  extra_search_path = ["public", "extensions"]
+  [api.notify]
+    enabled = true
+  [api.realtime]
+    enabled = true
+    sort_order_realtime_records = false
 
 [db]
-port = 54322
+  port = 54322
+  shadow_port = 54320
+  major_version = 15
 
 [studio]
-enabled = true
-port = 54323
+  enabled = true
+  port = 54323
+  api_url = "http://localhost"
 
 [inbucket]
-enabled = true
-port = 54324
+  enabled = true
+  port = 54324
+  smtp_port = 54325
+  pop3_port = 54326
 
 [storage]
-enabled = true
+  enabled = true
+  file_size_limit = "50MiB"
 
 [auth]
-enabled = true
-site_url = "http://localhost:5173"
+  enabled = true
+  site_url = "http://localhost:3000"
+  additional_redirect_urls = ["https://localhost:3000"]
+  jwt_expiry = 3600
+  enable_signup = true
 
 [realtime]
-enabled = true
+  enabled = true
 
-[edge_functions]
-[edge_functions.telegram-check-bot]
-verify_jwt = true
+[functions]
+  [functions.telegram-post-announcement]
+    verify_jwt = true
+    import_map = "./supabase/functions/telegram-post-announcement/import_map.json"
+  [functions.telegram-webhook]
+    verify_jwt = false
+    import_map = "./supabase/functions/telegram-webhook/import_map.json"
+  [functions.telegram-analytics]
+    verify_jwt = true
+    import_map = "./supabase/functions/telegram-analytics/import_map.json"
+  [functions.telegram-check-bot]
+    verify_jwt = true
+    import_map = "./supabase/functions/telegram-check-bot/import_map.json"
+  [functions.telegram-configure-bot]
+    verify_jwt = true
+    import_map = "./supabase/functions/telegram-configure-bot/import_map.json"
+  [functions.enhance-announcement]
+    verify_jwt = true
+    import_map = "./supabase/functions/enhance-announcement/import_map.json"
+  [functions.validate-announcement]
+    verify_jwt = true
+    import_map = "./supabase/functions/validate-announcement/import_map.json"
+  [functions.register-bot-commands]
+    verify_jwt = true
+    import_map = "./supabase/functions/register-bot-commands/import_map.json"
+  [functions.create-storage-bucket]
+    verify_jwt = true
+    import_map = "./supabase/functions/create-storage-bucket/import_map.json"
 
-[edge_functions.telegram-webhook]
-verify_jwt = false
+[watchlist]
+  enabled = true
 
-[edge_functions.telegram-configure-bot]
-verify_jwt = true
-
-[edge_functions.telegram-post-announcement]
-verify_jwt = true
-
-[edge_functions.telegram-analytics]
-verify_jwt = true
-
-[edge_functions.register-bot-commands]
-verify_jwt = true
+[experimental]
+  enable_cloud_logging = true

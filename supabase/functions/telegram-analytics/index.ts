@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -70,6 +69,28 @@ serve(async (req) => {
           JSON.stringify({ success: false, error: "Failed to update metrics" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+      
+      // Also update the announcement table to track overall metrics
+      if (action === 'view' || action === 'click') {
+        const metricsField = action === 'view' ? 'impressions' : 'clicks';
+        
+        // Get current announcement data
+        const { data: announcementData, error: announcementError } = await supabaseAdmin
+          .from('announcements')
+          .select(`id, ${metricsField}`)
+          .eq('id', announcementId)
+          .single();
+          
+        if (!announcementError && announcementData) {
+          const currentValue = announcementData[metricsField] || 0;
+          
+          // Update the announcement metrics
+          await supabaseAdmin
+            .from('announcements')
+            .update({ [metricsField]: currentValue + 1 })
+            .eq('id', announcementId);
+        }
       }
       
       return new Response(
