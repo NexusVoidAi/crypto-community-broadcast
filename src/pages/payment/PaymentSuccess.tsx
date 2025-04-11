@@ -93,7 +93,7 @@ const PaymentSuccess: React.FC = () => {
         // Get payment amount
         const { data: paymentData, error: paymentError } = await supabase
           .from('payments')
-          .select('amount')
+          .select('id, amount')  // Updated to select both id and amount
           .eq('announcement_id', announcementId)
           .single();
           
@@ -126,7 +126,7 @@ const PaymentSuccess: React.FC = () => {
                 .insert({
                   community_id: community.id,
                   amount: amountPerCommunity,
-                  payment_id: paymentData.id,
+                  payment_id: paymentData.id,  // Now properly typed
                   currency: 'USDT'
                 });
                 
@@ -224,3 +224,4 @@ const PaymentSuccess: React.FC = () => {
 };
 
 export default PaymentSuccess;
+

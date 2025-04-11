@@ -29,6 +29,7 @@ export interface Campaign {
   spent: number;
   communities?: any[];
   impressions?: number;
+  created_at?: string; // Added this property to fix the error
 }
 
 export interface DashboardNavItem {
