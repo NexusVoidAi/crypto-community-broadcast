@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -352,10 +351,10 @@ const AnnouncementForm: React.FC = () => {
     
     setIsLoading(true);
     try {
-      // Update announcement status
+      // Update announcement status - using 'PENDING_VALIDATION' instead of 'PENDING_APPROVAL'
       const { error } = await supabase
         .from('announcements')
-        .update({ status: 'PENDING_APPROVAL' })
+        .update({ status: 'PENDING_VALIDATION' })
         .eq('id', announcement.id);
         
       if (error) throw error;

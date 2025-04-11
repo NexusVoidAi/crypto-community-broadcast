@@ -2,14 +2,16 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Lightbulb, ArrowRight, Edit, Wand2 } from 'lucide-react';
+import { Lightbulb, ArrowRight, Edit, Wand2, Loader2 } from 'lucide-react';
 
 interface SuggestionsListProps {
   suggestions: string[];
-  onEdit: () => void;
-  onContinue: () => void;
+  onEdit?: () => void;
+  onContinue?: () => void;
   onEditWithAI?: () => void;
-  isValid: boolean;
+  onApply?: (suggestion: string) => Promise<void> | void;
+  isValid?: boolean;
+  isLoading?: boolean;
 }
 
 const SuggestionsList: React.FC<SuggestionsListProps> = ({
@@ -17,7 +19,9 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
   onEdit,
   onContinue,
   onEditWithAI,
-  isValid
+  onApply,
+  isValid = true,
+  isLoading = false
 }) => {
   return (
     <Card className="border border-border/50 bg-crypto-darkgray/50 mt-6">
@@ -37,46 +41,69 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
         <ul className="space-y-2 mb-6 pl-9">
           {suggestions.map((suggestion, index) => (
             <li key={index} className="text-sm list-disc text-muted-foreground">
-              {suggestion}
+              {onApply ? (
+                <div className="flex justify-between items-start">
+                  <span>{suggestion}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-xs h-6 ml-2 text-crypto-blue" 
+                    onClick={() => onApply(suggestion)}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : 'Apply'}
+                  </Button>
+                </div>
+              ) : (
+                suggestion
+              )}
             </li>
           ))}
         </ul>
         
-        <div className="flex justify-between">
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={onEdit}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Manually
-            </Button>
+        {(onEdit || onContinue || onEditWithAI) && (
+          <div className="flex justify-between">
+            <div className="flex gap-2">
+              {onEdit && (
+                <Button 
+                  variant="outline" 
+                  onClick={onEdit}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Manually
+                </Button>
+              )}
+              
+              {onEditWithAI && (
+                <Button 
+                  variant="outline"
+                  className="border-crypto-blue/50 text-crypto-blue"
+                  onClick={onEditWithAI}
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Enhance with AI
+                </Button>
+              )}
+            </div>
             
-            {onEditWithAI && (
+            {onContinue && (
               <Button 
-                variant="outline"
-                className="border-crypto-blue/50 text-crypto-blue"
-                onClick={onEditWithAI}
+                className="bg-crypto-blue hover:bg-crypto-blue/90"
+                onClick={onContinue}
+                disabled={!isValid}
               >
-                <Wand2 className="h-4 w-4 mr-2" />
-                Enhance with AI
+                {isValid ? (
+                  <>
+                    Continue
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </>
+                ) : "Fix Issues to Continue"}
               </Button>
             )}
           </div>
-          
-          <Button 
-            className="bg-crypto-blue hover:bg-crypto-blue/90"
-            onClick={onContinue}
-            disabled={!isValid}
-          >
-            {isValid ? (
-              <>
-                Continue
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </>
-            ) : "Fix Issues to Continue"}
-          </Button>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
