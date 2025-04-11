@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -50,6 +49,27 @@ const BotCommandsManagement = () => {
   
   useEffect(() => {
     fetchCommands();
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('bot_commands_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bot_commands',
+        },
+        (payload) => {
+          console.log('Real-time update:', payload);
+          fetchCommands(); // Refresh the commands when changes occur
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
   
   const fetchCommands = async () => {
@@ -130,7 +150,6 @@ const BotCommandsManagement = () => {
       
       // Close dialog and refresh list
       setIsDialogOpen(false);
-      fetchCommands();
     } catch (error: any) {
       console.error('Error saving bot command:', error);
       toast.error(`Failed to save command: ${error.message}`);

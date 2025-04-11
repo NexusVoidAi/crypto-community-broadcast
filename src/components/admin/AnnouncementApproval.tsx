@@ -17,12 +17,36 @@ const AnnouncementApproval = () => {
 
   useEffect(() => {
     fetchPendingAnnouncements();
+    
+    // Set up real-time subscription to announcements
+    const channel = supabase
+      .channel('announcement_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'announcements',
+          filter: `status=eq.PENDING_VALIDATION`,
+        },
+        (payload) => {
+          console.log('Real-time update for announcements:', payload);
+          fetchPendingAnnouncements();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchPendingAnnouncements = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      
+      console.log("Fetching pending announcements");
       
       // First fetch the announcements
       const { data: announcementsData, error: announcementsError } = await supabase
@@ -31,7 +55,12 @@ const AnnouncementApproval = () => {
         .eq('status', 'PENDING_VALIDATION')
         .order('created_at', { ascending: false });
         
-      if (announcementsError) throw announcementsError;
+      if (announcementsError) {
+        console.error("Error fetching announcements:", announcementsError);
+        throw announcementsError;
+      }
+      
+      console.log("Fetched announcements:", announcementsData);
       
       if (!announcementsData || announcementsData.length === 0) {
         setAnnouncements([]);
@@ -88,6 +117,7 @@ const AnnouncementApproval = () => {
         };
       });
       
+      console.log("Enhanced announcements:", enhancedAnnouncements);
       setAnnouncements(enhancedAnnouncements);
     } catch (error: any) {
       console.error("Error fetching announcements:", error);
@@ -95,6 +125,63 @@ const AnnouncementApproval = () => {
       toast.error(`Error loading announcements: ${error.message}`);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const sendAnnouncementToCommunities = async (announcementId: string) => {
+    try {
+      // Get the announcement communities
+      const { data: communities, error: communitiesError } = await supabase
+        .from('announcement_communities')
+        .select(`
+          id,
+          community_id,
+          announcement_id,
+          community:communities(id, name, platform, platform_id)
+        `)
+        .eq('announcement_id', announcementId);
+        
+      if (communitiesError) throw communitiesError;
+      
+      if (!communities || communities.length === 0) {
+        console.log("No communities found for this announcement");
+        return;
+      }
+      
+      console.log("Communities to send announcement to:", communities);
+      
+      // Get the announcement content
+      const { data: announcement, error: announcementError } = await supabase
+        .from('announcements')
+        .select('*')
+        .eq('id', announcementId)
+        .single();
+        
+      if (announcementError) throw announcementError;
+      
+      // For each Telegram community, send the announcement
+      const telegramCommunities = communities.filter(c => c.community.platform === 'TELEGRAM');
+      
+      if (telegramCommunities.length > 0) {
+        // Call the edge function to post to Telegram
+        const { data: telegramResponse, error: telegramError } = await supabase.functions.invoke('telegram-post-announcement', {
+          body: { announcementId }
+        });
+        
+        if (telegramError) {
+          console.error("Error sending to Telegram:", telegramError);
+          toast.error(`Error sending to Telegram communities: ${telegramError.message}`);
+        } else {
+          console.log("Telegram posting response:", telegramResponse);
+          toast.success(`Sent to ${telegramCommunities.length} Telegram communities`);
+        }
+      }
+      
+      // Handle other platforms (Discord, WhatsApp) in a similar way if needed
+      
+    } catch (error: any) {
+      console.error("Error sending announcement to communities:", error);
+      toast.error(`Error: ${error.message}`);
     }
   };
 
@@ -111,7 +198,13 @@ const AnnouncementApproval = () => {
         
       if (error) throw error;
       
-      toast.success(`Announcement ${approved ? 'approved' : 'rejected'} successfully`);
+      if (approved) {
+        // Send the announcement to communities
+        await sendAnnouncementToCommunities(announcementId);
+        toast.success('Announcement approved and sent to communities');
+      } else {
+        toast.success('Announcement rejected');
+      }
       
       // Remove the processed announcement from the list
       setAnnouncements(prevAnnouncements => 
