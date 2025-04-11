@@ -140,6 +140,7 @@ export type Database = {
           approval_status: string
           created_at: string
           description: string | null
+          focus_areas: string[] | null
           id: string
           name: string
           owner_id: string
@@ -147,6 +148,7 @@ export type Database = {
           platform_id: string | null
           price_per_announcement: number
           reach: number | null
+          region: string[] | null
           updated_at: string
           wallet_address: string | null
         }
@@ -154,6 +156,7 @@ export type Database = {
           approval_status?: string
           created_at?: string
           description?: string | null
+          focus_areas?: string[] | null
           id?: string
           name: string
           owner_id: string
@@ -161,6 +164,7 @@ export type Database = {
           platform_id?: string | null
           price_per_announcement?: number
           reach?: number | null
+          region?: string[] | null
           updated_at?: string
           wallet_address?: string | null
         }
@@ -168,6 +172,7 @@ export type Database = {
           approval_status?: string
           created_at?: string
           description?: string | null
+          focus_areas?: string[] | null
           id?: string
           name?: string
           owner_id?: string
@@ -175,6 +180,7 @@ export type Database = {
           platform_id?: string | null
           price_per_announcement?: number
           reach?: number | null
+          region?: string[] | null
           updated_at?: string
           wallet_address?: string | null
         }
