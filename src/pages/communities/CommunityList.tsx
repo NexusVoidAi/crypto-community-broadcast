@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, Users, Search, ExternalLink } from 'lucide-react';
+import { Loader2, Plus, Users, Search, MapPin, Target } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +21,8 @@ interface Community {
   price_per_announcement: number;
   owner_id: string;
   approval_status: string;
+  region?: string[];
+  focus_areas?: string[];
 }
 
 const CommunityList: React.FC = () => {
@@ -88,6 +90,25 @@ const CommunityList: React.FC = () => {
     }
   };
 
+  // Helper function to render regions and focus areas
+  const renderBadgeList = (items: string[] | undefined, icon: React.ReactNode) => {
+    if (!items || items.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-1 mt-2">
+        {items.map((item, index) => (
+          <Badge 
+            key={index} 
+            variant="outline" 
+            className="bg-crypto-darkgray/50 text-xs font-normal py-0 h-5 border-border/30 flex items-center"
+          >
+            {icon}
+            <span className="ml-1 truncate max-w-[80px]">{item}</span>
+          </Badge>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-8">
@@ -143,7 +164,14 @@ const CommunityList: React.FC = () => {
                         <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                           {community.description || 'No description provided'}
                         </p>
-                        <div className="flex items-center justify-between mt-auto">
+                        
+                        {/* Render regions */}
+                        {renderBadgeList(community.region, <MapPin className="h-3 w-3" />)}
+                        
+                        {/* Render focus areas */}
+                        {renderBadgeList(community.focus_areas, <Target className="h-3 w-3" />)}
+                        
+                        <div className="flex items-center justify-between mt-3">
                           <span className="text-sm text-muted-foreground flex items-center">
                             <Users className="h-3 w-3 mr-1" /> {community.reach.toLocaleString()}
                           </span>
@@ -188,7 +216,14 @@ const CommunityList: React.FC = () => {
                         <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                           {community.description || 'No description provided'}
                         </p>
-                        <div className="flex items-center justify-between">
+                        
+                        {/* Render regions */}
+                        {renderBadgeList(community.region, <MapPin className="h-3 w-3" />)}
+                        
+                        {/* Render focus areas */}
+                        {renderBadgeList(community.focus_areas, <Target className="h-3 w-3" />)}
+                        
+                        <div className="flex items-center justify-between mt-3">
                           <span className="text-sm text-muted-foreground flex items-center">
                             <Users className="h-3 w-3 mr-1" /> {community.reach.toLocaleString()}
                           </span>
