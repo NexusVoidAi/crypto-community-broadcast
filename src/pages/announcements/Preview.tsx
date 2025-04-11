@@ -86,13 +86,15 @@ const Preview = () => {
   const handlePaymentSuccess = async (txHash: string) => {
     try {
       // Update payment status
-      const { error: paymentError } = await supabase
+      const { data: paymentData, error: paymentError } = await supabase
         .from('payments')
         .update({
           status: 'PAID',
           transaction_hash: txHash
         })
-        .eq('announcement_id', announcementId);
+        .eq('announcement_id', announcementId)
+        .select()
+        .single();
         
       if (paymentError) throw paymentError;
       
@@ -107,8 +109,26 @@ const Preview = () => {
         
       if (announcementError) throw announcementError;
       
+      // Create community earnings records
+      if (communities.length > 0) {
+        const communityFee = totalCost - platformFee;
+        const amountPerCommunity = communityFee / communities.length;
+        
+        // Create earnings records for each community
+        for (const community of communities) {
+          await supabase
+            .from('community_earnings')
+            .insert({
+              community_id: community.id,
+              amount: amountPerCommunity,
+              payment_id: paymentData.id,
+              currency: 'USDT'
+            });
+        }
+      }
+      
       toast.success('Payment successful! Your announcement will be published soon.');
-      navigate('/');
+      navigate('/dashboard');
     } catch (error: any) {
       toast.error(`Error processing payment: ${error.message}`);
     }

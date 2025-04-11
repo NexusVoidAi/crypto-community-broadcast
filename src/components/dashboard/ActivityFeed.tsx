@@ -3,8 +3,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ActivityItem } from './types';
-import { formatDistanceToNow } from 'date-fns';
-import { Bell, Check, AlertTriangle, Info, Ban, ArrowRight } from 'lucide-react';
+import { formatDistanceToNow, parseISO } from 'date-fns';
+import { Bell, Check, AlertTriangle, Info, Ban, ArrowRight, CreditCard, Megaphone, Users } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ActivityFeedProps {
@@ -12,7 +12,7 @@ interface ActivityFeedProps {
 }
 
 const getStatusIcon = (status: string) => {
-  switch (status) {
+  switch (status.toLowerCase()) {
     case 'success':
       return <Check className="h-4 w-4 text-green-500" />;
     case 'warning':
@@ -26,31 +26,50 @@ const getStatusIcon = (status: string) => {
 };
 
 const getTypeIcon = (type: string) => {
-  switch (type) {
+  switch (type.toLowerCase()) {
     case 'announcement':
-      return <Bell className="h-4 w-4 text-purple-500" />;
+      return <Megaphone className="h-4 w-4 text-purple-500" />;
     case 'payment':
-      return <Bell className="h-4 w-4 text-green-500" />;
+      return <CreditCard className="h-4 w-4 text-green-500" />;
     case 'validation':
       return <Check className="h-4 w-4 text-blue-500" />;
     case 'community':
-      return <Bell className="h-4 w-4 text-orange-500" />;
+      return <Users className="h-4 w-4 text-orange-500" />;
     default:
       return <Bell className="h-4 w-4 text-gray-500" />;
   }
 };
 
 const getStatusColor = (status: string) => {
-  switch (status) {
+  switch (status.toLowerCase()) {
     case 'success':
+    case 'paid':
+    case 'active':
+    case 'published':
       return 'text-green-500 bg-green-500/10 border-green-500/20';
     case 'warning':
+    case 'pending':
+    case 'pending_validation':
       return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
     case 'error':
+    case 'failed':
+    case 'rejected':
+    case 'validation_failed':
       return 'text-red-500 bg-red-500/10 border-red-500/20';
     case 'info':
+    case 'draft':
     default:
       return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
+  }
+};
+
+const formatDate = (timestamp: string | undefined | null) => {
+  if (!timestamp) return 'Recently';
+  try {
+    return formatDistanceToNow(parseISO(timestamp), { addSuffix: true });
+  } catch (error) {
+    console.error("Invalid date format:", timestamp);
+    return 'Recently';
   }
 };
 
@@ -83,7 +102,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities }) => {
                   <p className="text-sm text-muted-foreground line-clamp-2">{activity.description}</p>
                   <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
                     <p className="text-xs text-muted-foreground">
-                      {activity.timestamp ? formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true }) : 'Recently'}
+                      {formatDate(activity.timestamp)}
                     </p>
                     <button className="text-xs text-crypto-blue hover:underline flex items-center whitespace-nowrap">
                       View Details <ArrowRight className="ml-1 h-3 w-3" />

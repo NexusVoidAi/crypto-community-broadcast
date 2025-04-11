@@ -67,6 +67,9 @@ const PaymentSuccess: React.FC = () => {
             
           if (announcementError) throw announcementError;
           
+          // Update community earnings for the announcement communities
+          await updateCommunityEarnings(announcementId);
+          
           toast.success('Payment confirmed successfully!');
         }
       } catch (error: any) {
@@ -74,6 +77,65 @@ const PaymentSuccess: React.FC = () => {
         toast.error(`Failed to verify payment: ${error.message}`);
       } finally {
         setIsVerifying(false);
+      }
+    };
+    
+    const updateCommunityEarnings = async (announcementId: string) => {
+      try {
+        // Get the communities linked to this announcement
+        const { data: communityData, error: communityError } = await supabase
+          .from('announcement_communities')
+          .select('community_id')
+          .eq('announcement_id', announcementId);
+          
+        if (communityError) throw communityError;
+        
+        // Get payment amount
+        const { data: paymentData, error: paymentError } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('announcement_id', announcementId)
+          .single();
+          
+        if (paymentError) throw paymentError;
+        
+        // If we have communities and payment data
+        if (communityData && communityData.length > 0 && paymentData) {
+          // Get communities with their prices
+          const communityIds = communityData.map((item: any) => item.community_id);
+          const { data: communities, error: communitiesError } = await supabase
+            .from('communities')
+            .select('id,price_per_announcement,owner_id')
+            .in('id', communityIds);
+            
+          if (communitiesError) throw communitiesError;
+          
+          // Calculate community payout amounts and create earnings records
+          if (communities) {
+            const platformFee = 1; // Default platform fee
+            const totalAmount = Number(paymentData.amount);
+            const communityFee = totalAmount - platformFee;
+            
+            // If multiple communities, split the amount between them
+            const amountPerCommunity = communityFee / communities.length;
+            
+            // Create earnings records for each community
+            for (const community of communities) {
+              const { error: earningsError } = await supabase
+                .from('community_earnings')
+                .insert({
+                  community_id: community.id,
+                  amount: amountPerCommunity,
+                  payment_id: paymentData.id,
+                  currency: 'USDT'
+                });
+                
+              if (earningsError) throw earningsError;
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error('Error updating community earnings:', error);
       }
     };
     
@@ -149,7 +211,7 @@ const PaymentSuccess: React.FC = () => {
           </CardContent>
           <CardFooter>
             <Button 
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/dashboard')}  
               className="w-full bg-crypto-blue hover:bg-crypto-blue/90"
             >
               Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />

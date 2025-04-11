@@ -14,7 +14,8 @@ import {
   Loader2,
   Eye,
   Edit,
-  BarChart2
+  BarChart2,
+  ExternalLink
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ const Dashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [payments, setPayments] = useState<any[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [communityEarnings, setCommunityEarnings] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [chartData, setChartData] = useState([]);
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
@@ -89,6 +91,38 @@ const Dashboard = () => {
         setIsLoading(false);
       }
     };
+
+    const fetchCommunityEarnings = async () => {
+      try {
+        // First get the communities owned by the user
+        const { data: userCommunities, error: communitiesError } = await supabase
+          .from('communities')
+          .select('id')
+          .eq('owner_id', user?.id);
+          
+        if (communitiesError) throw communitiesError;
+        
+        if (userCommunities && userCommunities.length > 0) {
+          const communityIds = userCommunities.map((c) => c.id);
+          
+          // Then get the earnings for these communities
+          const { data: earnings, error: earningsError } = await supabase
+            .from('community_earnings')
+            .select('amount')
+            .in('community_id', communityIds);
+            
+          if (earningsError) throw earningsError;
+          
+          const totalEarnings = earnings
+            ? earnings.reduce((sum, item) => sum + Number(item.amount), 0)
+            : 0;
+            
+          setCommunityEarnings(totalEarnings);
+        }
+      } catch (error: any) {
+        console.error("Error fetching community earnings:", error);
+      }
+    };
     
     const checkAdminStatus = async () => {
       try {
@@ -108,9 +142,12 @@ const Dashboard = () => {
       }
     };
     
-    fetchProfile();
-    fetchPayments();
-    checkAdminStatus();
+    if (user?.id) {
+      fetchProfile();
+      fetchPayments();
+      fetchCommunityEarnings();
+      checkAdminStatus();
+    }
   }, [user]);
 
   // Fetch campaigns (announcements) data
@@ -126,7 +163,9 @@ const Dashboard = () => {
             status,
             created_at,
             announcement_communities (
-              community_id
+              community_id,
+              views,
+              clicks
             ),
             impressions
           `)
@@ -136,19 +175,35 @@ const Dashboard = () => {
         if (error) throw error;
         
         // Transform the announcement data to match the Campaign interface
-        const formattedCampaigns: Campaign[] = (data || []).map((announcement: any) => ({
-          id: announcement.id,
-          name: announcement.title,
-          title: announcement.title,
-          status: announcement.status,
-          reach: Math.floor(Math.random() * 1000) + 500, // Placeholder for now
-          clicks: Math.floor(Math.random() * 200), // Placeholder for now
-          conversionRate: parseFloat((Math.random() * 0.1).toFixed(2)), // Convert to number with parseFloat
-          budget: 100, // Placeholder for now
-          spent: Math.floor(Math.random() * 50) + 10, // Placeholder for now
-          communities: announcement.announcement_communities || [],
-          impressions: announcement.impressions || 0,
-        }));
+        const formattedCampaigns: Campaign[] = (data || []).map((announcement: any) => {
+          // Calculate total views and clicks across all communities
+          const totalViews = announcement.announcement_communities?.reduce(
+            (sum: number, ac: any) => sum + (ac.views || 0), 0
+          ) || 0;
+          
+          const totalClicks = announcement.announcement_communities?.reduce(
+            (sum: number, ac: any) => sum + (ac.clicks || 0), 0
+          ) || 0;
+          
+          const conversionRate = totalViews > 0 
+            ? parseFloat(((totalClicks / totalViews) * 100).toFixed(2)) 
+            : 0;
+            
+          return {
+            id: announcement.id,
+            name: announcement.title,
+            title: announcement.title,
+            status: announcement.status,
+            reach: Math.floor(Math.random() * 1000) + 500, // Placeholder
+            clicks: totalClicks,
+            conversionRate: conversionRate,
+            budget: 100, // Placeholder
+            spent: Math.floor(Math.random() * 50) + 10, // Placeholder
+            communities: announcement.announcement_communities || [],
+            impressions: announcement.impressions || 0,
+            views: totalViews,
+          };
+        });
         
         setCampaigns(formattedCampaigns);
       } catch (error: any) {
@@ -176,7 +231,7 @@ const Dashboard = () => {
         title: 'Payment processed',
         description: `Payment of $${payment.amount} ${payment.currency} for announcement`,
         type: 'payment',
-        status: payment.status === 'PAID' ? 'success' : (payment.status === 'PENDING' ? 'warning' : 'error'),
+        status: payment.status,
       });
     });
     
@@ -184,16 +239,19 @@ const Dashboard = () => {
     campaigns.slice(0, 3).forEach((campaign, index) => {
       activities.push({
         id: campaign.id || `campaign-${index}`,
-        timestamp: new Date().toISOString(), // Using current time as placeholder
+        timestamp: campaign.created_at,
         title: `Campaign "${campaign.title}" ${campaign.status === 'ACTIVE' ? 'is active' : 'status updated'}`,
         description: `Campaign status: ${campaign.status}`,
         type: 'announcement',
-        status: campaign.status === 'ACTIVE' ? 'success' : (campaign.status === 'PENDING' ? 'warning' : 'error'),
+        status: campaign.status,
       });
     });
     
     // Sort by timestamp (newest first) and limit to 5
-    activities.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+    activities.sort((a, b) => 
+      new Date(b.timestamp || Date.now()).getTime() - 
+      new Date(a.timestamp || Date.now()).getTime()
+    );
     setRecentActivities(activities.slice(0, 5));
   }, [payments, campaigns]);
 
@@ -251,6 +309,26 @@ const Dashboard = () => {
       default:
         return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
     }
+  };
+
+  // Handle view details for payments
+  const handleViewPaymentDetails = (paymentId: string) => {
+    // For now just show a toast since we don't have a detailed view yet
+    toast.info(`Viewing payment details for ID: ${paymentId}`);
+  };
+  
+  // Handle campaign actions
+  const handleViewCampaign = (campaignId: string) => {
+    navigate(`/announcements/preview?id=${campaignId}`);
+  };
+  
+  const handleEditCampaign = (campaignId: string) => {
+    navigate(`/announcements/create?edit=${campaignId}`);
+  };
+  
+  const handleViewCampaignAnalytics = (campaignId: string) => {
+    toast.info(`Viewing analytics for campaign ID: ${campaignId}`);
+    // This would navigate to an analytics page in the future
   };
 
   // Tab content rendering
@@ -360,8 +438,8 @@ const Dashboard = () => {
                   {!isMobile && (
                     <>
                       <TableHead>Communities</TableHead>
-                      <TableHead>Impressions</TableHead>
-                      <TableHead className="text-right">Spent</TableHead>
+                      <TableHead>Views</TableHead>
+                      <TableHead>Clicks</TableHead>
                     </>
                   )}
                   <TableHead className="text-right">Actions</TableHead>
@@ -386,20 +464,35 @@ const Dashboard = () => {
                       {!isMobile && (
                         <>
                           <TableCell>{campaign.communities?.length || 0}</TableCell>
-                          <TableCell>{campaign.impressions?.toLocaleString() || 0}</TableCell>
-                          <TableCell className="text-right">${campaign.spent.toLocaleString()}</TableCell>
+                          <TableCell>{campaign.views?.toLocaleString() || 0}</TableCell>
+                          <TableCell>{campaign.clicks?.toLocaleString() || 0}</TableCell>
                         </>
                       )}
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-1">
-                          <Button variant="ghost" size="icon" title="View">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            title="View"
+                            onClick={() => handleViewCampaign(campaign.id)}
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" title="Edit">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            title="Edit"
+                            onClick={() => handleEditCampaign(campaign.id)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                           {!isMobile && (
-                            <Button variant="ghost" size="icon" title="Analytics">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              title="Analytics"
+                              onClick={() => handleViewCampaignAnalytics(campaign.id)}
+                            >
                               <BarChart2 className="h-4 w-4" />
                             </Button>
                           )}
@@ -461,20 +554,20 @@ const Dashboard = () => {
             <div className="p-4 border border-border/50 rounded-md bg-crypto-darkgray/80">
               <h3 className="font-medium text-center mb-3">Total Spent</h3>
               <div className="text-center text-2xl md:text-3xl font-bold text-crypto-green">
-                ${payments.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)} USDT
+                ${payments.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0).toFixed(2)} USDT
               </div>
               <p className="text-xs text-muted-foreground text-center mt-2">Lifetime spending</p>
             </div>
             <div className="p-4 border border-border/50 rounded-md bg-crypto-darkgray/80">
               <h3 className="font-medium text-center mb-3">Pending Payments</h3>
               <div className="text-center text-2xl md:text-3xl font-bold text-yellow-500">
-                ${payments.filter((p: any) => p.status === 'PENDING').reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)} USDT
+                ${payments.filter((p: any) => p.status === 'PENDING').reduce((sum: number, payment: any) => sum + Number(payment.amount), 0).toFixed(2)} USDT
               </div>
               <p className="text-xs text-muted-foreground text-center mt-2">Payments awaiting confirmation</p>
             </div>
             <div className="p-4 border border-border/50 rounded-md bg-crypto-darkgray/80">
               <h3 className="font-medium text-center mb-3">Community Earnings</h3>
-              <div className="text-center text-2xl md:text-3xl font-bold text-crypto-blue">$0 USDT</div>
+              <div className="text-center text-2xl md:text-3xl font-bold text-crypto-blue">${communityEarnings.toFixed(2)} USDT</div>
               <p className="text-xs text-muted-foreground text-center mt-2">Revenue from your communities</p>
             </div>
           </div>
@@ -514,7 +607,12 @@ const Dashboard = () => {
                       </TableCell>
                       {!isMobile && (
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="h-8">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8"
+                            onClick={() => handleViewPaymentDetails(payment.id)}
+                          >
                             Details
                           </Button>
                         </TableCell>
