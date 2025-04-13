@@ -41,8 +41,8 @@ function App() {
 
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <Router>
+      <Router>
+        <AuthProvider>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/login" element={<Login />} />
@@ -59,9 +59,9 @@ function App() {
             <Route path="/announcements/preview" element={<PreviewAnnouncement />} />
             <Route path="/announcements/my" element={<MyAnnouncements />} />
           </Routes>
-        </Router>
-        <Toaster position="top-right" />
-      </AuthProvider>
+          <Toaster position="top-right" />
+        </AuthProvider>
+      </Router>
     </ThemeProvider>
   );
 }
