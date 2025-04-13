@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -256,15 +255,21 @@ const AnnouncementForm: React.FC = () => {
       setValidationResults({
         passed: validationResult.isValid,
         message: validationResult.feedback,
-        suggestions: validationResult.suggestions
+        suggestions: getSuggestions(validationResult)
       });
       
-      // Set suggestions even if validation fails
-      setAiSuggestions(validationResult.suggestions);
+      // Set suggestions from validation result
+      setAiSuggestions(getSuggestions(validationResult));
       
-      // Move to communities selection after showing validation
-      setStep('communities');
-      toast.success('Announcement draft saved!');
+      // Only move to communities selection if validation passed
+      if (validationResult.isValid) {
+        setStep('communities');
+        toast.success('Announcement draft saved!');
+      } else {
+        toast.error('Announcement validation failed. Please review the issues and improve your content.');
+        // Stay on create step but show the validation results
+        setStep('create');
+      }
     } catch (error: any) {
       console.error('Error creating announcement:', error.message);
       toast.error('Failed to create announcement');
@@ -272,7 +277,7 @@ const AnnouncementForm: React.FC = () => {
       setIsSaving(false);
     }
   };
-  
+
   // Toggle community selection
   const toggleCommunitySelection = (communityId: string) => {
     setSelectedCommunities(prev => 
@@ -412,6 +417,29 @@ const AnnouncementForm: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* Display validation results if validation failed but we're still on create step */}
+                  {validationResults && !validationResults.passed && (
+                    <>
+                      <Alert variant="destructive" className="mb-4">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Validation Issues</AlertTitle>
+                        <AlertDescription>
+                          Please review and address the validation issues.
+                        </AlertDescription>
+                      </Alert>
+                      
+                      {/* Display AI suggestions */}
+                      {aiSuggestions.length > 0 && (
+                        <SuggestionsList 
+                          suggestions={aiSuggestions} 
+                          onApply={applySuggestion}
+                          isLoading={aiSuggestionsLoading}
+                          isValid={false}
+                        />
+                      )}
+                    </>
+                  )}
+                
                   <FormField
                     control={form.control}
                     name="title"
@@ -587,12 +615,12 @@ const AnnouncementForm: React.FC = () => {
                   <Button 
                     type="submit" 
                     className="bg-crypto-blue hover:bg-crypto-blue/90"
-                    disabled={isSaving}
+                    disabled={isSaving || isValidating}
                   >
-                    {isSaving ? (
+                    {isSaving || isValidating ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
+                        {isValidating ? 'Validating...' : 'Saving...'}
                       </>
                     ) : (
                       'Continue to Community Selection'
@@ -939,14 +967,3 @@ const AnnouncementForm: React.FC = () => {
         
       default:
         return null;
-    }
-  };
-  
-  return (
-    <div className="max-w-3xl mx-auto">
-      {renderStepContent()}
-    </div>
-  );
-};
-
-export default AnnouncementForm;

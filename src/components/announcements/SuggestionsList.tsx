@@ -43,7 +43,7 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
             <p className="text-sm text-muted-foreground">
               {isValid 
                 ? "Your announcement passes our guidelines. Here are some suggestions to make it even better:" 
-                : "Please review these suggestions to improve your announcement:"}
+                : "Please address these points to improve your announcement:"}
             </p>
           </div>
         </div>
