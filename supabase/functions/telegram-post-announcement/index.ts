@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -276,3 +275,48 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper to create Supabase client in Deno
+const createClient = (url: string, key: string) => {
+  return {
+    from: (table: string) => ({
+      select: (columns: string) => ({
+        eq: (column: string, value: any) => ({
+          single: () => fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=eq.${value}&limit=1`, {
+            headers: {
+              'apikey': key,
+              'Authorization': `Bearer ${key}`,
+            },
+          }).then(res => res.json().then(data => ({ data: data?.[0] || null, error: null }))),
+          maybeSingle: () => fetch(`${url}/rest/v1/${table}?select=${columns}&${column}=eq.${value}&limit=1`, {
+            headers: {
+              'apikey': key,
+              'Authorization': `Bearer ${key}`,
+            },
+          }).then(res => res.json().then(data => ({ 
+            data: data && data.length > 0 ? data[0] : null, 
+            error: null 
+          }))),
+        }),
+        single: () => fetch(`${url}/rest/v1/${table}?select=${columns}&limit=1`, {
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+          },
+        }).then(res => res.json().then(data => ({ data: data?.[0] || null, error: null }))),
+      }),
+      update: (data: any) => ({
+        eq: (column: string, value: any) => fetch(`${url}/rest/v1/${table}?${column}=eq.${value}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify(data),
+        }).then(res => ({ data: null, error: null })),
+      }),
+    }),
+  };
+};

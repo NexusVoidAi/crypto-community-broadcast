@@ -129,8 +129,6 @@ const AnnouncementApproval = () => {
 
   const sendAnnouncementToCommunities = async (announcementId: string) => {
     try {
-      console.log("Starting to send announcement to communities:", announcementId);
-      
       // Get the announcement communities
       const { data: communities, error: communitiesError } = await supabase
         .from('announcement_communities')
@@ -142,10 +140,7 @@ const AnnouncementApproval = () => {
         `)
         .eq('announcement_id', announcementId);
         
-      if (communitiesError) {
-        console.error("Error fetching communities:", communitiesError);
-        throw communitiesError;
-      }
+      if (communitiesError) throw communitiesError;
       
       if (!communities || communities.length === 0) {
         console.log("No communities found for this announcement");
@@ -161,20 +156,13 @@ const AnnouncementApproval = () => {
         .eq('id', announcementId)
         .single();
         
-      if (announcementError) {
-        console.error("Error fetching announcement:", announcementError);
-        throw announcementError;
-      }
-      
-      console.log("Announcement details:", announcement);
+      if (announcementError) throw announcementError;
       
       // For each Telegram community, send the announcement
-      const telegramCommunities = communities.filter(c => c.community?.platform === 'TELEGRAM');
-      console.log("Telegram communities count:", telegramCommunities.length);
+      const telegramCommunities = communities.filter(c => c.community.platform === 'TELEGRAM');
       
       if (telegramCommunities.length > 0) {
         // Call the edge function to post to Telegram
-        console.log("Calling telegram-post-announcement edge function with announcementId:", announcementId);
         const { data: telegramResponse, error: telegramError } = await supabase.functions.invoke('telegram-post-announcement', {
           body: { announcementId }
         });
@@ -193,7 +181,6 @@ const AnnouncementApproval = () => {
     } catch (error: any) {
       console.error("Error sending announcement to communities:", error);
       toast.error(`Error: ${error.message}`);
-      throw error; // Re-throw to handle in the calling function
     }
   };
 
@@ -201,35 +188,20 @@ const AnnouncementApproval = () => {
     setIsProcessing(announcementId);
     
     try {
+      const { error } = await supabase
+        .from('announcements')
+        .update({
+          status: approved ? 'PUBLISHED' : 'VALIDATION_FAILED'
+        })
+        .eq('id', announcementId);
+        
+      if (error) throw error;
+      
       if (approved) {
-        console.log("Approving announcement:", announcementId);
-        
-        // First update the status to PUBLISHED
-        const { error } = await supabase
-          .from('announcements')
-          .update({
-            status: 'PUBLISHED'
-          })
-          .eq('id', announcementId);
-          
-        if (error) throw error;
-        
-        // Now send the announcement to communities
+        // Send the announcement to communities
         await sendAnnouncementToCommunities(announcementId);
         toast.success('Announcement approved and sent to communities');
       } else {
-        console.log("Rejecting announcement:", announcementId);
-        
-        // Update status to VALIDATION_FAILED
-        const { error } = await supabase
-          .from('announcements')
-          .update({
-            status: 'VALIDATION_FAILED'
-          })
-          .eq('id', announcementId);
-          
-        if (error) throw error;
-        
         toast.success('Announcement rejected');
       }
       
@@ -238,7 +210,6 @@ const AnnouncementApproval = () => {
         prevAnnouncements.filter(a => a.id !== announcementId)
       );
     } catch (error: any) {
-      console.error("Error processing announcement:", error);
       toast.error(`Error processing announcement: ${error.message}`);
     } finally {
       setIsProcessing(null);
@@ -304,31 +275,6 @@ const AnnouncementApproval = () => {
                   <div className="my-4 p-3 bg-crypto-darkgray/50 rounded-md">
                     <p className="text-sm">{announcement.content}</p>
                   </div>
-                  
-                  {announcement.media_url && (
-                    <div className="my-4">
-                      <p className="text-sm font-medium mb-2">Media:</p>
-                      {announcement.media_url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
-                        <img 
-                          src={announcement.media_url} 
-                          alt="Announcement media" 
-                          className="rounded-md max-h-60"
-                        />
-                      ) : (
-                        <div className="flex items-center space-x-2 p-2 bg-crypto-darkgray/50 rounded-md">
-                          <ExternalLink size={16} />
-                          <a 
-                            href={announcement.media_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-blue-400 hover:underline text-sm"
-                          >
-                            View attached media
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  )}
                   
                   {announcement.announcement_communities?.length > 0 && (
                     <div className="mb-4">

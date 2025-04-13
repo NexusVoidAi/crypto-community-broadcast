@@ -1,72 +1,112 @@
 
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Dashboard from '@/pages/Dashboard';
-import Login from '@/pages/auth/Login';
-import Register from '@/pages/auth/Register';
-import Profile from '@/pages/Profile';
-import Communities from '@/pages/communities/CommunityList';
-import Settings from '@/components/ui/settings';
-import Admin from '@/pages/AdminDashboard';
-import Analytics from '@/components/dashboard/Analytics';
-import Campaigns from '@/components/dashboard/Campaigns';
-import Payments from '@/pages/payment/PaymentSuccess';
-import Users from '@/components/dashboard/Users';
-import CreateAnnouncement from '@/pages/announcements/Create';
-import PreviewAnnouncement from '@/pages/announcements/Preview';
-import MyAnnouncements from '@/components/announcements/MyAnnouncements';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { ThemeProvider } from '@/components/ui/theme-provider';
-import { Web3Provider } from '@/contexts/Web3Provider';
-import { supabase } from '@/integrations/supabase/client';
-import { Toaster } from 'sonner';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import NotFound from "./pages/NotFound";
+import Web3Provider from "./contexts/Web3Provider";
 
-function App() {
-  useEffect(() => {
-    // Initialize storage bucket on app load
-    const initStorageBucket = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('create-storage-bucket');
-        if (error) {
-          console.error('Error initializing storage bucket:', error);
-        } else {
-          console.log('Storage bucket initialization result:', data);
-        }
-      } catch (error) {
-        console.error('Failed to initialize storage bucket:', error);
-      }
-    };
+// Dashboard
+import Dashboard from "./pages/Dashboard";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+
+// Auth pages
+import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
+
+// Announcement pages
+import Create from "./pages/announcements/Create";
+import Preview from "./pages/announcements/Preview";
+
+// Community pages
+import CommunityList from "./pages/communities/CommunityList";
+import CommunityDetail from "./pages/communities/CommunityDetail";
+import CommunityCreate from "./pages/communities/CommunityCreate";
+
+// Profile page
+import Profile from "./pages/Profile";
+
+// Payment pages
+import PaymentSuccess from "./pages/payment/PaymentSuccess";
+
+// Admin Dashboard
+import AdminDashboard from "./pages/AdminDashboard";
+
+const queryClient = new QueryClient();
+
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
+
+const AuthRoute = ({ children }: { children: JSX.Element }) => {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
+  
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+};
+
+const AppRoutes = () => (
+  <Routes>
+    {/* Protected Routes */}
+    <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     
-    initStorageBucket();
-  }, []);
+    {/* Announcement Routes */}
+    <Route path="/announcements/create" element={<ProtectedRoute><Create /></ProtectedRoute>} />
+    <Route path="/announcements/preview" element={<ProtectedRoute><Preview /></ProtectedRoute>} />
+    
+    {/* Community Routes */}
+    <Route path="/communities" element={<ProtectedRoute><CommunityList /></ProtectedRoute>} />
+    <Route path="/communities/create" element={<ProtectedRoute><CommunityCreate /></ProtectedRoute>} />
+    <Route path="/communities/:id" element={<ProtectedRoute><CommunityDetail /></ProtectedRoute>} />
+    
+    {/* Payment Routes */}
+    <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
+    
+    {/* Admin Routes */}
+    <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+    
+    {/* Auth Routes */}
+    <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
+    <Route path="/register" element={<AuthRoute><Register /></AuthRoute>} />
+    
+    {/* Catch-all route */}
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
 
-  return (
-    <ThemeProvider>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
       <Web3Provider>
-        <Router>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/communities" element={<Communities />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/campaigns" element={<Campaigns />} />
-              <Route path="/payments" element={<Payments />} />
-              <Route path="/users" element={<Users />} />
-              <Route path="/announcements/create" element={<CreateAnnouncement />} />
-              <Route path="/announcements/preview" element={<PreviewAnnouncement />} />
-              <Route path="/announcements/my" element={<MyAnnouncements />} />
-            </Routes>
-            <Toaster position="top-right" />
+            <AppRoutes />
           </AuthProvider>
-        </Router>
+        </BrowserRouter>
       </Web3Provider>
-    </ThemeProvider>
-  );
-}
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
