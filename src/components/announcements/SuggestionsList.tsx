@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Lightbulb, ArrowRight, Edit, Wand2, Loader2 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SuggestionsListProps {
   suggestions: string[];
@@ -23,11 +24,15 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
   isValid = true,
   isLoading = false
 }) => {
+  const isMobile = useIsMobile();
+
   return (
-    <Card className="border border-border/50 bg-crypto-darkgray/50 mt-6">
+    <Card className="border border-border/50 bg-crypto-darkgray/50 mt-6 rounded-xl glassmorphism">
       <CardContent className="pt-6">
         <div className="flex items-start mb-4">
-          <Lightbulb className="h-5 w-5 text-yellow-400 mr-3 mt-0.5" />
+          <div className="flex-shrink-0 h-8 w-8 bg-yellow-500/20 rounded-full flex items-center justify-center mr-3">
+            <Lightbulb className="h-4 w-4 text-yellow-500" />
+          </div>
           <div>
             <h3 className="font-medium text-base mb-1">AI Suggestions</h3>
             <p className="text-sm text-muted-foreground">
@@ -38,16 +43,19 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
           </div>
         </div>
         
-        <ul className="space-y-2 mb-6 pl-9">
+        <ul className="space-y-3 mb-6 pl-2 md:pl-11">
           {suggestions.map((suggestion, index) => (
-            <li key={index} className="text-sm list-disc text-muted-foreground">
+            <li key={index} className="text-sm flex items-start gap-2">
+              <span className="inline-block h-5 w-5 rounded-full bg-muted flex-shrink-0 flex items-center justify-center text-xs font-medium mt-0.5">
+                {index + 1}
+              </span>
               {onApply ? (
-                <div className="flex justify-between items-start">
-                  <span>{suggestion}</span>
+                <div className="flex justify-between items-start flex-1">
+                  <span className="text-muted-foreground flex-1">{suggestion}</span>
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="text-xs h-6 ml-2 text-crypto-blue" 
+                    className="text-xs h-6 ml-2 text-crypto-blue flex-shrink-0" 
                     onClick={() => onApply(suggestion)}
                     disabled={isLoading}
                   >
@@ -57,18 +65,19 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
                   </Button>
                 </div>
               ) : (
-                suggestion
+                <span className="text-muted-foreground">{suggestion}</span>
               )}
             </li>
           ))}
         </ul>
         
         {(onEdit || onContinue || onEditWithAI) && (
-          <div className="flex justify-between">
-            <div className="flex gap-2">
+          <div className={`flex ${isMobile ? 'flex-col space-y-3' : 'justify-between'}`}>
+            <div className={`flex ${isMobile ? 'w-full' : ''} gap-2 ${isMobile ? 'flex-col' : ''}`}>
               {onEdit && (
                 <Button 
-                  variant="outline" 
+                  variant="outline"
+                  className={isMobile ? "w-full" : ""}
                   onClick={onEdit}
                 >
                   <Edit className="h-4 w-4 mr-2" />
@@ -79,7 +88,7 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
               {onEditWithAI && (
                 <Button 
                   variant="outline"
-                  className="border-crypto-blue/50 text-crypto-blue"
+                  className={`border-crypto-blue/50 text-crypto-blue ${isMobile ? "w-full" : ""}`}
                   onClick={onEditWithAI}
                 >
                   <Wand2 className="h-4 w-4 mr-2" />
@@ -90,7 +99,7 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
             
             {onContinue && (
               <Button 
-                className="bg-crypto-blue hover:bg-crypto-blue/90"
+                className={`bg-crypto-blue hover:bg-crypto-blue/90 ${isMobile ? "w-full" : ""}`}
                 onClick={onContinue}
                 disabled={!isValid}
               >

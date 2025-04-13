@@ -8,6 +8,8 @@ import {
   CreditCard,
   Settings
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface DashboardNavProps {
   activeTab: string;
@@ -15,25 +17,28 @@ interface DashboardNavProps {
 }
 
 const DashboardNav: React.FC<DashboardNavProps> = ({ activeTab, setActiveTab }) => {
+  const isMobile = useIsMobile();
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/' },
     { id: 'campaigns', label: 'Campaigns', icon: Megaphone, path: '/campaigns' },
-    { id: 'marketplace', label: 'Community Marketplace', icon: ShoppingBag, path: '/communities' },
+    { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, path: '/communities' },
     { id: 'payments', label: 'Payments', icon: CreditCard, path: '/payments' },
   ];
 
   return (
     <div className="mb-6 overflow-x-auto scrollbar-hide">
-      <div className="flex justify-start space-x-1 border-b border-border/10 pb-3 glassmorphism bg-opacity-10 p-1 rounded-xl">
+      <div className="flex justify-start space-x-1 border-b border-border/10 py-1 px-1 rounded-xl min-w-max">
         {navItems.map((item) => (
           <Link 
             key={item.id}
             to={item.path}
-            className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
+            className={cn(
+              "flex items-center px-4 py-2.5 rounded-lg transition-all duration-200",
+              isMobile ? "min-w-[120px] justify-center" : "",
               activeTab === item.id ? 
-              'bg-crypto-green/10 text-crypto-green border border-crypto-green/20 shadow-sm shadow-crypto-green/10 translate-y-[-2px]' : 
-              'hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white'
-            }`}
+              "bg-crypto-green/10 text-crypto-green border border-crypto-green/20 shadow-sm shadow-crypto-green/10 translate-y-[-2px]" : 
+              "hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white"
+            )}
             onClick={(e) => {
               if (item.id !== 'overview') {
                 e.preventDefault();
@@ -41,8 +46,8 @@ const DashboardNav: React.FC<DashboardNavProps> = ({ activeTab, setActiveTab }) 
               setActiveTab(item.id);
             }}
           >
-            <item.icon className={`h-4 w-4 mr-2 ${activeTab === item.id ? 'animate-pulse' : ''}`} />
-            {item.label}
+            <item.icon className={`h-4 w-4 ${isMobile ? '' : 'mr-2'} ${activeTab === item.id ? 'text-crypto-green' : ''}`} />
+            {!isMobile || item.id === activeTab ? item.label : ''}
           </Link>
         ))}
       </div>

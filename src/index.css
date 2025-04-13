@@ -38,7 +38,7 @@
     --input: 216 34% 17%;
     --ring: 224 71% 45%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --sidebar-background: 222 47% 5%;
     --sidebar-foreground: 240 5% 84%;
@@ -81,7 +81,40 @@
 }
 
 .glassmorphic-card {
-  @apply bg-crypto-darkgray/30 backdrop-blur-md border border-white/5 shadow-xl;
+  @apply bg-crypto-darkgray/30 backdrop-blur-md border border-white/5 shadow-xl rounded-xl;
+}
+
+/* Dashboard Layout */
+.dashboard-layout {
+  @apply container mx-auto px-4 py-6 max-w-7xl;
+}
+
+.dashboard-container {
+  @apply space-y-6;
+}
+
+.dashboard-header {
+  @apply flex items-center justify-between mb-6 flex-wrap gap-4;
+}
+
+.dashboard-title {
+  @apply text-2xl font-bold text-gradient;
+}
+
+.stats-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4;
+}
+
+.dashboard-section {
+  @apply mt-8;
+}
+
+.dashboard-section-header {
+  @apply flex justify-between items-center mb-4;
+}
+
+.dashboard-section-title {
+  @apply text-lg font-medium;
 }
 
 /* Adding glow effects */
@@ -95,7 +128,8 @@
 
 /* Custom scrollbar for webkit browsers */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -132,4 +166,23 @@
 
 .animate-pulse-glow {
   animation: pulse-glow 2s infinite;
+}
+
+/* Mobile responsive utilities */
+@media (max-width: 640px) {
+  .mobile-full {
+    @apply w-full !important;
+  }
+  
+  .mobile-stack {
+    @apply flex-col !important;
+  }
+  
+  .mobile-hidden {
+    @apply hidden !important;
+  }
+  
+  .mobile-center {
+    @apply justify-center text-center !important;
+  }
 }
