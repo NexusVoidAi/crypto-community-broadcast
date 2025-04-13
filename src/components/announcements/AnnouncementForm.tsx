@@ -49,6 +49,7 @@ import SuggestionsList from './SuggestionsList';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { validateAnnouncement, enhanceAnnouncementWithAI } from '@/services/validation';
 
 // Form validation schema
 const formSchema = z.object({
@@ -245,6 +246,10 @@ const AnnouncementForm: React.FC = () => {
       
       setAnnouncement(data);
       
+      // Validate the announcement immediately
+      const validationResult = await validateAnnouncement(values.title, values.content);
+      setAiSuggestions(validationResult.suggestions);
+      
       // Move to communities selection
       setStep('communities');
       toast.success('Announcement draft saved!');
@@ -271,16 +276,17 @@ const AnnouncementForm: React.FC = () => {
     
     setIsValidating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('validate-announcement', {
-        body: { announcementId: announcement.id }
+      // Use the validation service directly
+      const validationResult = await validateAnnouncement(announcement.title, announcement.content);
+      
+      setValidationResults({
+        passed: validationResult.isValid,
+        message: validationResult.feedback,
+        suggestions: validationResult.suggestions
       });
       
-      if (error) throw error;
-      
-      setValidationResults(data);
-      
       // If validation passed, move to review step
-      if (data.passed) {
+      if (validationResult.isValid) {
         setStep('review');
       } else {
         toast.error('Announcement validation failed. Please review the issues.');
@@ -299,14 +305,11 @@ const AnnouncementForm: React.FC = () => {
     
     setIsEnhancing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('enhance-announcement', {
-        body: { announcementId: announcement.id }
-      });
+      // Use the AI enhancement service directly
+      const enhancement = await enhanceAnnouncementWithAI(announcement.title, announcement.content);
       
-      if (error) throw error;
-      
-      if (data?.suggestions) {
-        setAiSuggestions(data.suggestions);
+      if (enhancement?.improvements) {
+        setAiSuggestions(enhancement.improvements);
       }
     } catch (error: any) {
       console.error('Error enhancing announcement:', error.message);

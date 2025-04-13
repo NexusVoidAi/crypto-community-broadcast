@@ -25,6 +25,11 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
   isLoading = false
 }) => {
   const isMobile = useIsMobile();
+  
+  // Ensure we always have at least one suggestion to display
+  const displaySuggestions = suggestions.length > 0 
+    ? suggestions 
+    : ['Consider making your announcement more specific and targeted.'];
 
   return (
     <Card className="border border-border/50 bg-crypto-darkgray/50 mt-6 rounded-xl glassmorphism">
@@ -44,7 +49,7 @@ const SuggestionsList: React.FC<SuggestionsListProps> = ({
         </div>
         
         <ul className="space-y-3 mb-6 pl-2 md:pl-11">
-          {suggestions.map((suggestion, index) => (
+          {displaySuggestions.map((suggestion, index) => (
             <li key={index} className="text-sm flex items-start gap-2">
               <span className="inline-block h-5 w-5 rounded-full bg-muted flex-shrink-0 flex items-center justify-center text-xs font-medium mt-0.5">
                 {index + 1}
