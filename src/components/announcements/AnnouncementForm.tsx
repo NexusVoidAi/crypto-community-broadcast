@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -49,7 +50,7 @@ import SuggestionsList from './SuggestionsList';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { validateAnnouncement, enhanceAnnouncementWithAI } from '@/services/validation';
+import { validateAnnouncement, enhanceAnnouncementWithAI, getSuggestions } from '@/services/validation';
 
 // Form validation schema
 const formSchema = z.object({
@@ -246,11 +247,22 @@ const AnnouncementForm: React.FC = () => {
       
       setAnnouncement(data);
       
-      // Validate the announcement immediately
+      // Validate the announcement immediately before moving to communities step
+      setIsValidating(true);
       const validationResult = await validateAnnouncement(values.title, values.content);
+      setIsValidating(false);
+      
+      // Set validation results to display to user
+      setValidationResults({
+        passed: validationResult.isValid,
+        message: validationResult.feedback,
+        suggestions: validationResult.suggestions
+      });
+      
+      // Set suggestions even if validation fails
       setAiSuggestions(validationResult.suggestions);
       
-      // Move to communities selection
+      // Move to communities selection after showing validation
       setStep('communities');
       toast.success('Announcement draft saved!');
     } catch (error: any) {
@@ -602,6 +614,36 @@ const AnnouncementForm: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Display validation results if available */}
+              {validationResults && (
+                <Alert variant={validationResults.passed ? "default" : "destructive"} className="mb-4">
+                  {validationResults.passed ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4" />
+                  )}
+                  <AlertTitle>
+                    {validationResults.passed ? 'Validation Passed' : 'Validation Issues'}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {validationResults.passed 
+                      ? 'Your announcement has passed our validation checks.' 
+                      : validationResults.message || 'Please review and address the validation issues.'}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* Display AI suggestions */}
+              {aiSuggestions.length > 0 && (
+                <SuggestionsList 
+                  suggestions={aiSuggestions} 
+                  onApply={applySuggestion}
+                  isLoading={aiSuggestionsLoading}
+                  onEdit={() => setStep('create')}
+                  isValid={validationResults?.passed !== false}
+                />
+              )}
+
               {errorMessage && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertCircle className="h-4 w-4" />
@@ -698,7 +740,7 @@ const AnnouncementForm: React.FC = () => {
                 </Button>
                 <Button 
                   className="bg-crypto-blue hover:bg-crypto-blue/90"
-                  disabled={selectedCommunities.length === 0 || isValidating}
+                  disabled={selectedCommunities.length === 0 || isValidating || (validationResults && !validationResults.passed)}
                   onClick={handleValidate}
                 >
                   {isValidating ? (
