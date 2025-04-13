@@ -966,4 +966,4 @@ const AnnouncementForm: React.FC = () => {
         );
         
       default:
-        return null;
+        return
