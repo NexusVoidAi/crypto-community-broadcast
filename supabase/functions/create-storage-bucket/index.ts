@@ -86,13 +86,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Helper function to create a storage policy
-function createStoragePolicy(client, bucket, name, definition, role = 'authenticated') {
-  return client.rpc('create_storage_policy', {
-    bucket_name: bucket,
-    policy_name: name,
-    definition: definition,
-    policy_role: role
-  });
-}
