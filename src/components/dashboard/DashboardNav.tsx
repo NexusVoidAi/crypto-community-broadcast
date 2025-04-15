@@ -4,9 +4,7 @@ import { Link } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Megaphone, 
-  ShoppingBag,
   CreditCard,
-  Settings
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -21,7 +19,6 @@ const DashboardNav: React.FC<DashboardNavProps> = ({ activeTab, setActiveTab }) 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/' },
     { id: 'campaigns', label: 'Campaigns', icon: Megaphone, path: '/campaigns' },
-    { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, path: '/communities' },
     { id: 'payments', label: 'Payments', icon: CreditCard, path: '/payments' },
   ];
 

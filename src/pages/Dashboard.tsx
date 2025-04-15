@@ -561,33 +561,6 @@ const Dashboard = () => {
     </div>
   );
 
-  const renderMarketplaceContent = () => (
-    <div className="mt-4">
-      <div className="mb-4 flex justify-between flex-wrap gap-3">
-        <h2 className="text-xl font-semibold">Community Marketplace</h2>
-        <Button
-          onClick={() => navigate('/communities/create')}
-          className="bg-crypto-blue hover:bg-crypto-blue/90"
-        >
-          Add Community
-        </Button>
-      </div>
-      
-      <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
-        <CardContent className="p-6">
-          <p className="mb-4">Discover and manage communities for your announcements.</p>
-          <Button
-            onClick={() => navigate('/communities')}
-            variant="outline"
-            className={isMobile ? "w-full" : ""}
-          >
-            Browse Communities
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
   const renderPaymentsContent = () => (
     <div className="mt-4">
       <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
@@ -680,15 +653,12 @@ const Dashboard = () => {
     </div>
   );
 
-  // Render the appropriate content based on the active tab
   const renderContent = () => {
     switch (activeTab) {
       case "overview":
         return renderOverviewContent();
       case "campaigns":
         return renderCampaignsContent();
-      case "marketplace":
-        return renderMarketplaceContent();
       case "payments":
         return renderPaymentsContent();
       default:
