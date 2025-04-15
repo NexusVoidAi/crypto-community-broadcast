@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import * as z from 'zod';
@@ -99,6 +100,14 @@ const CreateAnnouncementStep: React.FC<CreateAnnouncementStepProps> = ({
     "DAO Participants",
   ];
 
+  const handleApplySuggestion = async (suggestion: string) => {
+    // Update the form's content field directly
+    form.setValue('content', suggestion);
+    
+    // Call the parent's applySuggestion function
+    await applySuggestion(suggestion);
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -124,7 +133,7 @@ const CreateAnnouncementStep: React.FC<CreateAnnouncementStepProps> = ({
                 {aiSuggestions.length > 0 && (
                   <SuggestionsList 
                     suggestions={aiSuggestions} 
-                    onApply={applySuggestion}
+                    onApply={handleApplySuggestion}
                     isLoading={aiSuggestionsLoading}
                     isValid={false}
                   />

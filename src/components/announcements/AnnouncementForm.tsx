@@ -53,6 +53,8 @@ const AnnouncementForm: React.FC = () => {
       cta_text: "",
       cta_url: "",
       campaign_id: campaignId || "",
+      target_nation: "",
+      target_category: "",
     },
   });
   
@@ -142,7 +144,9 @@ const AnnouncementForm: React.FC = () => {
           cta_url: values.cta_url || null,
           media_url: mediaUrl,
           user_id: user.id,
-          status: 'DRAFT'
+          status: 'DRAFT',
+          target_nation: values.target_nation,
+          target_category: values.target_category,
         })
         .select()
         .single();
@@ -207,6 +211,9 @@ const AnnouncementForm: React.FC = () => {
         suggestions: validationResult.suggestions
       });
       
+      // Set AI suggestions from validation result
+      setAiSuggestions(getSuggestions(validationResult));
+      
       // If validation passed, move to review step
       if (validationResult.isValid) {
         setStep('review');
@@ -232,6 +239,7 @@ const AnnouncementForm: React.FC = () => {
       
       if (enhancement?.improvements) {
         setAiSuggestions(enhancement.improvements);
+        toast.success('AI suggestions generated!');
       }
     } catch (error: any) {
       console.error('Error enhancing announcement:', error.message);
@@ -247,7 +255,7 @@ const AnnouncementForm: React.FC = () => {
     
     setAiSuggestionsLoading(true);
     try {
-      // Update the content in the form
+      // Update the form content directly
       form.setValue('content', suggestion);
       
       // Also update in the database
@@ -260,6 +268,18 @@ const AnnouncementForm: React.FC = () => {
       
       // Update local state
       setAnnouncement({ ...announcement, content: suggestion });
+      
+      // Revalidate after applying suggestion
+      const validationResult = await validateAnnouncement(announcement.title, suggestion);
+      
+      setValidationResults({
+        passed: validationResult.isValid,
+        message: validationResult.feedback,
+        suggestions: getSuggestions(validationResult)
+      });
+      
+      // Update suggestions based on new validation
+      setAiSuggestions(getSuggestions(validationResult));
       
       toast.success('Applied AI suggestion!');
     } catch (error: any) {
