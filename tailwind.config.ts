@@ -67,7 +67,8 @@ export default {
 				crypto: {
 					'blue': '#3671E9',
 					'violet': '#9945FF',
-					'green': '#14F195',
+					'green': '#14F195', // Change this to a teal color
+					'teal': '#008B8B', // Deep Teal
 					'dark': '#0F1116',
 					'darkgray': '#1A1F2C'
 				}
