@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import * as z from 'zod';
@@ -20,6 +19,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -38,6 +44,8 @@ export const formSchema = z.object({
   cta_text: z.string().optional(),
   cta_url: z.string().url().optional().or(z.literal('')),
   campaign_id: z.string().optional(),
+  target_nation: z.string().min(1, { message: "Please select a target nation" }),
+  target_category: z.string().min(1, { message: "Please select a target category" }),
 });
 
 export type AnnouncementFormValues = z.infer<typeof formSchema>;
@@ -69,6 +77,28 @@ const CreateAnnouncementStep: React.FC<CreateAnnouncementStepProps> = ({
   onFileChange,
   onFileUrlChange,
 }) => {
+  const nations = [
+    "Global",
+    "United States",
+    "United Kingdom",
+    "European Union",
+    "Asia Pacific",
+    "Latin America",
+    "Africa",
+    "Middle East",
+  ];
+
+  const categories = [
+    "Crypto Enthusiasts",
+    "Traders",
+    "DeFi Users",
+    "NFT Collectors",
+    "Web3 Developers",
+    "Blockchain Investors",
+    "GameFi Players",
+    "DAO Participants",
+  ];
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -80,7 +110,6 @@ const CreateAnnouncementStep: React.FC<CreateAnnouncementStepProps> = ({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Display validation results if validation failed but we're still on create step */}
             {validationResults && !validationResults.passed && (
               <>
                 <Alert variant="destructive" className="mb-4">
@@ -144,6 +173,67 @@ const CreateAnnouncementStep: React.FC<CreateAnnouncementStepProps> = ({
                 </FormItem>
               )}
             />
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium mb-2">Targeting Options</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="target_nation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Target Nation/Region</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-crypto-dark border-border/50">
+                            <SelectValue placeholder="Select target region" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {nations.map((nation) => (
+                            <SelectItem key={nation} value={nation}>
+                              {nation}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Choose the primary region for your announcement
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="target_category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Target Category</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-crypto-dark border-border/50">
+                            <SelectValue placeholder="Select target audience" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Select your primary target audience
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
             
             <div className="space-y-4">
               <div>
