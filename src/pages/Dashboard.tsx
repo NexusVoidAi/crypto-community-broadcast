@@ -51,7 +51,7 @@ const Dashboard = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [communityEarnings, setCommunityEarnings] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [chartData, setChartData] = useState([]);
+  const [chartData, setChartData] = useState<any[]>([]);
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
 
   // Fetch profile, payments, and admin status
@@ -193,18 +193,22 @@ const Dashboard = () => {
             name: announcement.title,
             title: announcement.title,
             status: announcement.status,
-            reach: Math.floor(Math.random() * 1000) + 500, // Placeholder
+            reach: announcement.impressions || 0, // Use actual impressions
             clicks: totalClicks,
             conversionRate: conversionRate,
-            budget: 100, // Placeholder
-            spent: Math.floor(Math.random() * 50) + 10, // Placeholder
+            budget: 100, // This could be updated with actual budget data
+            spent: 0, // This could be updated with actual spent data
             communities: announcement.announcement_communities || [],
             impressions: announcement.impressions || 0,
             views: totalViews,
+            created_at: announcement.created_at
           };
         });
         
         setCampaigns(formattedCampaigns);
+        
+        // Generate chart data based on actual campaigns
+        generateChartDataFromCampaigns(formattedCampaigns);
       } catch (error: any) {
         console.error("Error fetching campaigns:", error);
         toast.error("Failed to load campaigns");
@@ -217,6 +221,50 @@ const Dashboard = () => {
       fetchCampaigns();
     }
   }, [user?.id]);
+  
+  // Generate chart data from actual campaign data
+  const generateChartDataFromCampaigns = (campaignData: Campaign[]) => {
+    if (!campaignData || campaignData.length === 0) {
+      setChartData([]);
+      return;
+    }
+    
+    // Get the last 7 days
+    const last7Days = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      date.setHours(0, 0, 0, 0); // Set to beginning of day
+      last7Days.push(date);
+    }
+    
+    // Create an array of chart data points
+    const chartPoints = last7Days.map(date => {
+      // Format date to YYYY-MM-DD for comparison
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Find campaigns that were active on this date
+      const campaignsOnDate = campaignData.filter(campaign => {
+        if (!campaign.created_at) return false;
+        const campaignDate = new Date(campaign.created_at);
+        campaignDate.setHours(0, 0, 0, 0);
+        return campaignDate <= date;
+      });
+      
+      // Sum up views, clicks
+      const views = campaignsOnDate.reduce((sum, campaign) => sum + (campaign.views || 0), 0);
+      const clicks = campaignsOnDate.reduce((sum, campaign) => sum + (campaign.clicks || 0), 0);
+      
+      return {
+        date: date.toLocaleDateString(),
+        views: views,
+        clicks: clicks
+      };
+    });
+    
+    setChartData(chartPoints);
+  };
 
   // Generate activities from payments and campaigns
   useEffect(() => {
@@ -253,21 +301,6 @@ const Dashboard = () => {
     );
     setRecentActivities(activities.slice(0, 5));
   }, [payments, campaigns]);
-
-  // Generate chart data
-  useEffect(() => {
-    // Generate dummy chart data for the last 7 days
-    const today = new Date();
-    const data = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      const dateString = date.toLocaleDateString();
-      const value = Math.floor(Math.random() * 100); // Random value for demonstration
-      data.push({ date: dateString, value });
-    }
-    setChartData(data);
-  }, []);
 
   // Helper functions
   const formatDate = (dateString: string) => {
@@ -379,7 +412,8 @@ const Dashboard = () => {
                   <XAxis dataKey="date" stroke="#94a3b8" />
                   <YAxis stroke="#94a3b8" />
                   <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', color: '#fff' }} />
-                  <Line type="monotone" dataKey="value" stroke="#8884d8" activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="views" name="Views" stroke="#8884d8" activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="clicks" name="Clicks" stroke="#82ca9d" activeDot={{ r: 8 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
