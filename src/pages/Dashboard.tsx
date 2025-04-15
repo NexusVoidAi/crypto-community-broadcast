@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -654,7 +653,6 @@ const Dashboard = () => {
     <AppLayout>
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
           {isAdmin && (
             <Button
               onClick={() => navigate('/admin')}
