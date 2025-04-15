@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Mail, Lock, Wallet } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import AuthCard from '@/components/auth/AuthCard';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Login: React.FC = () => {
-  const { signIn, connectWallet, isLoading } = useAuth();
+  const { signIn, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -76,26 +76,6 @@ const Login: React.FC = () => {
           disabled={isLoading}
         >
           {isLoading ? 'Signing in...' : 'Sign in with Email'}
-        </Button>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <Separator className="w-full" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={connectWallet}
-          disabled={isLoading}
-        >
-          <Wallet className="mr-2 h-4 w-4" />
-          {isLoading ? 'Connecting...' : 'Connect Wallet'}
         </Button>
       </form>
     </AuthCard>

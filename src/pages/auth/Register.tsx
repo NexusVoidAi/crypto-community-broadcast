@@ -5,13 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Separator } from '@/components/ui/separator';
-import { Mail, Lock, User, Building2, Wallet } from 'lucide-react';
+import { Mail, Lock, User, Building2 } from 'lucide-react';
 import AuthCard from '@/components/auth/AuthCard';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Register: React.FC = () => {
-  const { signUp, connectWallet, isLoading } = useAuth();
+  const { signUp, isLoading } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -118,26 +117,6 @@ const Register: React.FC = () => {
           disabled={isLoading}
         >
           {isLoading ? 'Creating account...' : 'Create account'}
-        </Button>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <Separator className="w-full" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={connectWallet}
-          disabled={isLoading}
-        >
-          <Wallet className="mr-2 h-4 w-4" />
-          {isLoading ? 'Connecting...' : 'Connect Wallet'}
         </Button>
       </form>
     </AuthCard>
