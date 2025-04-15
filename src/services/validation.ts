@@ -27,8 +27,6 @@ export const validateAnnouncement = async (title: string, content: string): Prom
       throw error;
     }
 
-    console.log('Validation result:', data);
-
     return {
       isValid: data.isValid,
       suggestions: data.suggestions || [],
@@ -169,8 +167,6 @@ export const enhanceAnnouncementWithAI = async (title: string, content: string):
       console.error('AI Enhancement function error:', error);
       throw error;
     }
-
-    console.log('Enhancement result:', data);
 
     return {
       enhancedTitle: data.enhancedTitle || title,
