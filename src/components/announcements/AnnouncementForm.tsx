@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -22,6 +21,7 @@ interface Community {
 }
 
 const AnnouncementForm: React.FC = () => {
+  
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -56,6 +56,7 @@ const AnnouncementForm: React.FC = () => {
     },
   });
   
+  
   // Fetch communities on component mount
   useEffect(() => {
     const fetchCommunities = async () => {
@@ -76,6 +77,7 @@ const AnnouncementForm: React.FC = () => {
     
     fetchCommunities();
   }, []);
+  
   
   // Calculate total price based on selected communities
   const calculateTotalPrice = (): number => {
@@ -118,6 +120,7 @@ const AnnouncementForm: React.FC = () => {
   
   // Handle form submission
   const onSubmit = async (values: AnnouncementFormValues) => {
+    
     if (!user) {
       toast.error('You must be logged in to create an announcement');
       return;
@@ -183,6 +186,57 @@ const AnnouncementForm: React.FC = () => {
     }
   };
 
+  // Apply AI suggestion - Fixed to properly update the form content
+  const applySuggestion = async (suggestion: string) => {
+    setAiSuggestionsLoading(true);
+    try {
+      // Update the form value directly - this is the key fix
+      form.setValue('content', suggestion);
+      
+      // If we have an existing announcement, update it in the database
+      if (announcement) {
+        const { error } = await supabase
+          .from('announcements')
+          .update({ content: suggestion })
+          .eq('id', announcement.id);
+          
+        if (error) throw error;
+        
+        // Update local state
+        setAnnouncement({ ...announcement, content: suggestion });
+      }
+      
+      toast.success('Applied AI suggestion!');
+      
+      // Re-validate the content after applying the suggestion
+      if (announcement) {
+        setIsValidating(true);
+        const validationResult = await validateAnnouncement(
+          announcement.title, 
+          suggestion // Use the new content for validation
+        );
+        setIsValidating(false);
+        
+        // Update validation results
+        setValidationResults({
+          passed: validationResult.isValid,
+          message: validationResult.feedback,
+          suggestions: getSuggestions(validationResult)
+        });
+        
+        if (validationResult.isValid) {
+          toast.success('Content now passes validation!');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error applying suggestion:', error.message);
+      toast.error('Failed to apply suggestion');
+    } finally {
+      setAiSuggestionsLoading(false);
+    }
+  };
+  
+  
   // Toggle community selection
   const toggleCommunitySelection = (communityId: string) => {
     setSelectedCommunities(prev => 
@@ -241,35 +295,6 @@ const AnnouncementForm: React.FC = () => {
     }
   };
   
-  // Apply AI suggestion
-  const applySuggestion = async (suggestion: string) => {
-    if (!announcement) return;
-    
-    setAiSuggestionsLoading(true);
-    try {
-      // Update the content in the form
-      form.setValue('content', suggestion);
-      
-      // Also update in the database
-      const { error } = await supabase
-        .from('announcements')
-        .update({ content: suggestion })
-        .eq('id', announcement.id);
-        
-      if (error) throw error;
-      
-      // Update local state
-      setAnnouncement({ ...announcement, content: suggestion });
-      
-      toast.success('Applied AI suggestion!');
-    } catch (error: any) {
-      console.error('Error applying suggestion:', error.message);
-      toast.error('Failed to apply suggestion');
-    } finally {
-      setAiSuggestionsLoading(false);
-    }
-  };
-  
   // Submit final announcement
   const handleSubmitAnnouncement = async () => {
     if (!announcement || selectedCommunities.length === 0) return;
@@ -306,7 +331,7 @@ const AnnouncementForm: React.FC = () => {
       setIsLoading(false);
     }
   };
-  
+
   // Render form based on current step
   const renderStepContent = () => {
     switch (step) {
