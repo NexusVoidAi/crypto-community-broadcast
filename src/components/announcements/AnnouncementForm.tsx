@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -53,10 +52,11 @@ const AnnouncementForm: React.FC = () => {
       cta_text: "",
       cta_url: "",
       campaign_id: campaignId || "",
+      target_nation: "",
+      target_category: "",
     },
   });
   
-  // Fetch communities on component mount
   useEffect(() => {
     const fetchCommunities = async () => {
       try {
@@ -77,7 +77,6 @@ const AnnouncementForm: React.FC = () => {
     fetchCommunities();
   }, []);
   
-  // Calculate total price based on selected communities
   const calculateTotalPrice = (): number => {
     return communities
       .filter(community => selectedCommunities.includes(community.id))
@@ -142,7 +141,9 @@ const AnnouncementForm: React.FC = () => {
           cta_url: values.cta_url || null,
           media_url: mediaUrl,
           user_id: user.id,
-          status: 'DRAFT'
+          status: 'DRAFT',
+          target_nation: values.target_nation,
+          target_category: values.target_category
         })
         .select()
         .single();
@@ -183,7 +184,6 @@ const AnnouncementForm: React.FC = () => {
     }
   };
 
-  // Toggle community selection
   const toggleCommunitySelection = (communityId: string) => {
     setSelectedCommunities(prev => 
       prev.includes(communityId)
@@ -192,7 +192,6 @@ const AnnouncementForm: React.FC = () => {
     );
   };
   
-  // Handle validation request
   const handleValidate = async () => {
     if (!announcement) return;
     
@@ -221,7 +220,6 @@ const AnnouncementForm: React.FC = () => {
     }
   };
   
-  // Handle AI enhancement
   const handleEnhance = async () => {
     if (!announcement) return;
     
@@ -241,25 +239,40 @@ const AnnouncementForm: React.FC = () => {
     }
   };
   
-  // Apply AI suggestion
+  // Apply AI suggestion - Fixed implementation
   const applySuggestion = async (suggestion: string) => {
-    if (!announcement) return;
-    
     setAiSuggestionsLoading(true);
     try {
       // Update the content in the form
       form.setValue('content', suggestion);
       
-      // Also update in the database
-      const { error } = await supabase
-        .from('announcements')
-        .update({ content: suggestion })
-        .eq('id', announcement.id);
+      // If we have an announcement already saved, update it in the database
+      if (announcement) {
+        const { error } = await supabase
+          .from('announcements')
+          .update({ content: suggestion })
+          .eq('id', announcement.id);
+          
+        if (error) throw error;
         
-      if (error) throw error;
+        // Update local state
+        setAnnouncement({ ...announcement, content: suggestion });
+      }
       
-      // Update local state
-      setAnnouncement({ ...announcement, content: suggestion });
+      // Re-validate after applying suggestion if we're in create step
+      if (step === 'create') {
+        const title = form.getValues('title');
+        const validationResult = await validateAnnouncement(title, suggestion);
+        
+        setValidationResults({
+          passed: validationResult.isValid,
+          message: validationResult.feedback,
+          suggestions: getSuggestions(validationResult)
+        });
+        
+        // Update AI suggestions
+        setAiSuggestions(getSuggestions(validationResult));
+      }
       
       toast.success('Applied AI suggestion!');
     } catch (error: any) {
@@ -270,7 +283,6 @@ const AnnouncementForm: React.FC = () => {
     }
   };
   
-  // Submit final announcement
   const handleSubmitAnnouncement = async () => {
     if (!announcement || selectedCommunities.length === 0) return;
     
