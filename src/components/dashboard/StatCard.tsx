@@ -17,7 +17,10 @@ interface StatCardProps {
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, trend, icon, className }) => {
   return (
-    <Card className={cn("border border-border/50 bg-crypto-darkgray/50 backdrop-blur-md p-6 hover:bg-crypto-darkgray/70 transition-colors", className)}>
+    <Card className={cn(
+      "border border-border/50 bg-crypto-darkgray/50 backdrop-blur-md p-6 hover:bg-crypto-darkgray/70 transition-colors", 
+      className
+    )}>
       <div className="flex justify-between items-start">
         <div>
           <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>

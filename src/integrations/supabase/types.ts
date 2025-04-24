@@ -135,6 +135,125 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_stats: {
+        Row: {
+          campaign_id: string
+          clicks: number
+          conversions: number
+          created_at: string
+          date: string
+          id: string
+          impressions: number
+          reach: number
+          revenue: number
+          spend: number
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          date: string
+          id?: string
+          impressions?: number
+          reach?: number
+          revenue?: number
+          spend?: number
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          date?: string
+          id?: string
+          impressions?: number
+          reach?: number
+          revenue?: number
+          spend?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_stats_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          budget: number
+          clicks: number
+          conversions: number
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          reach: number
+          revenue: number
+          spent: number
+          start_date: string | null
+          status: Database["public"]["Enums"]["campaign_status"]
+          target_categories:
+            | Database["public"]["Enums"]["target_category"][]
+            | null
+          target_nations: string[] | null
+          target_states: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          budget?: number
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          reach?: number
+          revenue?: number
+          spent?: number
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          target_categories?:
+            | Database["public"]["Enums"]["target_category"][]
+            | null
+          target_nations?: string[] | null
+          target_states?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          budget?: number
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          reach?: number
+          revenue?: number
+          spent?: number
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          target_categories?:
+            | Database["public"]["Enums"]["target_category"][]
+            | null
+          target_nations?: string[] | null
+          target_states?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       communities: {
         Row: {
           approval_status: string
@@ -331,7 +450,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_total_communities: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_total_community_reach: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_total_tokens_earned: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
     }
     Enums: {
       announcement_status:
@@ -339,8 +469,20 @@ export type Database = {
         | "PENDING_VALIDATION"
         | "VALIDATION_FAILED"
         | "PUBLISHED"
+      campaign_status: "active" | "paused" | "completed" | "draft"
       payment_status: "PENDING" | "PAID" | "FAILED"
       platform_type: "TELEGRAM" | "DISCORD" | "WHATSAPP"
+      target_category:
+        | "Students"
+        | "Professionals"
+        | "Entrepreneurs"
+        | "Parents"
+        | "Tech Enthusiasts"
+        | "Fitness Enthusiasts"
+        | "Healthcare Workers"
+        | "Remote Workers"
+        | "Digital Nomads"
+        | "Small Business Owners"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -462,8 +604,21 @@ export const Constants = {
         "VALIDATION_FAILED",
         "PUBLISHED",
       ],
+      campaign_status: ["active", "paused", "completed", "draft"],
       payment_status: ["PENDING", "PAID", "FAILED"],
       platform_type: ["TELEGRAM", "DISCORD", "WHATSAPP"],
+      target_category: [
+        "Students",
+        "Professionals",
+        "Entrepreneurs",
+        "Parents",
+        "Tech Enthusiasts",
+        "Fitness Enthusiasts",
+        "Healthcare Workers",
+        "Remote Workers",
+        "Digital Nomads",
+        "Small Business Owners",
+      ],
     },
   },
 } as const
