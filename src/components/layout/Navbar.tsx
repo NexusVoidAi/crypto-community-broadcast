@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -56,10 +55,12 @@ const Navbar: React.FC<NavbarProps> = ({ user, onSignOut }) => {
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0">
               <div className="flex items-center">
-                <div className="w-8 h-8 rounded-md bg-crypto-green flex items-center justify-center mr-2">
-                  <span className="text-black font-bold text-sm">AA</span>
+                <div className="relative w-8 h-8 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#D946EF] via-[#8B5CF6] to-[#6E59A5] shadow-lg transform rotate-45">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  </div>
                 </div>
-                <span className="text-white font-space font-bold text-xl">ACHO AI</span>
+                <span className="text-white font-space font-bold text-xl ml-3">ACHO AI</span>
               </div>
             </Link>
             <div className="hidden md:block ml-10">
@@ -81,6 +82,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onSignOut }) => {
               </div>
             </div>
           </div>
+          
           <div className="hidden md:block">
             <div className="flex items-center space-x-4">
               {user ? (
