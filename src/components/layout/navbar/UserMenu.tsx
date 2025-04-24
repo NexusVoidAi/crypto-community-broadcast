@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Bell, Wallet, LogOut, User, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 type User = {
   name: string;
