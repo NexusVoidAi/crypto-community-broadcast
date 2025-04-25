@@ -39,6 +39,7 @@ import {
 import DashboardNav from '@/components/dashboard/DashboardNav';
 import AppLayout from '@/components/layout/AppLayout';
 import { useIsMobile } from '@/hooks/use-mobile';
+import ComingSoon from '@/components/ui/coming-soon';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -387,7 +388,7 @@ const Dashboard = () => {
         />
       </div>
       
-      <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
+      <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50 relative">
         <CardHeader>
           <CardTitle>Campaign Performance</CardTitle>
           <CardDescription>Your campaign performance for the last 7 days</CardDescription>
@@ -419,6 +420,7 @@ const Dashboard = () => {
             </div>
           )}
         </CardContent>
+        <ComingSoon message="Analytics Coming Soon" />
       </Card>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -467,7 +469,7 @@ const Dashboard = () => {
   );
 
   const renderCampaignsContent = () => (
-    <div className="mt-4">
+    <div className="mt-4 relative">
       <div className="mb-4 flex justify-between flex-wrap gap-3">
         <h2 className="text-xl font-semibold">Your Campaigns</h2>
         <CreateAnnouncementButton />
@@ -558,11 +560,12 @@ const Dashboard = () => {
           </div>
         </CardContent>
       </Card>
+      <ComingSoon message="Advanced Campaign Features Coming Soon" />
     </div>
   );
 
   const renderPaymentsContent = () => (
-    <div className="mt-4">
+    <div className="mt-4 relative">
       <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
         <CardHeader>
           <CardTitle>Payments & Transactions</CardTitle>
@@ -650,6 +653,7 @@ const Dashboard = () => {
           </div>
         </CardContent>
       </Card>
+      <ComingSoon message="Advanced Payment Features Coming Soon" />
     </div>
   );
 

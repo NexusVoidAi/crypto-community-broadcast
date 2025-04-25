@@ -1,5 +1,6 @@
 
 import { Link } from 'react-router-dom';
+import { theme } from '@/lib/colors';
 
 export const Logo = () => {
   return (
