@@ -16,40 +16,35 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 210 100% 56%;
+    --primary: 180 100% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 76% 50%;
+    --secondary: 291 100% 50%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 223 47% 11%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 266 100% 64%;
+    --accent: 330 100% 50%;
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --success: 157 100% 49%;
+    --success: 148 100% 47%;
     --success-foreground: 210 40% 98%;
 
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
-    --ring: 224 71% 45%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222 47% 11%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 222 47% 5%;
-    --sidebar-foreground: 240 5% 84%;
-    --sidebar-primary: 210 100% 56%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 223 47% 11%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 216 34% 17%;
-    --sidebar-ring: 224 71% 45%;
-
-    --crypto-green: #008B8B; /* Deep Teal color */
+    /* Neon Colors */
+    --neon-blue: #00FFFF;
+    --neon-purple: #BD00FF;
+    --neon-pink: #FF00FF;
+    --neon-green: #39FF14;
   }
 }
 
@@ -60,9 +55,9 @@
 
   body {
     @apply bg-white text-foreground font-inter;
-    background-image: radial-gradient(rgba(55, 65, 81, 0.1) 1px, transparent 0);
-    background-size: 30px 30px;
-    background-position: -19px -19px;
+    background-image: 
+      radial-gradient(circle at 50% 50%, rgba(189, 0, 255, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(0, 255, 255, 0.03) 0%, transparent 50%);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -71,19 +66,19 @@
 }
 
 .glassmorphism {
-  @apply bg-opacity-20 backdrop-blur-md border border-white/10 shadow-lg;
+  @apply bg-white/60 backdrop-blur-xl border border-white/20 shadow-lg;
 }
 
 .text-gradient {
-  @apply bg-gradient-to-br from-black via-black/90 to-black/70 bg-clip-text text-transparent;
+  @apply bg-gradient-to-br from-[#00FFFF] via-[#BD00FF] to-[#FF00FF] bg-clip-text text-transparent;
 }
 
 .card-hover {
-  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20;
 }
 
 .glassmorphic-card {
-  @apply bg-white/30 backdrop-blur-md border border-white/20 shadow-xl rounded-xl;
+  @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl rounded-xl;
 }
 
 /* Dashboard Layout */
@@ -121,11 +116,19 @@
 
 /* Adding glow effects */
 .glow-green {
-  @apply shadow-[0_0_15px_rgba(20,241,149,0.5)];
+  @apply shadow-[0_0_15px_rgba(57,255,20,0.5)];
 }
 
 .glow-blue {
-  @apply shadow-[0_0_15px_rgba(54,113,233,0.5)];
+  @apply shadow-[0_0_15px_rgba(0,255,255,0.5)];
+}
+
+.glow-purple {
+  @apply shadow-[0_0_15px_rgba(189,0,255,0.5)];
+}
+
+.glow-pink {
+  @apply shadow-[0_0_15px_rgba(255,0,255,0.5)];
 }
 
 /* Custom scrollbar for webkit browsers */
@@ -139,30 +142,30 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted rounded-full;
+  @apply bg-primary/20 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-muted/80;
+  @apply bg-primary/40;
 }
 
 /* For hiding scrollbars but keeping functionality */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
 }
 
 /* Animation for glowing elements */
 @keyframes pulse-glow {
   0%, 100% { 
-    box-shadow: 0 0 5px rgba(20, 241, 149, 0.3), 0 0 10px rgba(20, 241, 149, 0.2); 
+    box-shadow: 0 0 5px rgba(0,255,255,0.3), 0 0 10px rgba(189,0,255,0.2); 
   }
   50% { 
-    box-shadow: 0 0 15px rgba(20, 241, 149, 0.6), 0 0 20px rgba(20, 241, 149, 0.4); 
+    box-shadow: 0 0 15px rgba(0,255,255,0.6), 0 0 20px rgba(189,0,255,0.4); 
   }
 }
 
@@ -203,9 +206,9 @@
 
 /* Coming soon overlay */
 .coming-soon-overlay {
-  @apply absolute inset-0 backdrop-blur-sm bg-black/30 flex flex-col items-center justify-center z-10;
+  @apply absolute inset-0 backdrop-blur-md bg-white/80 flex flex-col items-center justify-center z-10;
 }
 
 .coming-soon-text {
-  @apply text-2xl font-bold text-white bg-gradient-to-r from-crypto-violet to-crypto-blue bg-clip-text text-transparent;
+  @apply text-2xl font-bold bg-gradient-to-r from-[#00FFFF] via-[#BD00FF] to-[#FF00FF] bg-clip-text text-transparent;
 }
