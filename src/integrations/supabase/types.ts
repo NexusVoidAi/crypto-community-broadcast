@@ -256,11 +256,13 @@ export type Database = {
       }
       communities: {
         Row: {
+          admin_email: string | null
           approval_status: string
           created_at: string
           description: string | null
           focus_areas: string[] | null
           id: string
+          logo_url: string | null
           name: string
           owner_id: string
           platform: Database["public"]["Enums"]["platform_type"]
@@ -272,11 +274,13 @@ export type Database = {
           wallet_address: string | null
         }
         Insert: {
+          admin_email?: string | null
           approval_status?: string
           created_at?: string
           description?: string | null
           focus_areas?: string[] | null
           id?: string
+          logo_url?: string | null
           name: string
           owner_id: string
           platform: Database["public"]["Enums"]["platform_type"]
@@ -288,11 +292,13 @@ export type Database = {
           wallet_address?: string | null
         }
         Update: {
+          admin_email?: string | null
           approval_status?: string
           created_at?: string
           description?: string | null
           focus_areas?: string[] | null
           id?: string
+          logo_url?: string | null
           name?: string
           owner_id?: string
           platform?: Database["public"]["Enums"]["platform_type"]
@@ -343,6 +349,56 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_preferences: {
+        Row: {
+          bounties: boolean | null
+          community_id: string | null
+          created_at: string | null
+          enable_monetization: boolean | null
+          hackathons: boolean | null
+          hiring: boolean | null
+          id: string
+          irl_events: boolean | null
+          news_updates: boolean | null
+          thread_contests: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          bounties?: boolean | null
+          community_id?: string | null
+          created_at?: string | null
+          enable_monetization?: boolean | null
+          hackathons?: boolean | null
+          hiring?: boolean | null
+          id?: string
+          irl_events?: boolean | null
+          news_updates?: boolean | null
+          thread_contests?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          bounties?: boolean | null
+          community_id?: string | null
+          created_at?: string | null
+          enable_monetization?: boolean | null
+          hackathons?: boolean | null
+          hiring?: boolean | null
+          id?: string
+          irl_events?: boolean | null
+          news_updates?: boolean | null
+          thread_contests?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_preferences_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
             referencedColumns: ["id"]
           },
         ]
