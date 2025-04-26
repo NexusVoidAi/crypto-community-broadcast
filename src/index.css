@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -61,7 +60,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-space font-medium tracking-tight;
+    @apply font-space font-medium tracking-tight text-text-primary;
   }
 }
 
@@ -74,11 +73,54 @@
 }
 
 .card-hover {
-  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20;
+  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 border border-border/40;
 }
 
 .glassmorphic-card {
   @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl rounded-xl;
+}
+
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #00FFFF);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #BD00FF);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
 }
 
 /* Dashboard Layout */
@@ -98,10 +140,12 @@
   @apply text-2xl font-bold text-gradient;
 }
 
+/* Stats Grid */
 .stats-grid {
   @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4;
 }
 
+/* Dashboard Section */
 .dashboard-section {
   @apply mt-8;
 }
@@ -116,19 +160,19 @@
 
 /* Adding glow effects */
 .glow-green {
-  @apply shadow-[0_0_15px_rgba(57,255,20,0.5)];
+  @apply shadow-[0_0_15px_rgba(57,255,20,0.5)] border border-neon-green/30;
 }
 
 .glow-blue {
-  @apply shadow-[0_0_15px_rgba(0,255,255,0.5)];
+  @apply shadow-[0_0_15px_rgba(0,255,255,0.5)] border border-neon-blue/30;
 }
 
 .glow-purple {
-  @apply shadow-[0_0_15px_rgba(189,0,255,0.5)];
+  @apply shadow-[0_0_15px_rgba(189,0,255,0.5)] border border-neon-purple/30;
 }
 
 .glow-pink {
-  @apply shadow-[0_0_15px_rgba(255,0,255,0.5)];
+  @apply shadow-[0_0_15px_rgba(255,0,255,0.5)] border border-neon-pink/30;
 }
 
 /* Custom scrollbar for webkit browsers */
@@ -206,7 +250,7 @@
 
 /* Coming soon overlay */
 .coming-soon-overlay {
-  @apply absolute inset-0 backdrop-blur-md bg-white/80 flex flex-col items-center justify-center z-10;
+  @apply absolute inset-0 backdrop-blur-md bg-white/80 flex flex-col items-center justify-center z-10 border border-neon-purple/20 rounded-lg shadow-lg;
 }
 
 .coming-soon-text {

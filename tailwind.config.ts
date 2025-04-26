@@ -58,6 +58,11 @@ export default {
           purple: 'var(--neon-purple)',
           pink: 'var(--neon-pink)',
           green: 'var(--neon-green)'
+        },
+        text: {
+          primary: '#222222',
+          secondary: '#403E43',
+          muted: '#9F9EA1',
         }
       },
       borderRadius: {
