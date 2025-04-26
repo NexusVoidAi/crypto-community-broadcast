@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -88,9 +89,6 @@ const CommunityList: React.FC = () => {
     community.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Calculate total reach across all communities
-  const totalReach = communities.reduce((sum, community) => sum + (community.reach || 0), 0);
-
   // Helper function to render regions and focus areas
   const renderBadgeList = (items: string[] | undefined, icon: React.ReactNode) => {
     if (!items || items.length === 0) return null;
@@ -100,7 +98,7 @@ const CommunityList: React.FC = () => {
           <Badge 
             key={index} 
             variant="outline" 
-            className="bg-crypto-darkgray/50 text-xs font-normal py-0 h-5 border-border/30 flex items-center"
+            className="bg-crypto-darkgray/50 text-xs font-normal py-0 h-5 border-border/30 flex items-center text-white"
           >
             {icon}
             <span className="ml-1 truncate max-w-[80px]">{item}</span>
@@ -171,7 +169,7 @@ const CommunityList: React.FC = () => {
                             {community.platform}
                           </Badge>
                         </div>
-                        <p className="text-sm text-white/80 mb-4 line-clamp-2">
+                        <p className="text-sm text-white mb-4 line-clamp-2">
                           {community.description || 'No description provided'}
                         </p>
                         
@@ -180,7 +178,7 @@ const CommunityList: React.FC = () => {
                         {renderBadgeList(community.focus_areas, <Target className="h-3 w-3 text-white" />)}
                         
                         <div className="flex items-center justify-between mt-3">
-                          <span className="text-sm text-white/80 flex items-center">
+                          <span className="text-sm text-white flex items-center">
                             <Users className="h-3 w-3 mr-1" /> {community.reach.toLocaleString()}
                           </span>
                           <span className="font-medium text-crypto-green">
@@ -191,9 +189,8 @@ const CommunityList: React.FC = () => {
                           community.approval_status === 'APPROVED' 
                             ? 'bg-crypto-green/10 text-crypto-green border-crypto-green/20'
                             : community.approval_status === 'PENDING'
-                            ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                            : community.approval_status === 'REJECTED'
-                            ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                              ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                              : 'bg-red-500/10 text-red-500 border-red-500/20'
                         }`}>
                           {community.approval_status}
                         </Badge>
@@ -204,7 +201,7 @@ const CommunityList: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-white/80 mb-4">
+                <p className="text-white mb-4">
                   {searchQuery ? 'No communities found matching your search.' : 'You haven\'t created any communities yet.'}
                 </p>
                 <Link to="/communities/create">
