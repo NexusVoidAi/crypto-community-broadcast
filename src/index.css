@@ -64,20 +64,48 @@
   }
 }
 
-.glassmorphism {
-  @apply bg-white/60 backdrop-blur-xl border border-white/20 shadow-lg;
-}
+@layer components {
+  .glassmorphism {
+    @apply bg-white/60 backdrop-blur-xl border border-white/20 shadow-lg;
+  }
 
-.text-gradient {
-  @apply bg-gradient-to-br from-[#00FFFF] via-[#BD00FF] to-[#FF00FF] bg-clip-text text-transparent;
-}
+  .text-gradient {
+    @apply bg-gradient-to-br from-[#00FFFF] via-[#BD00FF] to-[#FF00FF] bg-clip-text text-transparent;
+  }
 
-.card-hover {
-  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 border border-border/40;
-}
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/20 border border-border/40;
+  }
 
-.glassmorphic-card {
-  @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl rounded-xl;
+  .glassmorphic-card {
+    @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl rounded-xl;
+  }
+
+  /* Adding glow effects */
+  .glow-green {
+    @apply shadow-[0_0_15px_rgba(57,255,20,0.5)] border border-[#39FF14]/30;
+  }
+
+  .glow-blue {
+    @apply shadow-[0_0_15px_rgba(0,255,255,0.5)] border border-[#00FFFF]/30;
+  }
+
+  .glow-purple {
+    @apply shadow-[0_0_15px_rgba(189,0,255,0.5)] border border-[#BD00FF]/30;
+  }
+
+  .glow-pink {
+    @apply shadow-[0_0_15px_rgba(255,0,255,0.5)] border border-[#FF00FF]/30;
+  }
+  
+  /* Coming soon overlay */
+  .coming-soon-overlay {
+    @apply absolute inset-0 backdrop-blur-md bg-white/80 flex flex-col items-center justify-center z-10 border border-[#BD00FF]/20 rounded-lg shadow-lg;
+  }
+
+  .coming-soon-text {
+    @apply text-2xl font-bold bg-gradient-to-r from-[#00FFFF] via-[#BD00FF] to-[#FF00FF] bg-clip-text text-transparent;
+  }
 }
 
 #root {
@@ -156,23 +184,6 @@
 
 .dashboard-section-title {
   @apply text-lg font-medium;
-}
-
-/* Adding glow effects */
-.glow-green {
-  @apply shadow-[0_0_15px_rgba(57,255,20,0.5)] border border-neon-green/30;
-}
-
-.glow-blue {
-  @apply shadow-[0_0_15px_rgba(0,255,255,0.5)] border border-neon-blue/30;
-}
-
-.glow-purple {
-  @apply shadow-[0_0_15px_rgba(189,0,255,0.5)] border border-neon-purple/30;
-}
-
-.glow-pink {
-  @apply shadow-[0_0_15px_rgba(255,0,255,0.5)] border border-neon-pink/30;
 }
 
 /* Custom scrollbar for webkit browsers */
