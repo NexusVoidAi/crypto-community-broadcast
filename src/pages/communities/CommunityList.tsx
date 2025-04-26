@@ -129,7 +129,7 @@ const CommunityList: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white">Communities</h1>
-            <p className="text-muted-foreground">Browse and manage crypto communities</p>
+            <p className="text-white/80">Browse and manage crypto communities</p>
           </div>
           <Link to="/communities/create">
             <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90">
@@ -137,51 +137,12 @@ const CommunityList: React.FC = () => {
             </Button>
           </Link>
         </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card className="border-border/50 bg-crypto-darkgray/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Communities</p>
-                  <p className="text-2xl font-bold">{communities.length}</p>
-                </div>
-                <Users className="h-8 w-8 text-crypto-green opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 bg-crypto-darkgray/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Reach</p>
-                  <p className="text-2xl font-bold">{totalReach.toLocaleString()}</p>
-                </div>
-                <Target className="h-8 w-8 text-crypto-blue opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 bg-crypto-darkgray/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Earnings</p>
-                  <p className="text-2xl font-bold">${totalEarnings.toLocaleString()}</p>
-                </div>
-                <Wallet className="h-8 w-8 text-crypto-green opacity-80" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
         
         <div className="relative mb-6">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-3 h-4 w-4 text-white/60" />
           <Input
             placeholder="Search communities..."
-            className="pl-10 bg-crypto-darkgray/50 border-border/50"
+            className="pl-10 bg-crypto-darkgray/50 border-border/50 text-white placeholder:text-white/60"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -196,7 +157,7 @@ const CommunityList: React.FC = () => {
 
             {isLoading ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Loader2 className="h-8 w-8 animate-spin text-white/60" />
               </div>
             ) : filteredMyCommunities.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -205,12 +166,12 @@ const CommunityList: React.FC = () => {
                     <Card className="h-full hover:border-crypto-blue/50 transition-colors border border-border/50 bg-crypto-darkgray/50 backdrop-blur-md hover:shadow-lg hover:shadow-crypto-blue/10 hover:-translate-y-1 transition-all duration-300">
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-3">
-                          <h3 className="font-semibold text-lg truncate flex-1">{community.name}</h3>
+                          <h3 className="font-semibold text-lg text-white truncate flex-1">{community.name}</h3>
                           <Badge variant="outline" className={`ml-2 ${getPlatformColor(community.platform)}`}>
                             {community.platform}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                        <p className="text-sm text-white/80 mb-4 line-clamp-2">
                           {community.description || 'No description provided'}
                         </p>
                         
@@ -219,7 +180,7 @@ const CommunityList: React.FC = () => {
                         {renderBadgeList(community.focus_areas, <Target className="h-3 w-3 text-white" />)}
                         
                         <div className="flex items-center justify-between mt-3">
-                          <span className="text-sm text-muted-foreground flex items-center">
+                          <span className="text-sm text-white/80 flex items-center">
                             <Users className="h-3 w-3 mr-1" /> {community.reach.toLocaleString()}
                           </span>
                           <span className="font-medium text-crypto-green">
@@ -231,7 +192,8 @@ const CommunityList: React.FC = () => {
                             ? 'bg-crypto-green/10 text-crypto-green border-crypto-green/20'
                             : community.approval_status === 'PENDING'
                             ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                            : 'bg-red-500/10 text-red-500 border-red-500/20'
+                            : community.approval_status === 'REJECTED'
+                            ? 'bg-red-500/10 text-red-500 border-red-500/20'
                         }`}>
                           {community.approval_status}
                         </Badge>
@@ -242,7 +204,7 @@ const CommunityList: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">
+                <p className="text-white/80 mb-4">
                   {searchQuery ? 'No communities found matching your search.' : 'You haven\'t created any communities yet.'}
                 </p>
                 <Link to="/communities/create">
