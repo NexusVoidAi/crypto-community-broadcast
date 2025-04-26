@@ -128,11 +128,11 @@ const CommunityList: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gradient">Communities</h1>
+            <h1 className="text-3xl font-bold text-white">Communities</h1>
             <p className="text-muted-foreground">Browse and manage crypto communities</p>
           </div>
           <Link to="/communities/create">
-            <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90 shadow-xl shadow-crypto-green/20">
+            <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90">
               <Plus className="mr-2 h-4 w-4" /> Add Community
             </Button>
           </Link>
@@ -181,18 +181,17 @@ const CommunityList: React.FC = () => {
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search communities..."
-            className="pl-10 bg-crypto-darkgray/50 border-border/50 backdrop-blur-sm"
+            className="pl-10 bg-crypto-darkgray/50 border-border/50"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        {/* Remove All Communities tab and keep only My Communities */}
-        <Card className="border-border/50 bg-crypto-darkgray/50 backdrop-blur-sm">
+        <Card className="border-border/50 bg-crypto-darkgray/50">
           <CardContent className="p-6">
             <div className="flex items-center mb-4">
               <Users className="mr-2 h-5 w-5 text-crypto-green" />
-              <h2 className="text-lg font-semibold">My Communities</h2>
+              <h2 className="text-lg font-semibold text-white">My Communities</h2>
             </div>
 
             {isLoading ? (
@@ -215,11 +214,9 @@ const CommunityList: React.FC = () => {
                           {community.description || 'No description provided'}
                         </p>
                         
-                        {/* Render regions */}
-                        {renderBadgeList(community.region, <MapPin className="h-3 w-3" />)}
+                        {renderBadgeList(community.region, <MapPin className="h-3 w-3 text-white" />)}
                         
-                        {/* Render focus areas */}
-                        {renderBadgeList(community.focus_areas, <Target className="h-3 w-3" />)}
+                        {renderBadgeList(community.focus_areas, <Target className="h-3 w-3 text-white" />)}
                         
                         <div className="flex items-center justify-between mt-3">
                           <span className="text-sm text-muted-foreground flex items-center">
@@ -249,7 +246,7 @@ const CommunityList: React.FC = () => {
                   {searchQuery ? 'No communities found matching your search.' : 'You haven\'t created any communities yet.'}
                 </p>
                 <Link to="/communities/create">
-                  <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90 shadow-lg shadow-crypto-green/20">
+                  <Button className="bg-crypto-green text-crypto-dark hover:bg-crypto-green/90">
                     <Plus className="mr-2 h-4 w-4" /> Create Community
                   </Button>
                 </Link>

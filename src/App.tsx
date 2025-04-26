@@ -65,18 +65,21 @@ const AuthRoute = ({ children }: { children: JSX.Element }) => {
 
 const AppRoutes = () => (
   <Routes>
+    {/* Redirect root to communities */}
+    <Route path="/" element={<Navigate to="/communities" replace />} />
+    
     {/* Protected Routes */}
-    <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+    
+    {/* Community Routes - Now the main feature */}
+    <Route path="/communities" element={<ProtectedRoute><CommunityList /></ProtectedRoute>} />
+    <Route path="/communities/create" element={<ProtectedRoute><CommunityCreate /></ProtectedRoute>} />
+    <Route path="/communities/:id" element={<ProtectedRoute><CommunityDetail /></ProtectedRoute>} />
     
     {/* Announcement Routes */}
     <Route path="/announcements/create" element={<ProtectedRoute><Create /></ProtectedRoute>} />
     <Route path="/announcements/preview" element={<ProtectedRoute><Preview /></ProtectedRoute>} />
-    
-    {/* Community Routes */}
-    <Route path="/communities" element={<ProtectedRoute><CommunityList /></ProtectedRoute>} />
-    <Route path="/communities/create" element={<ProtectedRoute><CommunityCreate /></ProtectedRoute>} />
-    <Route path="/communities/:id" element={<ProtectedRoute><CommunityDetail /></ProtectedRoute>} />
     
     {/* Payment Routes */}
     <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
