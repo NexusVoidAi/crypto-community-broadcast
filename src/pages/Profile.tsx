@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -153,29 +152,29 @@ const Profile: React.FC = () => {
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-6">Your Profile</h1>
+        <h1 className="text-3xl font-bold mb-6 text-white">Your Profile</h1>
         
-        <Tabs defaultValue="personal">
-          <TabsList className="mb-6">
-            <TabsTrigger value="personal">Personal Info</TabsTrigger>
-            {isAdmin && <TabsTrigger value="platform">Platform Settings</TabsTrigger>}
+        <Tabs defaultValue="personal" className="text-white">
+          <TabsList className="mb-6 bg-crypto-darkgray/50">
+            <TabsTrigger value="personal" className="text-white">Personal Info</TabsTrigger>
+            {isAdmin && <TabsTrigger value="platform" className="text-white">Platform Settings</TabsTrigger>}
           </TabsList>
           
           <TabsContent value="personal">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="col-span-1 border border-border/50 bg-crypto-darkgray/50">
+              <Card className="col-span-1 border border-border/50 bg-crypto-darkgray/50 text-white">
                 <CardHeader className="flex items-center justify-center">
                   <Avatar className="h-24 w-24">
                     <AvatarImage src="" />
-                    <AvatarFallback className="text-2xl">{getInitials()}</AvatarFallback>
+                    <AvatarFallback className="text-2xl text-white">{getInitials()}</AvatarFallback>
                   </Avatar>
-                  <CardTitle className="mt-4">{profile?.name || 'User'}</CardTitle>
-                  <CardDescription>{profile?.account_type === 'business' ? 'Business Account' : 'Community Account'}</CardDescription>
+                  <CardTitle className="mt-4 text-white">{profile?.name || 'User'}</CardTitle>
+                  <CardDescription className="text-white/80">{profile?.account_type === 'business' ? 'Business Account' : 'Community Account'}</CardDescription>
                 </CardHeader>
                 <CardContent className="text-center">
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                  <p className="text-sm text-white">{user?.email}</p>
                   {profile?.wallet_address && (
-                    <p className="text-sm text-muted-foreground mt-1 truncate">
+                    <p className="text-sm text-white mt-1 truncate">
                       Wallet: {profile.wallet_address}
                     </p>
                   )}
@@ -292,7 +291,7 @@ const Profile: React.FC = () => {
                                       </div>
                                     </div>
                                   );
-                                })()}
+                                })(()}
                               </div>
                             );
                           }}
