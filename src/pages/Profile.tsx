@@ -153,29 +153,29 @@ const Profile: React.FC = () => {
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-6 text-white">Your Profile</h1>
+        <h1 className="text-3xl font-bold mb-6">Your Profile</h1>
         
-        <Tabs defaultValue="personal" className="text-white">
-          <TabsList className="mb-6 bg-crypto-darkgray/50">
-            <TabsTrigger value="personal" className="text-white">Personal Info</TabsTrigger>
-            {isAdmin && <TabsTrigger value="platform" className="text-white">Platform Settings</TabsTrigger>}
+        <Tabs defaultValue="personal">
+          <TabsList className="mb-6">
+            <TabsTrigger value="personal">Personal Info</TabsTrigger>
+            {isAdmin && <TabsTrigger value="platform">Platform Settings</TabsTrigger>}
           </TabsList>
           
           <TabsContent value="personal">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="col-span-1 border border-border/50 bg-crypto-darkgray/50 text-white">
+              <Card className="col-span-1 border border-border/50 bg-crypto-darkgray/50">
                 <CardHeader className="flex items-center justify-center">
                   <Avatar className="h-24 w-24">
                     <AvatarImage src="" />
-                    <AvatarFallback className="text-2xl text-white">{getInitials()}</AvatarFallback>
+                    <AvatarFallback className="text-2xl">{getInitials()}</AvatarFallback>
                   </Avatar>
-                  <CardTitle className="mt-4 text-white">{profile?.name || 'User'}</CardTitle>
-                  <CardDescription className="text-white/80">{profile?.account_type === 'business' ? 'Business Account' : 'Community Account'}</CardDescription>
+                  <CardTitle className="mt-4">{profile?.name || 'User'}</CardTitle>
+                  <CardDescription>{profile?.account_type === 'business' ? 'Business Account' : 'Community Account'}</CardDescription>
                 </CardHeader>
                 <CardContent className="text-center">
-                  <p className="text-sm text-white">{user?.email}</p>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
                   {profile?.wallet_address && (
-                    <p className="text-sm text-white mt-1 truncate">
+                    <p className="text-sm text-muted-foreground mt-1 truncate">
                       Wallet: {profile.wallet_address}
                     </p>
                   )}
@@ -184,34 +184,34 @@ const Profile: React.FC = () => {
               
               <Card className="col-span-1 md:col-span-2 border border-border/50 bg-crypto-darkgray/50">
                 <CardHeader>
-                  <CardTitle className="text-white">Account Information</CardTitle>
-                  <CardDescription className="text-white/80">Update your personal information</CardDescription>
+                  <CardTitle>Account Information</CardTitle>
+                  <CardDescription>Update your personal information</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name" className="text-white">Name</Label>
+                      <Label htmlFor="name">Name</Label>
                       <Input
                         id="name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="bg-crypto-dark border-border/50 text-white"
+                        className="bg-crypto-dark border-border/50"
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-white">Email</Label>
+                      <Label htmlFor="email">Email</Label>
                       <Input
                         id="email"
                         value={user?.email || ''}
                         disabled
-                        className="bg-crypto-dark/50 border-border/50 text-white"
+                        className="bg-crypto-dark/50 border-border/50 text-muted-foreground"
                       />
-                      <p className="text-xs text-white/60">Email cannot be changed</p>
+                      <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="wallet" className="text-white">Wallet</Label>
+                      <Label htmlFor="wallet">Wallet</Label>
                       <div className="bg-crypto-dark border-border/50 rounded-md p-4">
                         <ConnectButton.Custom>
                           {({
@@ -240,7 +240,7 @@ const Profile: React.FC = () => {
                                         onClick={openConnectModal}
                                         type="button"
                                         variant="outline"
-                                        className="w-full text-white"
+                                        className="w-full"
                                       >
                                         Connect Wallet
                                       </Button>
@@ -264,10 +264,10 @@ const Profile: React.FC = () => {
                                     <div className="flex flex-col space-y-3">
                                       <div className="flex items-center justify-between">
                                         <div className="text-sm">
-                                          <p className="font-medium text-white">
+                                          <p className="font-medium">
                                             {account.displayName}
                                           </p>
-                                          <p className="text-xs text-white/60">
+                                          <p className="text-xs text-muted-foreground">
                                             Connected to {chain.name}
                                           </p>
                                         </div>
@@ -277,7 +277,6 @@ const Profile: React.FC = () => {
                                             size="sm" 
                                             onClick={openChainModal}
                                             type="button"
-                                            className="text-white"
                                           >
                                             {chain.name}
                                           </Button>
@@ -286,7 +285,6 @@ const Profile: React.FC = () => {
                                             size="sm" 
                                             onClick={openAccountModal}
                                             type="button"
-                                            className="text-white"
                                           >
                                             Account
                                           </Button>
@@ -321,18 +319,18 @@ const Profile: React.FC = () => {
             <TabsContent value="platform">
               <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
                 <CardHeader>
-                  <CardTitle className="text-white">Platform Settings</CardTitle>
-                  <CardDescription className="text-white/80">Configure platform-wide settings</CardDescription>
+                  <CardTitle>Platform Settings</CardTitle>
+                  <CardDescription>Configure platform-wide settings</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {isSettingsLoading ? (
                     <div className="flex justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-white/60" />
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                   ) : (
                     <div className="space-y-6">
                       <div className="space-y-2">
-                        <Label htmlFor="platformFee" className="text-white">Platform Fee (USDT)</Label>
+                        <Label htmlFor="platformFee">Platform Fee (USDT)</Label>
                         <Input
                           id="platformFee"
                           type="number"
@@ -340,36 +338,36 @@ const Profile: React.FC = () => {
                           step="0.01"
                           value={settings.platformFee}
                           onChange={(e) => setSettings(prev => ({ ...prev, platformFee: parseFloat(e.target.value) }))}
-                          className="bg-crypto-dark border-border text-white"
+                          className="bg-crypto-dark border-border"
                         />
-                        <p className="text-xs text-white/60">Additional fee added to each announcement</p>
+                        <p className="text-xs text-muted-foreground">Additional fee added to each announcement</p>
                       </div>
                       
                       <Separator />
                       
                       <div>
-                        <h3 className="text-lg font-medium mb-4 text-white">Telegram Bot Configuration</h3>
+                        <h3 className="text-lg font-medium mb-4">Telegram Bot Configuration</h3>
                         
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="telegramBotToken" className="text-white">Bot Token</Label>
+                            <Label htmlFor="telegramBotToken">Bot Token</Label>
                             <Input
                               id="telegramBotToken"
                               type="password"
                               value={settings.telegramBotToken}
                               onChange={(e) => setSettings(prev => ({ ...prev, telegramBotToken: e.target.value }))}
-                              className="bg-crypto-dark border-border text-white"
+                              className="bg-crypto-dark border-border"
                             />
                           </div>
                           
                           <div className="space-y-2">
-                            <Label htmlFor="telegramBotUsername" className="text-white">Bot Username</Label>
+                            <Label htmlFor="telegramBotUsername">Bot Username</Label>
                             <Input
                               id="telegramBotUsername"
                               placeholder="e.g., my_crypto_bot"
                               value={settings.telegramBotUsername}
                               onChange={(e) => setSettings(prev => ({ ...prev, telegramBotUsername: e.target.value }))}
-                              className="bg-crypto-dark border-border text-white"
+                              className="bg-crypto-dark border-border"
                             />
                           </div>
                         </div>
