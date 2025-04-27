@@ -1112,12 +1112,12 @@ const CommunityCreate: React.FC = () => {
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-8 max-w-3xl">
-        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-br from-white via-white/90 to-white/70 bg-clip-text text-transparent">Create Your Community</h1>
-        <p className="text-gray-400 mb-6">Complete the onboarding steps to add your community</p>
+        <h1 className="text-3xl font-bold mb-2 text-white">Create Your Community</h1>
+        <p className="text-white/80 mb-6">Complete the onboarding steps to add your community</p>
         
         <div className="mb-8">
           <Progress value={progress} className="h-2 bg-white/10" indicatorClassName="bg-gradient-to-r from-crypto-violet to-crypto-blue" />
-          <div className="flex justify-between mt-2 text-xs text-gray-400">
+          <div className="flex justify-between mt-2 text-xs text-white/60">
             <span>Basic Info</span>
             <span>Platform Setup</span>
             <span>Preferences</span>
@@ -1125,15 +1125,15 @@ const CommunityCreate: React.FC = () => {
           </div>
         </div>
         
-        <Card className="border border-white/10 bg-white/5 backdrop-blur-lg shadow-xl">
+        <Card className="border border-white/10 bg-white/5 backdrop-blur-lg shadow-xl text-white">
           <CardHeader>
-            <CardTitle>
+            <CardTitle className="text-white">
               {currentStep === 'basic-info' && 'Basic Community Information'}
               {currentStep === 'platform-setup' && 'Platform Setup'}
               {currentStep === 'preferences' && 'Content Preferences'}
               {currentStep === 'monetization' && 'Monetization Settings'}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-white/80">
               {currentStep === 'basic-info' && 'Add details about your community'}
               {currentStep === 'platform-setup' && 'Configure your community platform and reach'}
               {currentStep === 'preferences' && 'Select which types of content you want to receive'}
