@@ -24,7 +24,9 @@ import {
   Eye,
   MousePointer,
   Clock,
-  BarChart3
+  BarChart3,
+  Mail,
+  MessageCircle
 } from 'lucide-react';
 import {
   Dialog,
@@ -48,9 +50,14 @@ interface Community {
   platform_id: string | null;
   reach: number;
   price_per_announcement: number;
-  wallet_address: string | null;
   owner_id: string;
   created_at: string;
+  admin_email: string | null;
+  admin_telegram_handle: string | null;
+  admin_twitter_handle: string | null;
+  audience_type: string[] | null;
+  host_local_meetups: boolean | null;
+  meetup_city: string | null;
 }
 
 interface AnnouncementCommunity {
@@ -93,7 +100,9 @@ const CommunityDetail: React.FC = () => {
   const [platformId, setPlatformId] = useState('');
   const [reach, setReach] = useState('');
   const [price, setPrice] = useState('');
-  const [walletAddress, setWalletAddress] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminTelegram, setAdminTelegram] = useState('');
+  const [adminTwitter, setAdminTwitter] = useState('');
   
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -200,7 +209,9 @@ const CommunityDetail: React.FC = () => {
         setPlatformId(data.platform_id || '');
         setReach(data.reach ? data.reach.toString() : '0');
         setPrice(data.price_per_announcement ? data.price_per_announcement.toString() : '25');
-        setWalletAddress(data.wallet_address || '');
+        setAdminEmail(data.admin_email || '');
+        setAdminTelegram(data.admin_telegram_handle || '');
+        setAdminTwitter(data.admin_twitter_handle || '');
         
         // Fetch related announcements
         const { data: announcementData, error: announcementError } = await supabase
@@ -249,7 +260,9 @@ const CommunityDetail: React.FC = () => {
           platform_id: platformId,
           reach: parseInt(reach) || 0,
           price_per_announcement: parseFloat(price) || 25.00,
-          wallet_address: walletAddress
+          admin_email: adminEmail,
+          admin_telegram_handle: adminTelegram,
+          admin_twitter_handle: adminTwitter
         })
         .eq('id', id);
         
@@ -263,7 +276,9 @@ const CommunityDetail: React.FC = () => {
         platform_id: platformId,
         reach: parseInt(reach) || 0,
         price_per_announcement: parseFloat(price) || 25.00,
-        wallet_address: walletAddress
+        admin_email: adminEmail,
+        admin_telegram_handle: adminTelegram,
+        admin_twitter_handle: adminTwitter
       });
       
       setIsEditing(false);
@@ -468,10 +483,51 @@ const CommunityDetail: React.FC = () => {
                     <p className="text-crypto-green font-medium">${community.price_per_announcement}</p>
                   </div>
                   
-                  {community.wallet_address && (
+                  {community.admin_email && (
                     <div>
-                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Wallet Address</h3>
-                      <p className="text-xs break-all">{community.wallet_address}</p>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Admin Email</h3>
+                      <div className="flex items-center">
+                        <Mail className="h-4 w-4 mr-2 text-blue-400" />
+                        <p>{community.admin_email}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {community.admin_telegram_handle && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Admin Telegram</h3>
+                      <div className="flex items-center">
+                        <Send className="h-4 w-4 mr-2 text-blue-400" />
+                        <p>{community.admin_telegram_handle}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {community.admin_twitter_handle && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Admin Twitter</h3>
+                      <div className="flex items-center">
+                        <MessageCircle className="h-4 w-4 mr-2 text-blue-400" />
+                        <p>{community.admin_twitter_handle}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {community.host_local_meetups && community.meetup_city && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Local Meetups</h3>
+                      <p>Hosts meetups in {community.meetup_city}</p>
+                    </div>
+                  )}
+                  
+                  {community.audience_type && community.audience_type.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Audience Type</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {community.audience_type.map((type) => (
+                          <Badge key={type} variant="secondary">{type.replace('_', ' ')}</Badge>
+                        ))}
+                      </div>
                     </div>
                   )}
                   
@@ -550,11 +606,31 @@ const CommunityDetail: React.FC = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="wallet">Wallet Address</Label>
+                      <Label htmlFor="adminEmail">Admin Email</Label>
                       <Input
-                        id="wallet"
-                        value={walletAddress}
-                        onChange={(e) => setWalletAddress(e.target.value)}
+                        id="adminEmail"
+                        value={adminEmail}
+                        onChange={(e) => setAdminEmail(e.target.value)}
+                        className="bg-crypto-dark border-border/50"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="adminTelegram">Admin Telegram Handle</Label>
+                      <Input
+                        id="adminTelegram"
+                        value={adminTelegram}
+                        onChange={(e) => setAdminTelegram(e.target.value)}
+                        className="bg-crypto-dark border-border/50"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="adminTwitter">Admin Twitter Handle</Label>
+                      <Input
+                        id="adminTwitter"
+                        value={adminTwitter}
+                        onChange={(e) => setAdminTwitter(e.target.value)}
                         className="bg-crypto-dark border-border/50"
                       />
                     </div>
