@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -128,6 +127,31 @@ const CommunityCreate: React.FC = () => {
     memberCount?: number;
     chatInfo?: any;
   } | null>(null);
+
+  const [platformSettings, setPlatformSettings] = useState<{
+    telegram_bot_token?: string;
+    telegram_bot_username?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    // Fetch platform settings
+    const fetchPlatformSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('platform_settings')
+          .select('telegram_bot_token, telegram_bot_username')
+          .single();
+          
+        if (error) throw error;
+        setPlatformSettings(data);
+      } catch (error: any) {
+        console.error('Error fetching platform settings:', error);
+        toast.error('Failed to fetch bot information');
+      }
+    };
+    
+    fetchPlatformSettings();
+  }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -474,7 +498,7 @@ const CommunityCreate: React.FC = () => {
           <li>Go to your Telegram group</li>
           <li>Click on the group name to open the info panel</li>
           <li>Select "Add members"</li>
-          <li>Search for the ACHO AI bot {verificationResult?.botInfo?.username && <span className="font-medium">@{verificationResult.botInfo.username}</span>}</li>
+          <li>Search for {platformSettings?.telegram_bot_username ? `@${platformSettings.telegram_bot_username}` : 'our bot'}</li>
           <li>Add the bot to your group</li>
           <li>Make the bot an administrator of the group (required for posting announcements)</li>
           <li>Click "Verify" below to confirm the bot has been added successfully</li>
@@ -818,246 +842,4 @@ const CommunityCreate: React.FC = () => {
                   <label htmlFor={type} className="text-sm text-white cursor-pointer">
                     {type.replace('_', ' ').toLowerCase()
                       .split(' ')
-                      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                      .join(' ')}
-                  </label>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hostMeetups"
-                  checked={hostMeetups}
-                  onCheckedChange={(checked) => setHostMeetups(checked === true)}
-                />
-                <Label htmlFor="hostMeetups" className="cursor-pointer text-white">
-                  Do you host local Web3 meetups?
-                </Label>
-              </div>
-
-              {hostMeetups && (
-                <div className="space-y-2">
-                  <Label htmlFor="meetupCity" className="text-white">City</Label>
-                  <Input
-                    id="meetupCity"
-                    value={meetupCity}
-                    onChange={(e) => setMeetupCity(e.target.value)}
-                    placeholder="e.g., San Francisco"
-                    className="bg-white/10 border-white/20 backdrop-blur-sm text-white"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        );
-        
-      case 'preferences':
-        return (
-          <div className="space-y-6">
-            <p className="text-lg text-white font-medium">Community Preferences</p>
-            <p className="text-sm text-white/70">
-              Select which types of content you're interested in for your community:
-            </p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hackathons"
-                  checked={preferences.hackathons}
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, hackathons: checked === true})
-                  }
-                />
-                <label htmlFor="hackathons" className="text-sm text-white cursor-pointer">
-                  Hackathons
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="bounties"
-                  checked={preferences.bounties}
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, bounties: checked === true})
-                  }
-                />
-                <label htmlFor="bounties" className="text-sm text-white cursor-pointer">
-                  Bounties
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hiring"
-                  checked={preferences.hiring}
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, hiring: checked === true})
-                  }
-                />
-                <label htmlFor="hiring" className="text-sm text-white cursor-pointer">
-                  Hiring & Jobs
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="irl_events"
-                  checked={preferences.irl_events}
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, irl_events: checked === true})
-                  }
-                />
-                <label htmlFor="irl_events" className="text-sm text-white cursor-pointer">
-                  IRL Events
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="news_updates"
-                  checked={preferences.news_updates}
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, news_updates: checked === true})
-                  }
-                />
-                <label htmlFor="news_updates" className="text-sm text-white cursor-pointer">
-                  News & Updates
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="thread_contests"
-                  checked={preferences.thread_contests}
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, thread_contests: checked === true})
-                  }
-                />
-                <label htmlFor="thread_contests" className="text-sm text-white cursor-pointer">
-                  Thread Contests
-                </label>
-              </div>
-            </div>
-          </div>
-        );
-        
-      case 'monetization':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg text-white font-medium mb-2">Monetization Settings</h3>
-              <p className="text-sm text-white/70">
-                Enable monetization to earn when brands post to your community.
-              </p>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="enableMonetization"
-                checked={enableMonetization}
-                onCheckedChange={(checked) => setEnableMonetization(checked === true)}
-              />
-              <label htmlFor="enableMonetization" className="text-white font-medium cursor-pointer">
-                Enable Monetization
-              </label>
-            </div>
-            
-            {enableMonetization && (
-              <div className="space-y-2">
-                <Label htmlFor="price" className="text-white">
-                  Price per Announcement (USD)
-                </Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="5"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className="bg-white/10 border-white/20 backdrop-blur-sm text-white"
-                />
-                <p className="text-xs text-white/70">
-                  This is the amount advertisers will pay to post in your community.
-                  You'll receive 85% of this amount.
-                </p>
-              </div>
-            )}
-            
-            <Alert className="bg-blue-500/10 border-blue-400/30">
-              <AlertDescription className="text-white">
-                You'll need to complete the KYC process to receive payments. This can be done after creating your community.
-              </AlertDescription>
-            </Alert>
-          </div>
-        );
-        
-      default:
-        return null;
-    }
-  };
-  
-  return (
-    <AppLayout>
-      <div className="container max-w-2xl px-4 py-8">
-        <Card className="bg-white/10 backdrop-blur-xl border-white/20">
-          <CardHeader>
-            <CardTitle className="text-white">Create a Community</CardTitle>
-            <CardDescription className="text-white/70">
-              Add your community to start receiving announcements and earnings
-            </CardDescription>
-            <div className="mt-4">
-              <Progress value={progress} className="h-2 bg-white/10" />
-              <div className="flex justify-between mt-2">
-                <p className="text-xs text-white/70">Step {currentStep === 'basic-info' ? 1 : currentStep === 'platform-setup' ? 2 : currentStep === 'preferences' ? 3 : 4} of 4</p>
-                <p className="text-xs text-white/70">{progress}% Complete</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit}>
-              {renderStepContent()}
-              
-              <div className="mt-8 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
-                {currentStep !== 'basic-info' && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={prevStep}
-                    className="bg-white/10 backdrop-blur-sm text-white"
-                  >
-                    Back
-                  </Button>
-                )}
-                
-                {currentStep !== 'monetization' ? (
-                  <Button 
-                    type="button" 
-                    onClick={nextStep}
-                  >
-                    Continue
-                  </Button>
-                ) : (
-                  <Button 
-                    type="submit" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : 'Create Community'}
-                  </Button>
-                )}
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </AppLayout>
-  );
-};
-
-export default CommunityCreate;
+                      .map(word => word.charAt(
