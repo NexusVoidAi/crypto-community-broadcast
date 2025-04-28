@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { MessagesSquare, Send, Users, AlertTriangle, Bot, Check, ExternalLink, Globe, Plus, X, Upload, AtSign, Wallet, Rocket } from 'lucide-react';
+import { MessagesSquare, Send, Users, AlertTriangle, Bot, Check, ExternalLink, Globe, Plus, X, Upload, AtSign, Wallet, Rocket, Twitter } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -76,6 +75,12 @@ const CommunityCreate: React.FC = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const [adminTelegram, setAdminTelegram] = useState('');
+  const [adminTwitter, setAdminTwitter] = useState('');
+  const [hostMeetups, setHostMeetups] = useState(false);
+  const [meetupCity, setMeetupCity] = useState('');
+  const [audienceTypes, setAudienceTypes] = useState<string[]>([]);
+  const [botInfo, setBotInfo] = useState<any>(null);
   const [walletAddress, setWalletAddress] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -390,7 +395,6 @@ const CommunityCreate: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     setIsLoading(true);
     
     try {
@@ -411,7 +415,11 @@ const CommunityCreate: React.FC = () => {
           region: regions,
           focus_areas: focusAreas,
           admin_email: adminEmail,
-          wallet_address: walletAddress
+          admin_telegram_handle: adminTelegram,
+          admin_twitter_handle: adminTwitter,
+          host_local_meetups: hostMeetups,
+          meetup_city: meetupCity,
+          audience_type: audienceTypes,
         })
         .select()
         .single();
@@ -506,6 +514,29 @@ const CommunityCreate: React.FC = () => {
     );
   };
 
+  useEffect(() => {
+    // Fetch bot info when platform changes
+    const fetchBotInfo = async () => {
+      if (!platform) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('platform_bots')
+          .select('*')
+          .eq('platform', platform)
+          .single();
+          
+        if (error) throw error;
+        setBotInfo(data);
+      } catch (error) {
+        console.error('Error fetching bot info:', error);
+        toast.error('Failed to fetch bot information');
+      }
+    };
+    
+    fetchBotInfo();
+  }, [platform]);
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 'basic-info':
@@ -555,14 +586,28 @@ const CommunityCreate: React.FC = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="walletAddress">Wallet Address (for payments)</Label>
+              <Label htmlFor="adminTelegram">Admin Telegram Handle</Label>
               <div className="relative">
-                <Wallet className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Send className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="walletAddress"
-                  value={walletAddress}
-                  onChange={(e) => setWalletAddress(e.target.value)}
-                  placeholder="0x..."
+                  id="adminTelegram"
+                  value={adminTelegram}
+                  onChange={(e) => setAdminTelegram(e.target.value)}
+                  placeholder="@username"
+                  className="pl-10 bg-white/10 border-white/20 backdrop-blur-sm"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="adminTwitter">Admin Twitter Handle</Label>
+              <div className="relative">
+                <Twitter className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="adminTwitter"
+                  value={adminTwitter}
+                  onChange={(e) => setAdminTwitter(e.target.value)}
+                  placeholder="@username"
                   className="pl-10 bg-white/10 border-white/20 backdrop-blur-sm"
                 />
               </div>
@@ -716,6 +761,29 @@ const CommunityCreate: React.FC = () => {
                 )}
               </Alert>
             )}
+
+            {botInfo && (
+              <div className="mt-4 p-4 bg-blue-500/10 border border-blue-400/30 rounded-md">
+                <div className="flex items-start mb-2">
+                  <Bot className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-blue-400">Add Bot to Your Community</h4>
+                    <p className="text-sm text-white/70 mt-1">
+                      Bot Name: {botInfo.bot_name}
+                    </p>
+                    <a 
+                      href={botInfo.bot_link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-400 hover:text-blue-300 flex items-center mt-2"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Add Bot to {platform}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="reach">Community Size</Label>
@@ -735,458 +803,47 @@ const CommunityCreate: React.FC = () => {
                 <p className="text-xs text-green-400">Member count auto-detected from the group</p>
               )}
             </div>
-            
-            {/* Multiple Regions Selection */}
-            <div className="space-y-3">
-              <Label htmlFor="region" className="flex items-center">
-                Community Regions <span className="text-red-500 ml-1">*</span>
-                <span className="text-xs text-gray-400 ml-2">(Select one or more)</span>
-              </Label>
-              
-              <div className="flex flex-wrap gap-2">
-                {regions.map(region => (
-                  <Badge 
-                    key={region}
-                    variant="secondary" 
-                    className="px-3 py-1.5 bg-white/10 backdrop-blur-sm"
-                  >
-                    {getRegionLabel(region)}
-                    <button 
-                      type="button"
-                      onClick={() => removeRegion(region)}
-                      className="ml-2 hover:text-red-400"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-              
-              <div className="flex gap-2 items-center">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" type="button" className="bg-white/10 border-white/20 backdrop-blur-sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Region
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-white/10 backdrop-blur-lg border-white/20">
-                    {REGIONS.map((region) => (
-                      <DropdownMenuItem 
-                        key={region.value}
-                        className="cursor-pointer"
-                        onClick={() => {
-                          if (region.value === 'other') {
-                            setShowCustomRegionInput(true);
-                          } else if (!regions.includes(region.value)) {
-                            setRegions(prev => [...prev, region.value]);
-                          }
-                        }}
-                      >
-                        <Globe className="mr-2 h-4 w-4 text-blue-400" />
-                        {region.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                
-                {showCustomRegionInput && (
-                  <div className="flex-1 flex gap-2">
-                    <Input
-                      value={customRegion}
-                      onChange={(e) => setCustomRegion(e.target.value)}
-                      placeholder="Enter custom region name"
-                      className="bg-white/10 border-white/20 backdrop-blur-sm flex-1"
-                    />
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={addCustomRegion}
-                      disabled={!customRegion.trim()}
-                      className="bg-white/10 border-white/20 backdrop-blur-sm"
-                    >
-                      Add
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="ghost"
-                      onClick={() => setShowCustomRegionInput(false)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Multiple Focus Areas Selection */}
+
             <div className="space-y-3">
               <Label className="flex items-center">
-                Focus Areas <span className="text-red-500 ml-1">*</span> 
-                <span className="text-xs text-gray-400 ml-2">(Select one or more)</span>
+                Target Audience <span className="text-red-500 ml-1">*</span>
               </Label>
-              
-              <div className="flex flex-wrap gap-2">
-                {focusAreas.map(area => (
-                  <Badge 
-                    key={area}
-                    variant="secondary" 
-                    className="px-3 py-1.5 bg-white/10 backdrop-blur-sm"
-                  >
-                    {getFocusAreaLabel(area)}
-                    <button 
-                      type="button"
-                      onClick={() => removeFocusArea(area)}
-                      className="ml-2 hover:text-red-400"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-              
-              <div className="flex gap-2 items-center">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" type="button" className="bg-white/10 border-white/20 backdrop-blur-sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Focus Area
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-white/10 backdrop-blur-lg border-white/20">
-                    {FOCUS_AREAS.map((area) => (
-                      <DropdownMenuItem 
-                        key={area.value}
-                        className="cursor-pointer"
-                        onClick={() => {
-                          if (area.value === 'other') {
-                            setShowCustomFocusAreaInput(true);
-                          } else if (!focusAreas.includes(area.value)) {
-                            setFocusAreas(prev => [...prev, area.value]);
-                          }
-                        }}
-                      >
-                        {area.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                
-                {showCustomFocusAreaInput && (
-                  <div className="flex-1 flex gap-2">
-                    <Input
-                      value={customFocusArea}
-                      onChange={(e) => setCustomFocusArea(e.target.value)}
-                      placeholder="Enter custom focus area"
-                      className="bg-white/10 border-white/20 backdrop-blur-sm flex-1"
-                    />
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={addCustomFocusArea}
-                      disabled={!customFocusArea.trim()}
-                      className="bg-white/10 border-white/20 backdrop-blur-sm"
-                    >
-                      Add
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="ghost"
-                      onClick={() => setShowCustomFocusAreaInput(false)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
+              {['WEB3_PROFESSIONALS', 'LEARNERS', 'INTERMEDIATE', 'TRADERS', 'INVESTORS'].map((type) => (
+                <div key={type} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={type}
+                    checked={audienceTypes.includes(type)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setAudienceTypes([...audienceTypes, type]);
+                      } else {
+                        setAudienceTypes(audienceTypes.filter(t => t !== type));
+                      }
+                    }}
+                  />
+                  <label htmlFor={type} className="text-sm text-white cursor-pointer">
+                    {type.replace('_', ' ').toLowerCase()
+                      .split(' ')
+                      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(' ')}
+                  </label>
+                </div>
+              ))}
             </div>
-          </div>
-        );
-        
-      case 'preferences':
-        return (
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium">Community Content Preferences</h3>
-            <p className="text-sm text-gray-400">
-              Select the types of content you want to receive in your community:
-            </p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-start space-x-3 bg-white/10 backdrop-blur-sm p-4 rounded-md border border-white/20">
-                <Checkbox 
-                  id="hackathons" 
-                  checked={preferences.hackathons} 
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, hackathons: checked === true})
-                  } 
+
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hostMeetups"
+                  checked={hostMeetups}
+                  onCheckedChange={(checked) => setHostMeetups(checked === true)}
                 />
-                <div>
-                  <Label 
-                    htmlFor="hackathons" 
-                    className="text-base font-medium cursor-pointer"
-                  >
-                    Hackathons
-                  </Label>
-                  <p className="text-sm text-gray-400">
-                    Announcements about blockchain and crypto hackathon events
-                  </p>
-                </div>
+                <Label htmlFor="hostMeetups" className="cursor-pointer">
+                  Do you host local Web3 meetups?
+                </Label>
               </div>
-              
-              <div className="flex items-start space-x-3 bg-white/10 backdrop-blur-sm p-4 rounded-md border border-white/20">
-                <Checkbox 
-                  id="bounties" 
-                  checked={preferences.bounties} 
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, bounties: checked === true})
-                  } 
-                />
-                <div>
-                  <Label 
-                    htmlFor="bounties" 
-                    className="text-base font-medium cursor-pointer"
-                  >
-                    Bounties
-                  </Label>
-                  <p className="text-sm text-gray-400">
-                    Offers for paid work and contribution opportunities
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-3 bg-white/10 backdrop-blur-sm p-4 rounded-md border border-white/20">
-                <Checkbox 
-                  id="hiring" 
-                  checked={preferences.hiring} 
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, hiring: checked === true})
-                  } 
-                />
-                <div>
-                  <Label 
-                    htmlFor="hiring" 
-                    className="text-base font-medium cursor-pointer"
-                  >
-                    Hiring
-                  </Label>
-                  <p className="text-sm text-gray-400">
-                    Job opportunities in blockchain and crypto
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-3 bg-white/10 backdrop-blur-sm p-4 rounded-md border border-white/20">
-                <Checkbox 
-                  id="irl_events" 
-                  checked={preferences.irl_events} 
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, irl_events: checked === true})
-                  } 
-                />
-                <div>
-                  <Label 
-                    htmlFor="irl_events" 
-                    className="text-base font-medium cursor-pointer"
-                  >
-                    IRL Events
-                  </Label>
-                  <p className="text-sm text-gray-400">
-                    In-person crypto conferences, meetups, and events
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-3 bg-white/10 backdrop-blur-sm p-4 rounded-md border border-white/20">
-                <Checkbox 
-                  id="news_updates" 
-                  checked={preferences.news_updates} 
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, news_updates: checked === true})
-                  } 
-                />
-                <div>
-                  <Label 
-                    htmlFor="news_updates" 
-                    className="text-base font-medium cursor-pointer"
-                  >
-                    News / Updates
-                  </Label>
-                  <p className="text-sm text-gray-400">
-                    Project updates, partnerships, and ecosystem news
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-3 bg-white/10 backdrop-blur-sm p-4 rounded-md border border-white/20">
-                <Checkbox 
-                  id="thread_contests" 
-                  checked={preferences.thread_contests} 
-                  onCheckedChange={(checked) => 
-                    setPreferences({...preferences, thread_contests: checked === true})
-                  } 
-                />
-                <div>
-                  <Label 
-                    htmlFor="thread_contests" 
-                    className="text-base font-medium cursor-pointer"
-                  >
-                    Thread Contests
-                  </Label>
-                  <p className="text-sm text-gray-400">
-                    Community engagement contests and challenges
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-        
-      case 'monetization':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between bg-gradient-to-r from-crypto-violet/20 to-crypto-blue/20 p-4 rounded-lg backdrop-blur-sm border border-white/10">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-crypto-violet/20 rounded-full">
-                  <Rocket className="h-6 w-6 text-crypto-violet" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium">Enable Monetization</h3>
-                  <p className="text-sm text-gray-400">
-                    Earn money by allowing announcements in your community
-                  </p>
-                </div>
-              </div>
-              <Checkbox 
-                id="enable_monetization" 
-                checked={enableMonetization}
-                className="data-[state=checked]:bg-crypto-violet"
-                onCheckedChange={(checked) => setEnableMonetization(checked === true)}
-              />
-            </div>
-            
-            {enableMonetization && (
-              <div className="space-y-4 p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
+
+              {hostMeetups && (
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price per announcement ($)</Label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-3 text-muted-foreground">$</div>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="25.00"
-                      step="0.01"
-                      min="0"
-                      className="pl-10 bg-white/5 border-white/20"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    This is the base price for a single announcement in your community
-                  </p>
-                </div>
-                
-                <div className="mt-4 p-4 bg-crypto-darkgray/50 rounded-md border border-white/10">
-                  <h4 className="font-medium mb-2">Payout Information</h4>
-                  <p className="text-sm text-gray-400 mb-4">
-                    Payments will be sent to your wallet address after each successful announcement
-                  </p>
-                  
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Wallet className="h-4 w-4 text-crypto-violet" />
-                    <span className="text-gray-300">
-                      {walletAddress ? walletAddress : 'No wallet address provided'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <AppLayout>
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
-        <h1 className="text-3xl font-bold mb-2 text-white">Create Your Community</h1>
-        <p className="text-white/80 mb-6">Complete the onboarding steps to add your community</p>
-        
-        <div className="mb-8">
-          <Progress value={progress} className="h-2 bg-white/10" indicatorClassName="bg-gradient-to-r from-crypto-violet to-crypto-blue" />
-          <div className="flex justify-between mt-2 text-xs text-white/60">
-            <span>Basic Info</span>
-            <span>Platform Setup</span>
-            <span>Preferences</span>
-            <span>Monetization</span>
-          </div>
-        </div>
-        
-        <Card className="border border-white/10 bg-white/5 backdrop-blur-lg shadow-xl text-white">
-          <CardHeader>
-            <CardTitle className="text-white">
-              {currentStep === 'basic-info' && 'Basic Community Information'}
-              {currentStep === 'platform-setup' && 'Platform Setup'}
-              {currentStep === 'preferences' && 'Content Preferences'}
-              {currentStep === 'monetization' && 'Monetization Settings'}
-            </CardTitle>
-            <CardDescription className="text-white/80">
-              {currentStep === 'basic-info' && 'Add details about your community'}
-              {currentStep === 'platform-setup' && 'Configure your community platform and reach'}
-              {currentStep === 'preferences' && 'Select which types of content you want to receive'}
-              {currentStep === 'monetization' && 'Set up earning options for your community'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {renderStepContent()}
-            </form>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            {currentStep !== 'basic-info' && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={prevStep}
-                className="bg-white/5 backdrop-blur-sm"
-              >
-                Back
-              </Button>
-            )}
-            
-            {currentStep === 'monetization' ? (
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                className="bg-gradient-to-r from-crypto-violet to-crypto-blue hover:from-crypto-violet/90 hover:to-crypto-blue/90 text-white ml-auto"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Complete Setup'
-                )}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                onClick={nextStep}
-                className="bg-gradient-to-r from-crypto-violet to-crypto-blue hover:from-crypto-violet/90 hover:to-crypto-blue/90 text-white ml-auto"
-              >
-                Continue
-              </Button>
-            )}
-          </CardFooter>
-        </Card>
-      </div>
-    </AppLayout>
-  );
-};
-
-export default CommunityCreate;
+                  <Label htmlFor="meetupCity">City</Label>
+                  <Input

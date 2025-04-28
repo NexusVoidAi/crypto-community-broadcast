@@ -257,12 +257,17 @@ export type Database = {
       communities: {
         Row: {
           admin_email: string | null
+          admin_telegram_handle: string | null
+          admin_twitter_handle: string | null
           approval_status: string
+          audience_type: string[] | null
           created_at: string
           description: string | null
           focus_areas: string[] | null
+          host_local_meetups: boolean | null
           id: string
           logo_url: string | null
+          meetup_city: string | null
           name: string
           owner_id: string
           platform: Database["public"]["Enums"]["platform_type"]
@@ -271,16 +276,20 @@ export type Database = {
           reach: number | null
           region: string[] | null
           updated_at: string
-          wallet_address: string | null
         }
         Insert: {
           admin_email?: string | null
+          admin_telegram_handle?: string | null
+          admin_twitter_handle?: string | null
           approval_status?: string
+          audience_type?: string[] | null
           created_at?: string
           description?: string | null
           focus_areas?: string[] | null
+          host_local_meetups?: boolean | null
           id?: string
           logo_url?: string | null
+          meetup_city?: string | null
           name: string
           owner_id: string
           platform: Database["public"]["Enums"]["platform_type"]
@@ -289,16 +298,20 @@ export type Database = {
           reach?: number | null
           region?: string[] | null
           updated_at?: string
-          wallet_address?: string | null
         }
         Update: {
           admin_email?: string | null
+          admin_telegram_handle?: string | null
+          admin_twitter_handle?: string | null
           approval_status?: string
+          audience_type?: string[] | null
           created_at?: string
           description?: string | null
           focus_areas?: string[] | null
+          host_local_meetups?: boolean | null
           id?: string
           logo_url?: string | null
+          meetup_city?: string | null
           name?: string
           owner_id?: string
           platform?: Database["public"]["Enums"]["platform_type"]
@@ -307,7 +320,6 @@ export type Database = {
           reach?: number | null
           region?: string[] | null
           updated_at?: string
-          wallet_address?: string | null
         }
         Relationships: []
       }
@@ -447,6 +459,33 @@ export type Database = {
           },
         ]
       }
+      platform_bots: {
+        Row: {
+          bot_link: string
+          bot_name: string
+          created_at: string | null
+          id: string
+          platform: Database["public"]["Enums"]["platform_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          bot_link: string
+          bot_name: string
+          created_at?: string | null
+          id?: string
+          platform: Database["public"]["Enums"]["platform_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          bot_link?: string
+          bot_name?: string
+          created_at?: string | null
+          id?: string
+          platform?: Database["public"]["Enums"]["platform_type"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           created_at: string
@@ -525,6 +564,12 @@ export type Database = {
         | "PENDING_VALIDATION"
         | "VALIDATION_FAILED"
         | "PUBLISHED"
+      audience_type:
+        | "WEB3_PROFESSIONALS"
+        | "LEARNERS"
+        | "INTERMEDIATE"
+        | "TRADERS"
+        | "INVESTORS"
       campaign_status: "active" | "paused" | "completed" | "draft"
       payment_status: "PENDING" | "PAID" | "FAILED"
       platform_type: "TELEGRAM" | "DISCORD" | "WHATSAPP"
@@ -659,6 +704,13 @@ export const Constants = {
         "PENDING_VALIDATION",
         "VALIDATION_FAILED",
         "PUBLISHED",
+      ],
+      audience_type: [
+        "WEB3_PROFESSIONALS",
+        "LEARNERS",
+        "INTERMEDIATE",
+        "TRADERS",
+        "INVESTORS",
       ],
       campaign_status: ["active", "paused", "completed", "draft"],
       payment_status: ["PENDING", "PAID", "FAILED"],
