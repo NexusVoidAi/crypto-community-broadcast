@@ -668,7 +668,7 @@ const CommunityCreate: React.FC = () => {
         
       case 'platform-setup':
         return (
-          <div className="space-y-6">
+          <div className="space-y-6 bg-background">
             <div className="space-y-2">
               <Label className="flex items-center text-white">
                 Platform <span className="text-red-500 ml-1">*</span>
@@ -790,7 +790,7 @@ const CommunityCreate: React.FC = () => {
                       Bot Name: {platformSettings.telegram_bot_username}
                     </p>
                     <a 
-                      href={`https://t.me/${platformSettings.telegram_bot_username}`} 
+                      href={`https://t.me/${platformSettings.telegram_bot_username}`}
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-sm text-blue-400 hover:text-blue-300 flex items-center mt-2"
@@ -840,4 +840,4 @@ const CommunityCreate: React.FC = () => {
                     }}
                   />
                   <label htmlFor={type} className="text-sm text-white cursor-pointer">
-                    {type.replace('_', ' ').
+                    {type.
