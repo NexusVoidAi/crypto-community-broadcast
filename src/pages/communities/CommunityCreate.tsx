@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { MessagesSquare, Send, Users, AlertTriangle, Bot, Check, ExternalLink, Globe, Plus, X, Upload, AtSign, Wallet, Rocket, Twitter } from 'lucide-react';
+import { MessagesSquare, Send, Users, AlertTriangle, Bot, Check, ExternalLink, Globe, Plus, X, Upload, AtSign, Twitter } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,7 +82,6 @@ const CommunityCreate: React.FC = () => {
   const [meetupCity, setMeetupCity] = useState('');
   const [audienceTypes, setAudienceTypes] = useState<string[]>([]);
   const [botInfo, setBotInfo] = useState<any>(null);
-  const [walletAddress, setWalletAddress] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   
@@ -240,7 +240,6 @@ const CommunityCreate: React.FC = () => {
           region: regions,
           focus_areas: focusAreas,
           admin_email: adminEmail,
-          wallet_address: walletAddress
         })
         .select()
         .single();
@@ -327,10 +326,6 @@ const CommunityCreate: React.FC = () => {
     if (!adminEmail) {
       toast.error('Admin email is required');
       return false;
-    }
-    
-    if (!walletAddress) {
-      toast.warning('Wallet address is recommended for receiving payments');
     }
     
     return true;
@@ -543,7 +538,7 @@ const CommunityCreate: React.FC = () => {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name" className="flex items-center">
+              <Label htmlFor="name" className="flex items-center text-white">
                 Community Name <span className="text-red-500 ml-1">*</span>
               </Label>
               <Input
@@ -551,24 +546,24 @@ const CommunityCreate: React.FC = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Crypto Traders Group"
-                className="bg-white/10 border-white/20 backdrop-blur-sm"
+                className="bg-white/10 border-white/20 backdrop-blur-sm text-white"
                 required
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" className="text-white">Description</Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Brief description of your community"
-                className="bg-white/10 border-white/20 backdrop-blur-sm min-h-[100px]"
+                className="bg-white/10 border-white/20 backdrop-blur-sm min-h-[100px] text-white"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="adminEmail" className="flex items-center">
+              <Label htmlFor="adminEmail" className="flex items-center text-white">
                 Admin Email <span className="text-red-500 ml-1">*</span>
               </Label>
               <div className="relative">
@@ -579,14 +574,14 @@ const CommunityCreate: React.FC = () => {
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
                   placeholder="admin@example.com"
-                  className="pl-10 bg-white/10 border-white/20 backdrop-blur-sm"
+                  className="pl-10 bg-white/10 border-white/20 backdrop-blur-sm text-white"
                   required
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="adminTelegram">Admin Telegram Handle</Label>
+              <Label htmlFor="adminTelegram" className="text-white">Admin Telegram Handle</Label>
               <div className="relative">
                 <Send className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -594,13 +589,13 @@ const CommunityCreate: React.FC = () => {
                   value={adminTelegram}
                   onChange={(e) => setAdminTelegram(e.target.value)}
                   placeholder="@username"
-                  className="pl-10 bg-white/10 border-white/20 backdrop-blur-sm"
+                  className="pl-10 bg-white/10 border-white/20 backdrop-blur-sm text-white"
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="adminTwitter">Admin Twitter Handle</Label>
+              <Label htmlFor="adminTwitter" className="text-white">Admin Twitter Handle</Label>
               <div className="relative">
                 <Twitter className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -608,13 +603,13 @@ const CommunityCreate: React.FC = () => {
                   value={adminTwitter}
                   onChange={(e) => setAdminTwitter(e.target.value)}
                   placeholder="@username"
-                  className="pl-10 bg-white/10 border-white/20 backdrop-blur-sm"
+                  className="pl-10 bg-white/10 border-white/20 backdrop-blur-sm text-white"
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="logo">Community Logo</Label>
+              <Label htmlFor="logo" className="text-white">Community Logo</Label>
               <div className="flex items-center space-x-4">
                 <label className="flex items-center justify-center w-20 h-20 border-2 border-dashed rounded-lg border-gray-300 hover:border-primary cursor-pointer bg-white/5 backdrop-blur-sm">
                   {logoUrl ? (
@@ -635,7 +630,7 @@ const CommunityCreate: React.FC = () => {
                   />
                 </label>
                 <div>
-                  <p className="text-sm text-gray-300">
+                  <p className="text-sm text-white">
                     {logoFile ? logoFile.name : 'Upload community logo'}
                   </p>
                   <p className="text-xs text-gray-400">
@@ -651,7 +646,7 @@ const CommunityCreate: React.FC = () => {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label className="flex items-center">
+              <Label className="flex items-center text-white">
                 Platform <span className="text-red-500 ml-1">*</span>
               </Label>
               <RadioGroup
@@ -665,21 +660,21 @@ const CommunityCreate: React.FC = () => {
               >
                 <div className="flex items-center space-x-2 border border-white/20 bg-white/5 backdrop-blur-sm rounded-md px-4 py-3">
                   <RadioGroupItem value="TELEGRAM" id="telegram" />
-                  <Label htmlFor="telegram" className="cursor-pointer flex items-center">
+                  <Label htmlFor="telegram" className="cursor-pointer flex items-center text-white">
                     <Send className="mr-2 h-4 w-4 text-blue-400" />
                     Telegram
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2 border border-white/20 bg-white/5 backdrop-blur-sm rounded-md px-4 py-3">
                   <RadioGroupItem value="DISCORD" id="discord" />
-                  <Label htmlFor="discord" className="cursor-pointer flex items-center">
+                  <Label htmlFor="discord" className="cursor-pointer flex items-center text-white">
                     <MessagesSquare className="mr-2 h-4 w-4 text-indigo-400" />
                     Discord
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2 border border-white/20 bg-white/5 backdrop-blur-sm rounded-md px-4 py-3">
                   <RadioGroupItem value="WHATSAPP" id="whatsapp" />
-                  <Label htmlFor="whatsapp" className="cursor-pointer flex items-center">
+                  <Label htmlFor="whatsapp" className="cursor-pointer flex items-center text-white">
                     <Send className="mr-2 h-4 w-4 text-green-400" />
                     WhatsApp
                   </Label>
@@ -688,7 +683,7 @@ const CommunityCreate: React.FC = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="platformId" className="flex items-center">
+              <Label htmlFor="platformId" className="flex items-center text-white">
                 Channel/Group ID or URL <span className="text-red-500 ml-1">*</span>
               </Label>
               <div className="flex space-x-2 flex-col sm:flex-row gap-2 sm:gap-0">
@@ -701,8 +696,7 @@ const CommunityCreate: React.FC = () => {
                     setVerificationResult(null);
                   }}
                   placeholder={platform === 'TELEGRAM' ? "e.g., @crypto_traders, t.me/channel, or -1001234567890" : "e.g., https://discord.gg/..."}
-                  className="bg-white/10 border-white/20 backdrop-blur-sm"
-                  normalizeTelegramId={platform === 'TELEGRAM'}
+                  className="bg-white/10 border-white/20 backdrop-blur-sm text-white"
                   required
                 />
                 {platform === 'TELEGRAM' && (
@@ -727,7 +721,7 @@ const CommunityCreate: React.FC = () => {
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-white">
                 {platform === 'TELEGRAM' && "Enter your Telegram group username starting with @ or group ID"}
                 {platform === 'DISCORD' && "Enter your Discord channel invite link"}
                 {platform === 'WHATSAPP' && "Enter your WhatsApp group invite link"}
@@ -768,7 +762,7 @@ const CommunityCreate: React.FC = () => {
                   <Bot className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
                   <div>
                     <h4 className="text-sm font-medium text-blue-400">Add Bot to Your Community</h4>
-                    <p className="text-sm text-white/70 mt-1">
+                    <p className="text-sm text-white mt-1">
                       Bot Name: {botInfo.bot_name}
                     </p>
                     <a 
@@ -786,7 +780,7 @@ const CommunityCreate: React.FC = () => {
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="reach">Community Size</Label>
+              <Label htmlFor="reach" className="text-white">Community Size</Label>
               <div className="relative">
                 <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -795,7 +789,7 @@ const CommunityCreate: React.FC = () => {
                   value={verificationResult?.memberCount ? verificationResult.memberCount.toString() : reach}
                   onChange={(e) => setReach(e.target.value)}
                   placeholder="Number of members"
-                  className="pl-10 bg-white/10 border-white/20 backdrop-blur-sm"
+                  className="pl-10 bg-white/10 border-white/20 backdrop-blur-sm text-white"
                   readOnly={verificationResult?.memberCount !== undefined}
                 />
               </div>
@@ -805,7 +799,7 @@ const CommunityCreate: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              <Label className="flex items-center">
+              <Label className="flex items-center text-white">
                 Target Audience <span className="text-red-500 ml-1">*</span>
               </Label>
               {['WEB3_PROFESSIONALS', 'LEARNERS', 'INTERMEDIATE', 'TRADERS', 'INVESTORS'].map((type) => (
@@ -838,12 +832,232 @@ const CommunityCreate: React.FC = () => {
                   checked={hostMeetups}
                   onCheckedChange={(checked) => setHostMeetups(checked === true)}
                 />
-                <Label htmlFor="hostMeetups" className="cursor-pointer">
+                <Label htmlFor="hostMeetups" className="cursor-pointer text-white">
                   Do you host local Web3 meetups?
                 </Label>
               </div>
 
               {hostMeetups && (
                 <div className="space-y-2">
-                  <Label htmlFor="meetupCity">City</Label>
+                  <Label htmlFor="meetupCity" className="text-white">City</Label>
                   <Input
+                    id="meetupCity"
+                    value={meetupCity}
+                    onChange={(e) => setMeetupCity(e.target.value)}
+                    placeholder="e.g., San Francisco"
+                    className="bg-white/10 border-white/20 backdrop-blur-sm text-white"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        );
+        
+      case 'preferences':
+        return (
+          <div className="space-y-6">
+            <p className="text-lg text-white font-medium">Community Preferences</p>
+            <p className="text-sm text-white/70">
+              Select which types of content you're interested in for your community:
+            </p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hackathons"
+                  checked={preferences.hackathons}
+                  onCheckedChange={(checked) => 
+                    setPreferences({...preferences, hackathons: checked === true})
+                  }
+                />
+                <label htmlFor="hackathons" className="text-sm text-white cursor-pointer">
+                  Hackathons
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="bounties"
+                  checked={preferences.bounties}
+                  onCheckedChange={(checked) => 
+                    setPreferences({...preferences, bounties: checked === true})
+                  }
+                />
+                <label htmlFor="bounties" className="text-sm text-white cursor-pointer">
+                  Bounties
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hiring"
+                  checked={preferences.hiring}
+                  onCheckedChange={(checked) => 
+                    setPreferences({...preferences, hiring: checked === true})
+                  }
+                />
+                <label htmlFor="hiring" className="text-sm text-white cursor-pointer">
+                  Hiring & Jobs
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="irl_events"
+                  checked={preferences.irl_events}
+                  onCheckedChange={(checked) => 
+                    setPreferences({...preferences, irl_events: checked === true})
+                  }
+                />
+                <label htmlFor="irl_events" className="text-sm text-white cursor-pointer">
+                  IRL Events
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="news_updates"
+                  checked={preferences.news_updates}
+                  onCheckedChange={(checked) => 
+                    setPreferences({...preferences, news_updates: checked === true})
+                  }
+                />
+                <label htmlFor="news_updates" className="text-sm text-white cursor-pointer">
+                  News & Updates
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="thread_contests"
+                  checked={preferences.thread_contests}
+                  onCheckedChange={(checked) => 
+                    setPreferences({...preferences, thread_contests: checked === true})
+                  }
+                />
+                <label htmlFor="thread_contests" className="text-sm text-white cursor-pointer">
+                  Thread Contests
+                </label>
+              </div>
+            </div>
+          </div>
+        );
+        
+      case 'monetization':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg text-white font-medium mb-2">Monetization Settings</h3>
+              <p className="text-sm text-white/70">
+                Enable monetization to earn when brands post to your community.
+              </p>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="enableMonetization"
+                checked={enableMonetization}
+                onCheckedChange={(checked) => setEnableMonetization(checked === true)}
+              />
+              <label htmlFor="enableMonetization" className="text-white font-medium cursor-pointer">
+                Enable Monetization
+              </label>
+            </div>
+            
+            {enableMonetization && (
+              <div className="space-y-2">
+                <Label htmlFor="price" className="text-white">
+                  Price per Announcement (USD)
+                </Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="5"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="bg-white/10 border-white/20 backdrop-blur-sm text-white"
+                />
+                <p className="text-xs text-white/70">
+                  This is the amount advertisers will pay to post in your community.
+                  You'll receive 85% of this amount.
+                </p>
+              </div>
+            )}
+            
+            <Alert className="bg-blue-500/10 border-blue-400/30">
+              <AlertDescription className="text-white">
+                You'll need to complete the KYC process to receive payments. This can be done after creating your community.
+              </AlertDescription>
+            </Alert>
+          </div>
+        );
+        
+      default:
+        return null;
+    }
+  };
+  
+  return (
+    <AppLayout>
+      <div className="container max-w-2xl px-4 py-8">
+        <Card className="bg-white/10 backdrop-blur-xl border-white/20">
+          <CardHeader>
+            <CardTitle className="text-white">Create a Community</CardTitle>
+            <CardDescription className="text-white/70">
+              Add your community to start receiving announcements and earnings
+            </CardDescription>
+            <div className="mt-4">
+              <Progress value={progress} className="h-2 bg-white/10" />
+              <div className="flex justify-between mt-2">
+                <p className="text-xs text-white/70">Step {currentStep === 'basic-info' ? 1 : currentStep === 'platform-setup' ? 2 : currentStep === 'preferences' ? 3 : 4} of 4</p>
+                <p className="text-xs text-white/70">{progress}% Complete</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit}>
+              {renderStepContent()}
+              
+              <div className="mt-8 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
+                {currentStep !== 'basic-info' && (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={prevStep}
+                    className="bg-white/10 backdrop-blur-sm text-white"
+                  >
+                    Back
+                  </Button>
+                )}
+                
+                {currentStep !== 'monetization' ? (
+                  <Button 
+                    type="button" 
+                    onClick={nextStep}
+                  >
+                    Continue
+                  </Button>
+                ) : (
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : 'Create Community'}
+                  </Button>
+                )}
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+};
+
+export default CommunityCreate;
