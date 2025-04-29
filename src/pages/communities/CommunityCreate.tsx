@@ -668,7 +668,7 @@ const CommunityCreate: React.FC = () => {
         
       case 'platform-setup':
         return (
-          <div className="space-y-6 bg-background">
+          <div className="space-y-6 bg-crypto-dark">
             <div className="space-y-2">
               <Label className="flex items-center text-white">
                 Platform <span className="text-red-500 ml-1">*</span>
@@ -840,4 +840,4 @@ const CommunityCreate: React.FC = () => {
                     }}
                   />
                   <label htmlFor={type} className="text-sm text-white cursor-pointer">
-                    {type.replace('_',
+                    {type.replace
