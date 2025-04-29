@@ -840,4 +840,4 @@ const CommunityCreate: React.FC = () => {
                     }}
                   />
                   <label htmlFor={type} className="text-sm text-white cursor-pointer">
-                    {type.
+                    {type.replace('_',
