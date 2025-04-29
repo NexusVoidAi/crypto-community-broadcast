@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -840,4 +841,483 @@ const CommunityCreate: React.FC = () => {
                     }}
                   />
                   <label htmlFor={type} className="text-sm text-white cursor-pointer">
-                    {type.replace
+                    {type.replace(/_/g, ' ')}
+                  </label>
+                </div>
+              ))}
+            </div>
+            
+            <div>
+              <Label className="text-white mb-3 block">Focus Areas</Label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {focusAreas.map(area => (
+                  <Badge 
+                    key={area} 
+                    variant="secondary" 
+                    className="bg-white/10 hover:bg-white/20 text-white flex items-center gap-1"
+                  >
+                    {getFocusAreaLabel(area)}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => removeFocusArea(area)} 
+                    />
+                  </Badge>
+                ))}
+                {focusAreas.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No focus areas selected yet</p>
+                )}
+              </div>
+              
+              {!showCustomFocusAreaInput ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add Focus Area
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-crypto-dark border-white/20">
+                    {FOCUS_AREAS.map(area => (
+                      <DropdownMenuItem 
+                        key={area.value}
+                        onClick={() => !focusAreas.includes(area.value) && setFocusAreas([...focusAreas, area.value])}
+                        disabled={focusAreas.includes(area.value)}
+                        className="cursor-pointer hover:bg-white/10 text-white"
+                      >
+                        {area.label}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuItem 
+                      onClick={() => setShowCustomFocusAreaInput(true)} 
+                      className="cursor-pointer hover:bg-white/10 text-white"
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Custom Focus Area
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <Input
+                    value={customFocusArea}
+                    onChange={(e) => setCustomFocusArea(e.target.value)}
+                    placeholder="Enter custom focus area"
+                    className="bg-white/10 border-white/20 text-white w-auto"
+                    onKeyDown={(e) => e.key === 'Enter' && addCustomFocusArea()}
+                  />
+                  <Button 
+                    size="sm" 
+                    onClick={addCustomFocusArea}
+                    disabled={!customFocusArea.trim()}
+                    className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+                  >
+                    Add
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => {
+                      setCustomFocusArea(''); 
+                      setShowCustomFocusAreaInput(false);
+                    }}
+                    className="text-white"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            <div>
+              <Label className="text-white mb-3 block">Regions</Label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {regions.map(region => (
+                  <Badge 
+                    key={region} 
+                    variant="secondary" 
+                    className="bg-white/10 hover:bg-white/20 text-white flex items-center gap-1"
+                  >
+                    {getRegionLabel(region)}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => removeRegion(region)} 
+                    />
+                  </Badge>
+                ))}
+              </div>
+              
+              {!showCustomRegionInput ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+                    >
+                      <Globe className="h-4 w-4 mr-1" /> Add Region
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-crypto-dark border-white/20">
+                    {REGIONS.map(region => (
+                      <DropdownMenuItem 
+                        key={region.value}
+                        onClick={() => !regions.includes(region.value) && setRegions([...regions, region.value])}
+                        disabled={regions.includes(region.value)}
+                        className="cursor-pointer hover:bg-white/10 text-white"
+                      >
+                        {region.label}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuItem 
+                      onClick={() => setShowCustomRegionInput(true)}
+                      className="cursor-pointer hover:bg-white/10 text-white"
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Custom Region
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <Input
+                    value={customRegion}
+                    onChange={(e) => setCustomRegion(e.target.value)}
+                    placeholder="Enter custom region"
+                    className="bg-white/10 border-white/20 text-white w-auto"
+                    onKeyDown={(e) => e.key === 'Enter' && addCustomRegion()}
+                  />
+                  <Button 
+                    size="sm" 
+                    onClick={addCustomRegion}
+                    disabled={!customRegion.trim()}
+                    className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+                  >
+                    Add
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => {
+                      setCustomRegion(''); 
+                      setShowCustomRegionInput(false);
+                    }}
+                    className="text-white"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hostMeetups"
+                  checked={hostMeetups}
+                  onCheckedChange={(checked) => setHostMeetups(!!checked)}
+                />
+                <Label htmlFor="hostMeetups" className="text-sm text-white cursor-pointer">
+                  This community hosts local meetups
+                </Label>
+              </div>
+              
+              {hostMeetups && (
+                <div className="mt-3 pl-6">
+                  <Label htmlFor="meetupCity" className="text-white block mb-1">City</Label>
+                  <Input
+                    id="meetupCity"
+                    value={meetupCity}
+                    onChange={(e) => setMeetupCity(e.target.value)}
+                    placeholder="e.g., New York, London, Singapore"
+                    className="bg-white/10 border-white/20 text-white max-w-xs"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        );
+        
+      case 'preferences':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-white font-medium mb-4">Content Preferences</h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Select the types of content you'd like to receive in your community
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="pref_hackathons"
+                    checked={preferences.hackathons}
+                    onCheckedChange={(checked) => 
+                      setPreferences({...preferences, hackathons: !!checked})
+                    }
+                  />
+                  <div>
+                    <Label 
+                      htmlFor="pref_hackathons" 
+                      className="text-white cursor-pointer"
+                    >
+                      Hackathons
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Announcements about coding competitions and hackathons
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="pref_bounties"
+                    checked={preferences.bounties}
+                    onCheckedChange={(checked) => 
+                      setPreferences({...preferences, bounties: !!checked})
+                    }
+                  />
+                  <div>
+                    <Label 
+                      htmlFor="pref_bounties" 
+                      className="text-white cursor-pointer"
+                    >
+                      Bounties
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Paid tasks and bounty programs from projects
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="pref_hiring"
+                    checked={preferences.hiring}
+                    onCheckedChange={(checked) => 
+                      setPreferences({...preferences, hiring: !!checked})
+                    }
+                  />
+                  <div>
+                    <Label 
+                      htmlFor="pref_hiring" 
+                      className="text-white cursor-pointer"
+                    >
+                      Job Opportunities
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Job postings and hiring announcements
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="pref_irl_events"
+                    checked={preferences.irl_events}
+                    onCheckedChange={(checked) => 
+                      setPreferences({...preferences, irl_events: !!checked})
+                    }
+                  />
+                  <div>
+                    <Label 
+                      htmlFor="pref_irl_events" 
+                      className="text-white cursor-pointer"
+                    >
+                      IRL Events
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Conferences, meetups, and in-person events
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="pref_news"
+                    checked={preferences.news_updates}
+                    onCheckedChange={(checked) => 
+                      setPreferences({...preferences, news_updates: !!checked})
+                    }
+                  />
+                  <div>
+                    <Label 
+                      htmlFor="pref_news" 
+                      className="text-white cursor-pointer"
+                    >
+                      News & Updates
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Industry news and project updates
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="pref_thread"
+                    checked={preferences.thread_contests}
+                    onCheckedChange={(checked) => 
+                      setPreferences({...preferences, thread_contests: !!checked})
+                    }
+                  />
+                  <div>
+                    <Label 
+                      htmlFor="pref_thread" 
+                      className="text-white cursor-pointer"
+                    >
+                      Thread Contests
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Twitter/X thread competitions with prizes
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+        
+      case 'monetization':
+        return (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-white font-medium">Monetization Settings</h3>
+              <p className="text-sm text-muted-foreground">
+                Configure how you'd like to monetize your community announcements
+              </p>
+              
+              <div className="flex items-center space-x-2 mb-6">
+                <Checkbox
+                  id="enableMonetization"
+                  checked={enableMonetization}
+                  onCheckedChange={(checked) => setEnableMonetization(!!checked)}
+                />
+                <Label htmlFor="enableMonetization" className="text-white cursor-pointer">
+                  Enable paid announcements for this community
+                </Label>
+              </div>
+              
+              {enableMonetization && (
+                <div className="bg-white/5 border border-white/10 rounded-lg p-6 space-y-4">
+                  <h4 className="text-white font-medium">Pricing</h4>
+                  <div className="space-y-2">
+                    <Label htmlFor="price" className="text-white">
+                      Price per announcement ($)
+                    </Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="e.g., 25.00"
+                      className="bg-white/10 border-white/20 text-white max-w-xs"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This is the amount clients will pay to post in your community
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                <p className="text-sm text-blue-400">
+                  You'll receive 90% of each paid announcement, with 10% going to platform fees.
+                  Payments are processed via CopperX to your connected wallet.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+        
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <AppLayout>
+      <div className="max-w-4xl mx-auto px-4 py-8 min-h-screen">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-white mb-2">Create a New Community</h1>
+          <p className="text-muted-foreground">Connect your community to start receiving paid announcements</p>
+        </div>
+        
+        <div className="mb-8">
+          <div className="mb-2 flex justify-between items-center">
+            <p className="text-sm text-white">Step {currentStep === 'basic-info' ? '1' : currentStep === 'platform-setup' ? '2' : currentStep === 'preferences' ? '3' : '4'} of 4</p>
+            <p className="text-sm text-white">{progress}%</p>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </div>
+        
+        <Card className="bg-crypto-dark border-white/10">
+          <CardHeader>
+            <CardTitle className="text-white">
+              {currentStep === 'basic-info' && 'Basic Information'}
+              {currentStep === 'platform-setup' && 'Platform Setup'}
+              {currentStep === 'preferences' && 'Content Preferences'}
+              {currentStep === 'monetization' && 'Monetization'}
+            </CardTitle>
+            <CardDescription>
+              {currentStep === 'basic-info' && 'Provide basic information about your community'}
+              {currentStep === 'platform-setup' && 'Connect your community platform and configure regions'}
+              {currentStep === 'preferences' && 'Set your content preferences'}
+              {currentStep === 'monetization' && 'Configure monetization settings'}
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            <form onSubmit={handleSubmit}>
+              {renderStepContent()}
+            </form>
+          </CardContent>
+          
+          <CardFooter className="flex justify-between border-t border-white/10 pt-6">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={prevStep}
+              disabled={currentStep === 'basic-info'}
+              className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+            >
+              Back
+            </Button>
+            
+            <div>
+              {currentStep === 'monetization' ? (
+                <Button 
+                  type="submit" 
+                  onClick={handleSubmit}
+                  disabled={isLoading}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Community'
+                  )}
+                </Button>
+              ) : (
+                <Button 
+                  type="button" 
+                  onClick={nextStep}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Continue
+                </Button>
+              )}
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+};
+
+export default CommunityCreate;
