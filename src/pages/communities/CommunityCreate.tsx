@@ -483,7 +483,7 @@ const CommunityCreate: React.FC = () => {
   };
 
   const getFocusAreaLabel = (value: string) => {
-    const area = FOCUS_AREAS.find(a => a.value === value);
+    const area = FOCUS_AREAS.find(r => r.value === value);
     return area ? area.label : value;
   };
   
