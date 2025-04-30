@@ -1222,12 +1222,12 @@ const CommunityCreate: React.FC = () => {
                 </div>
               )}
               
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              {/* <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                 <p className="text-sm text-blue-400">
                   You'll receive 90% of each paid announcement, with 10% going to platform fees.
                   Payments are processed via CopperX to your connected wallet.
                 </p>
-              </div>
+              </div> */}
             </div>
           </div>
         );
