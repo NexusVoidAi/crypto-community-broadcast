@@ -474,8 +474,7 @@ const Dashboard = () => {
         <CreateAnnouncementButton />
       </div>
       
-      <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50 relative">
-        <ComingSoonOverlay />
+      <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
@@ -565,8 +564,7 @@ const Dashboard = () => {
 
   const renderPaymentsContent = () => (
     <div className="mt-4">
-      <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50 relative">
-        <ComingSoonOverlay />
+      <Card className="border border-border/50 glassmorphism bg-crypto-darkgray/50">
         <CardHeader>
           <CardTitle>Payments & Transactions</CardTitle>
           <CardDescription>Manage your crypto payments and transaction history</CardDescription>
@@ -671,8 +669,7 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-6 relative">
-        <ComingSoonOverlay />
+      <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           {isAdmin && (
             <Button
