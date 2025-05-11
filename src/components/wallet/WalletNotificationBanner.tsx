@@ -11,9 +11,11 @@ const WalletNotificationBanner: React.FC = () => {
   const [isVisible, setIsVisible] = React.useState(true);
   const { openConnectModal } = useConnectModal();
   const { isConnected } = useAccount();
+  const { user, profile } = useAuth();
   
-  // Don't show banner if wallet is already connected
-  if (!isVisible || isConnected) {
+  // Don't show banner if wallet is already connected or user is not logged in
+  // or if user already has a wallet address saved in their profile
+  if (!isVisible || isConnected || !user || (profile?.wallet_address)) {
     return null;
   }
 

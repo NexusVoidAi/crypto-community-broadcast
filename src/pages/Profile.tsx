@@ -11,13 +11,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Wallet } from 'lucide-react';
 const Profile: React.FC = () => {
   const {
     user,
     profile,
     walletAddress,
-    isWalletConnected
+    isWalletConnected,
+    connectWallet
   } = useAuth();
   const [name, setName] = useState(profile?.name || '');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,6 +30,7 @@ const Profile: React.FC = () => {
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isDisconnectingWallet, setIsDisconnectingWallet] = useState(false);
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
@@ -128,6 +130,27 @@ const Profile: React.FC = () => {
       setIsSavingSettings(false);
     }
   };
+
+  const disconnectWallet = async () => {
+    setIsDisconnectingWallet(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ wallet_address: null })
+        .eq('id', user?.id);
+        
+      if (error) throw error;
+      
+      toast.success('Wallet disconnected successfully');
+      // Force a page reload to update the profile state
+      window.location.reload();
+    } catch (error: any) {
+      toast.error(`Error disconnecting wallet: ${error.message}`);
+    } finally {
+      setIsDisconnectingWallet(false);
+    }
+  };
+
   return <AppLayout>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <h1 className="text-3xl font-bold mb-6">Your Profile</h1>
@@ -176,60 +199,89 @@ const Profile: React.FC = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="wallet">Wallet</Label>
+                      <Label className="flex items-center gap-2">
+                        <Wallet className="h-4 w-4" />
+                        Wallet Connection
+                      </Label>
                       <div className="bg-crypto-dark border-border/50 rounded-md p-4">
-                        <ConnectButton.Custom>
-                          {({
-                          account,
-                          chain,
-                          openAccountModal,
-                          openChainModal,
-                          openConnectModal,
-                          mounted
-                        }) => {
-                          return <div {...!mounted && {
-                            'aria-hidden': true,
-                            'style': {
-                              opacity: 0,
-                              pointerEvents: 'none',
-                              userSelect: 'none'
-                            }
-                          }}>
-                                {(() => {
-                              if (!mounted || !account || !chain) {
-                                return <Button onClick={openConnectModal} type="button" variant="outline" className="w-full">
-                                        Connect Wallet
-                                      </Button>;
-                              }
-                              if (chain.unsupported) {
-                                return <Button onClick={openChainModal} type="button" variant="destructive" className="w-full">
-                                        Wrong network
-                                      </Button>;
-                              }
-                              return <div className="flex flex-col space-y-3">
-                                      <div className="flex items-center justify-between">
-                                        <div className="text-sm">
-                                          <p className="font-medium">
-                                            {account.displayName}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground">
-                                            Connected to {chain.name}
-                                          </p>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                          <Button variant="outline" size="sm" onClick={openChainModal} type="button">
-                                            {chain.name}
-                                          </Button>
-                                          <Button variant="outline" size="sm" onClick={openAccountModal} type="button">
-                                            Account
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    </div>;
-                            })()}
-                              </div>;
-                        }}
-                        </ConnectButton.Custom>
+                        {profile?.wallet_address ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium truncate">{profile.wallet_address}</p>
+                                <p className="text-xs text-muted-foreground">Connected Wallet</p>
+                              </div>
+                              <Button 
+                                variant="destructive" 
+                                size="sm" 
+                                onClick={disconnectWallet}
+                                disabled={isDisconnectingWallet}
+                              >
+                                {isDisconnectingWallet ? (
+                                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Disconnecting...</>
+                                ) : (
+                                  'Disconnect Wallet'
+                                )}
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              To connect a different wallet, first disconnect the current one
+                            </p>
+                          </div>
+                        ) : (
+                          <ConnectButton.Custom>
+                            {({
+                              account,
+                              chain,
+                              openAccountModal,
+                              openChainModal,
+                              openConnectModal,
+                              mounted
+                            }) => {
+                              return <div {...!mounted && {
+                                'aria-hidden': true,
+                                'style': {
+                                  opacity: 0,
+                                  pointerEvents: 'none',
+                                  userSelect: 'none'
+                                }
+                              }}>
+                                    {(() => {
+                                  if (!mounted || !account || !chain) {
+                                    return <Button onClick={openConnectModal} type="button" variant="outline" className="w-full">
+                                            Connect Wallet
+                                          </Button>;
+                                  }
+                                  if (chain.unsupported) {
+                                    return <Button onClick={openChainModal} type="button" variant="destructive" className="w-full">
+                                            Wrong network
+                                          </Button>;
+                                  }
+                                  return <div className="flex flex-col space-y-3">
+                                          <div className="flex items-center justify-between">
+                                            <div className="text-sm">
+                                              <p className="font-medium">
+                                                {account.displayName}
+                                              </p>
+                                              <p className="text-xs text-muted-foreground">
+                                                Connected to {chain.name}
+                                              </p>
+                                            </div>
+                                            <div className="flex space-x-2">
+                                              <Button variant="outline" size="sm" onClick={openChainModal} type="button">
+                                                {chain.name}
+                                              </Button>
+                                              <Button variant="outline" size="sm" onClick={openAccountModal} type="button">
+                                                Account
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </div>;
+                                })()}
+                                  </div>;
+                            }}
+                          </ConnectButton.Custom>
+                        )}
                       </div>
                     </div>
                     
