@@ -1,4 +1,3 @@
-
 import React, { ReactNode, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -91,7 +90,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="flex min-h-screen bg-crypto-dark text-white">
+    <div className="flex min-h-screen bg-transparent text-white">
       {/* Mobile sidebar overlay */}
       {isMobile && sidebarOpen && (
         <div 
@@ -103,7 +102,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <div 
         className={cn(
-          "fixed md:sticky top-0 h-screen w-[280px] bg-crypto-darkgray border-r border-border/10 z-40 transition-all duration-300 flex flex-col",
+          "fixed md:sticky top-0 h-screen w-[280px] bg-crypto-darkgray/80 backdrop-blur-md border-r border-border/10 z-40 transition-all duration-300 flex flex-col",
           isMobile && (sidebarOpen ? "left-0" : "-left-[280px]")
         )}
       >
@@ -206,7 +205,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
         {/* Mobile Header */}
-        <header className="sticky top-0 z-10 bg-crypto-dark/80 backdrop-blur-md border-b border-border/10 flex md:hidden items-center p-4">
+        <header className="sticky top-0 z-10 bg-crypto-dark/30 backdrop-blur-md border-b border-border/10 flex md:hidden items-center p-4">
           <Button 
             variant="ghost" 
             size="icon" 

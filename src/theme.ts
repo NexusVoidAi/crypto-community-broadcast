@@ -10,7 +10,7 @@ export const theme = {
   colors: {
     // Background colors
     background: {
-      primary: '#0A090F',
+      primary: '#01000E',
       secondary: '#1A1F2C',
       tertiary: '#2A2A3F',
       card: 'rgba(26, 31, 44, 0.5)',
@@ -59,6 +59,7 @@ export const theme = {
   
   // Gradient definitions
   gradients: {
+    mainBackground: 'linear-gradient(to bottom, #350081, #01000E)',
     gradient1: 'linear-gradient(90deg, #FABE5C, #C97B75, #892BE1)',
     gradient2: 'linear-gradient(90deg, #341D63, #5F299B, #892BE1)',
     gradient3: 'linear-gradient(90deg, #010002, #1A113E, #4C1C6A)',
