@@ -6,7 +6,7 @@ export const Logo = () => {
     <Link to="/" className="flex-shrink-0">
       <div className="flex items-center">
         <img 
-          src="/lovable-uploads/acho-ai-logo.png" 
+          src="https://res.cloudinary.com/db62usi2c/image/upload/v1746956709/image_37_e9apq9.png" 
           alt="Acho AI Logo" 
           className="h-8 w-auto"
         />

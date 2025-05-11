@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Eye, Edit, BarChart2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Campaign } from './types';
+import { getStatusBadgeClass } from '@/utils/theme-utils';
 
 interface CampaignTableProps {
   campaigns: Campaign[];
@@ -22,24 +23,6 @@ interface CampaignTableProps {
 
 const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
   const navigate = useNavigate();
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-      case 'PUBLISHED':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
-      case 'PENDING':
-      case 'PENDING_VALIDATION':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      case 'REJECTED':
-      case 'VALIDATION_FAILED':
-        return 'bg-red-500/10 text-red-500 border-red-500/20';
-      case 'DRAFT':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-      default:
-        return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-    }
-  };
 
   const handleViewCampaign = (id: string) => {
     navigate(`/announcements/preview?id=${id}`);
@@ -72,7 +55,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
           <TableRow key={campaign.id} className="border-border/50 hover:bg-crypto-darkgray/30">
             <TableCell className="font-medium text-white">{campaign.title || campaign.name}</TableCell>
             <TableCell>
-              <Badge variant="outline" className={getStatusColor(campaign.status)}>
+              <Badge variant="outline" className={getStatusBadgeClass(campaign.status)}>
                 {campaign.status}
               </Badge>
             </TableCell>

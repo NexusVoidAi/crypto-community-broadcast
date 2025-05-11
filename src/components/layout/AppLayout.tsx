@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -109,7 +110,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <div className="p-5 border-b border-border/10 flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-3">
             <img 
-              src="/lovable-uploads/acho-ai-logo.png" 
+              src="https://res.cloudinary.com/db62usi2c/image/upload/v1746956709/image_37_e9apq9.png" 
               alt="Acho AI Logo" 
               className="h-9 w-auto" 
             />
@@ -216,7 +217,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </Button>
           <div className="flex items-center space-x-2">
             <img 
-              src="/lovable-uploads/acho-ai-logo.png" 
+              src="https://res.cloudinary.com/db62usi2c/image/upload/v1746956709/image_37_e9apq9.png" 
               alt="Acho AI Logo" 
               className="h-7 w-auto" 
             />
