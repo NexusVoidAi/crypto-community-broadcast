@@ -480,39 +480,39 @@ const Dashboard = () => {
             <Table>
               <TableHeader>
                 <TableRow className="border-border/50 hover:bg-crypto-darkgray/30">
-                  <TableHead className="w-[300px]">Campaign</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[300px] text-white">Campaign</TableHead>
+                  <TableHead className="text-white">Status</TableHead>
                   {!isMobile && (
                     <>
-                      <TableHead>Communities</TableHead>
-                      <TableHead>Views</TableHead>
-                      <TableHead>Clicks</TableHead>
+                      <TableHead className="text-white">Communities</TableHead>
+                      <TableHead className="text-white">Views</TableHead>
+                      <TableHead className="text-white">Clicks</TableHead>
                     </>
                   )}
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right text-white">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={isMobile ? 3 : 6} className="text-center h-24">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    <TableCell colSpan={isMobile ? 3 : 6} className="text-center h-24 text-white">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-white" />
                     </TableCell>
                   </TableRow>
                 ) : campaigns.length > 0 ? (
                   campaigns.map((campaign) => (
                     <TableRow key={campaign.id} className="border-border/50 hover:bg-crypto-darkgray/30">
-                      <TableCell className="font-medium">{campaign.title}</TableCell>
-                      <TableCell>
+                      <TableCell className="font-medium text-white">{campaign.title}</TableCell>
+                      <TableCell className="text-white">
                         <Badge variant="outline" className={getStatusColor(campaign.status)}>
                           {campaign.status}
                         </Badge>
                       </TableCell>
                       {!isMobile && (
                         <>
-                          <TableCell>{campaign.communities?.length || 0}</TableCell>
-                          <TableCell>{campaign.views?.toLocaleString() || 0}</TableCell>
-                          <TableCell>{campaign.clicks?.toLocaleString() || 0}</TableCell>
+                          <TableCell className="text-white">{campaign.communities?.length || 0}</TableCell>
+                          <TableCell className="text-white">{campaign.views?.toLocaleString() || 0}</TableCell>
+                          <TableCell className="text-white">{campaign.clicks?.toLocaleString() || 0}</TableCell>
                         </>
                       )}
                       <TableCell className="text-right">
@@ -522,16 +522,18 @@ const Dashboard = () => {
                             size="icon" 
                             title="View"
                             onClick={() => handleViewCampaign(campaign.id)}
+                            className="text-white hover:bg-crypto-darkgray/80"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4 text-white" />
                           </Button>
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             title="Edit"
                             onClick={() => handleEditCampaign(campaign.id)}
+                            className="text-white hover:bg-crypto-darkgray/80"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-4 w-4 text-white" />
                           </Button>
                           {!isMobile && (
                             <Button 
@@ -539,8 +541,9 @@ const Dashboard = () => {
                               size="icon" 
                               title="Analytics"
                               onClick={() => handleViewCampaignAnalytics(campaign.id)}
+                              className="text-white hover:bg-crypto-darkgray/80"
                             >
-                              <BarChart2 className="h-4 w-4" />
+                              <BarChart2 className="h-4 w-4 text-white" />
                             </Button>
                           )}
                         </div>
@@ -549,7 +552,7 @@ const Dashboard = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={isMobile ? 3 : 6} className="text-center h-24 text-muted-foreground">
+                    <TableCell colSpan={isMobile ? 3 : 6} className="text-center h-24 text-white">
                       No campaigns found. Create your first campaign!
                     </TableCell>
                   </TableRow>
