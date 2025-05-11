@@ -14,12 +14,22 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 // Type definitions
 interface Announcement {
+  // Database fields that come from Supabase
   id: string;
   title: string;
   content: string;
   status: string;
   created_at: string;
   user_id: string;
+  // Optional database fields
+  impressions?: number | null;
+  cta_text?: string | null;
+  cta_url?: string | null;
+  media_url?: string | null;
+  payment_status?: string;
+  updated_at?: string;
+  validation_result?: any;
+  // Fields we'll compute or mock for UI
   views: number;
   clicks: number;
   engagement: number;
@@ -159,7 +169,7 @@ const AnnouncementList: React.FC = () => {
   const [filter, setFilter] = useState<string>('all');
 
   // Fetch announcements from Supabase
-  const { data: announcements, isLoading, error } = useQuery({
+  const { data: rawAnnouncements, isLoading, error } = useQuery({
     queryKey: ['announcements'],
     queryFn: async () => {
       try {
@@ -176,6 +186,19 @@ const AnnouncementList: React.FC = () => {
       }
     },
   });
+
+  // Transform raw announcements to match our Announcement interface
+  const announcements: Announcement[] = React.useMemo(() => {
+    if (!rawAnnouncements) return [];
+    
+    return rawAnnouncements.map(announcement => ({
+      ...announcement,
+      // Add UI-specific fields with mock or computed data
+      views: announcement.impressions || Math.floor(Math.random() * 1000),
+      clicks: Math.floor((announcement.impressions || Math.random() * 1000) * 0.2),
+      engagement: Math.floor((announcement.impressions || Math.random() * 1000) * 0.05)
+    }));
+  }, [rawAnnouncements]);
 
   // Show error in toast if query fails
   useEffect(() => {
