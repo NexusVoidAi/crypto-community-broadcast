@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Megaphone, 
@@ -16,10 +16,12 @@ interface DashboardNavProps {
 
 const DashboardNav: React.FC<DashboardNavProps> = ({ activeTab, setActiveTab }) => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  
   const navItems = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/' },
-    { id: 'campaigns', label: 'Campaigns', icon: Megaphone, path: '/campaigns' },
-    { id: 'payments', label: 'Payments', icon: CreditCard, path: '/payments' },
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/dashboard' },
+    { id: 'campaigns', label: 'Campaigns', icon: Megaphone, path: '/dashboard' },
+    { id: 'payments', label: 'Payments', icon: CreditCard, path: '/dashboard' },
   ];
 
   return (
@@ -37,10 +39,11 @@ const DashboardNav: React.FC<DashboardNavProps> = ({ activeTab, setActiveTab }) 
               "hover:bg-crypto-darkgray/60 text-gray-400 hover:text-white"
             )}
             onClick={(e) => {
+              setActiveTab(item.id);
               if (item.id !== 'overview') {
+                // Prevent default only for non-overview tabs
                 e.preventDefault();
               }
-              setActiveTab(item.id);
             }}
           >
             <item.icon className={`h-4 w-4 ${isMobile ? '' : 'mr-2'} ${activeTab === item.id ? 'text-crypto-green' : ''}`} />

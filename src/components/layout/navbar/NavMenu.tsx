@@ -17,6 +17,10 @@ export const NavMenu = ({ items, mobile, onItemClick }: NavMenuProps) => {
   const location = useLocation();
 
   const isActive = (path: string) => {
+    // Make dashboard active when on dashboard page
+    if (path === '/dashboard' && location.pathname === '/dashboard') {
+      return true;
+    }
     return location.pathname === path;
   };
 
