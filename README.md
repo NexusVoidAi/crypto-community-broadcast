@@ -1,6 +1,8 @@
 
 # CryptoConnect - Community Announcement Platform
 
+Try it on [achoai.space](https://achoai.space)
+
 ## Project Overview
 
 CryptoConnect is a platform that connects cryptocurrency projects with community managers. It allows projects to create and distribute announcements across multiple crypto communities on platforms like Telegram.
