@@ -34,8 +34,8 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
   };
 
   const handleViewAnalytics = (id: string) => {
-    toast.info(`Viewing analytics for campaign ID: ${id}`);
-    // This would navigate to an analytics page in the future
+    // Navigate to analytics page instead of just showing a toast
+    navigate(`/announcements/preview?id=${id}&tab=analytics`);
   };
 
   return (
