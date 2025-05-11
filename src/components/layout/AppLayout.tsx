@@ -43,7 +43,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [notifications, setNotifications] = useState(2);
 
   const navItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'Announcements', icon: MessageSquare, path: '/announcements/create' },
     { label: 'Communities', icon: Users, path: '/communities' },
   ];
