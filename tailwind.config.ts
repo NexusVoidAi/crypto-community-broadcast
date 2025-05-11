@@ -1,5 +1,6 @@
 
 import type { Config } from "tailwindcss";
+import { theme } from "./src/theme";
 
 export default {
 	darkMode: ["class"],
@@ -63,14 +64,24 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
+				// NexusVoid theme integration with Tailwind
+				'nexus': {
+					'background': theme.colors.background.primary,
+					'card': theme.colors.background.card,
+					'text': theme.colors.text.primary,
+					'text-secondary': theme.colors.text.secondary,
+					'text-muted': theme.colors.text.muted,
+					'border': theme.colors.border.primary,
+					'border-subtle': theme.colors.border.subtle,
+				},
 				// Custom crypto theme colors
 				crypto: {
-					'blue': '#3671E9',
-					'violet': '#9945FF',
-					'green': '#14F195', // Change this to a teal color
-					'teal': '#008B8B', // Deep Teal
-					'dark': '#0F1116',
-					'darkgray': '#1A1F2C'
+					'blue': theme.colors.brand.blue,
+					'violet': theme.colors.brand.violet,
+					'green': theme.colors.brand.green,
+					'teal': theme.colors.brand.teal,
+					'dark': theme.colors.background.primary,
+					'darkgray': theme.colors.background.secondary
 				}
 			},
 			borderRadius: {
@@ -110,12 +121,15 @@ export default {
 				'pulse-glow': 'pulse-glow 2s infinite',
 			},
 			fontFamily: {
-				'space': ['Space Grotesk', 'sans-serif'],
-				'inter': ['Inter', 'sans-serif']
+				'space': [theme.typography.fontFamily.primary],
+				'inter': [theme.typography.fontFamily.secondary]
 			},
 			backgroundImage: {
 				'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
 				'grid-pattern': 'url("data:image/svg+xml,%3Csvg width=\'30\' height=\'30\' viewBox=\'0 0 30 30\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M1.22676 0C1.91374 0 2.45351 0.539773 2.45351 1.22676C2.45351 1.91374 1.91374 2.45351 1.22676 2.45351C0.539773 2.45351 0 1.91374 0 1.22676C0 0.539773 0.539773 0 1.22676 0Z\' fill=\'rgba(255,255,255,0.07)\'/%3E%3C/svg%3E")',
+				'gradient-1': theme.gradients.gradient1,
+				'gradient-2': theme.gradients.gradient2,
+				'gradient-3': theme.gradients.gradient3,
 			}
 		}
 	},

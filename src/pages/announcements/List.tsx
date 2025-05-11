@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -11,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Eye, MousePointerClick, BarChart2, MessageSquareHeart } from 'lucide-react';
 import { toast } from 'sonner';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { getStatusBadgeClass } from '@/utils/theme-utils';
+import { theme } from '@/theme';
 
 // Type definitions
 interface Announcement {
@@ -69,30 +70,16 @@ const AnnouncementCard: React.FC<{ announcement: Announcement }> = ({ announceme
   const chartData = generateSampleData(parseInt(announcement.id.replace(/\D/g, '').slice(0, 5) || '1'));
   
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-      case 'PUBLISHED':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
-      case 'PENDING':
-      case 'PENDING_VALIDATION':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      case 'REJECTED':
-      case 'VALIDATION_FAILED':
-        return 'bg-red-500/10 text-red-500 border-red-500/20';
-      case 'DRAFT':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-      default:
-        return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-    }
+    return getStatusBadgeClass(status);
   };
 
   return (
-    <Card className="mb-4 bg-crypto-darkgray/40 border-border/50 overflow-hidden">
+    <Card className="mb-4 bg-nexus-card border-nexus-border-subtle overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-lg font-space text-white">{announcement.title}</CardTitle>
-            <p className="text-sm text-white/70 mt-1">
+            <CardTitle className="text-lg font-space text-nexus-text">{announcement.title}</CardTitle>
+            <p className="text-sm text-nexus-text-muted mt-1">
               {new Date(announcement.created_at).toLocaleDateString()}
             </p>
           </div>
@@ -102,7 +89,7 @@ const AnnouncementCard: React.FC<{ announcement: Announcement }> = ({ announceme
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-white/80 mb-4 line-clamp-2">{announcement.content}</p>
+        <p className="text-nexus-text-secondary mb-4 line-clamp-2">{announcement.content}</p>
         
         <div className="h-[180px] w-full mb-4">
           <ResponsiveContainer width="100%" height="100%">
@@ -112,28 +99,28 @@ const AnnouncementCard: React.FC<{ announcement: Announcement }> = ({ announceme
               <YAxis stroke="#888" />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: '#1A1F2C', 
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: '#fff'
+                  backgroundColor: theme.colors.background.secondary, 
+                  border: `1px solid ${theme.colors.border.subtle}`,
+                  color: theme.colors.text.primary
                 }}
               />
-              <Line type="monotone" dataKey="views" stroke="#008B8B" strokeWidth={2} />
-              <Line type="monotone" dataKey="clicks" stroke="#3671E9" strokeWidth={2} />
-              <Line type="monotone" dataKey="engagement" stroke="#9945FF" strokeWidth={2} />
+              <Line type="monotone" dataKey="views" stroke={theme.colors.brand.teal} strokeWidth={2} />
+              <Line type="monotone" dataKey="clicks" stroke={theme.colors.brand.blue} strokeWidth={2} />
+              <Line type="monotone" dataKey="engagement" stroke={theme.colors.brand.violet} strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
         
         <div className="grid grid-cols-3 gap-2 mb-3">
-          <div className="flex items-center text-white">
-            <Eye className="h-4 w-4 mr-1.5 text-crypto-green" />
+          <div className="flex items-center text-nexus-text">
+            <Eye className="h-4 w-4 mr-1.5 text-crypto-teal" />
             <span>{announcement.views || Math.floor(Math.random() * 1000)} views</span>
           </div>
-          <div className="flex items-center text-white">
+          <div className="flex items-center text-nexus-text">
             <MousePointerClick className="h-4 w-4 mr-1.5 text-crypto-blue" />
             <span>{announcement.clicks || Math.floor(Math.random() * 200)} clicks</span>
           </div>
-          <div className="flex items-center text-white">
+          <div className="flex items-center text-nexus-text">
             <MessageSquareHeart className="h-4 w-4 mr-1.5 text-crypto-violet" />
             <span>{announcement.engagement || Math.floor(Math.random() * 50)} engagement</span>
           </div>
@@ -143,7 +130,7 @@ const AnnouncementCard: React.FC<{ announcement: Announcement }> = ({ announceme
           <Button 
             variant="outline"
             size="sm"
-            className="mr-2 text-white border-white/30 hover:bg-white/10"
+            className="mr-2 text-nexus-text border-nexus-border-subtle hover:bg-white/10"
             onClick={() => navigate(`/announcements/preview?id=${announcement.id}`)}
           >
             <Eye className="h-4 w-4 mr-1.5" />
@@ -151,7 +138,7 @@ const AnnouncementCard: React.FC<{ announcement: Announcement }> = ({ announceme
           </Button>
           <Button 
             size="sm"
-            className="bg-crypto-blue hover:bg-crypto-blue/90 text-white"
+            className="bg-crypto-blue hover:bg-crypto-blue/90 text-nexus-text"
             onClick={() => navigate(`/announcements/analytics?id=${announcement.id}`)}
           >
             <BarChart2 className="h-4 w-4 mr-1.5" />
@@ -228,11 +215,11 @@ const AnnouncementList: React.FC = () => {
     <AppLayout>
       <div className="container mx-auto px-4 py-6 relative">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold tracking-tight text-white font-space">Announcements</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-nexus-text font-space">Announcements</h1>
           <Button 
             onClick={() => navigate('/announcements/create')}
             variant="secondary"
-            className="bg-crypto-green hover:bg-crypto-green/90 text-white"
+            className="bg-crypto-green hover:bg-crypto-green/90 text-nexus-text"
           >
             <Plus className="mr-2 h-4 w-4" />
             Create New Announcement
@@ -240,18 +227,18 @@ const AnnouncementList: React.FC = () => {
         </div>
         
         <Tabs defaultValue="all" onValueChange={setFilter} className="mb-6">
-          <TabsList className="bg-crypto-dark/70 text-white">
-            <TabsTrigger value="all" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-white">All</TabsTrigger>
-            <TabsTrigger value="active" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-white">Active</TabsTrigger>
-            <TabsTrigger value="pending" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-white">Pending</TabsTrigger>
-            <TabsTrigger value="draft" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-white">Drafts</TabsTrigger>
+          <TabsList className="bg-crypto-dark/70 text-nexus-text">
+            <TabsTrigger value="all" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-nexus-text">All</TabsTrigger>
+            <TabsTrigger value="active" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-nexus-text">Active</TabsTrigger>
+            <TabsTrigger value="pending" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-nexus-text">Pending</TabsTrigger>
+            <TabsTrigger value="draft" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-nexus-text">Drafts</TabsTrigger>
           </TabsList>
           
           {['all', 'active', 'pending', 'draft'].map((tab) => (
             <TabsContent key={tab} value={tab} className="mt-4">
               {isLoading ? (
                 <div className="flex justify-center items-center h-40">
-                  <p className="text-white/70">Loading announcements...</p>
+                  <p className="text-nexus-text-muted">Loading announcements...</p>
                 </div>
               ) : filteredAnnouncements.length > 0 ? (
                 <div className="space-y-4">
@@ -261,11 +248,11 @@ const AnnouncementList: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-40">
-                  <p className="text-white/70 mb-4">No announcements found.</p>
+                  <p className="text-nexus-text-muted mb-4">No announcements found.</p>
                   <Button 
                     onClick={() => navigate('/announcements/create')}
                     variant="outline"
-                    className="text-white border-white/30 hover:bg-white/10"
+                    className="text-nexus-text border-nexus-border-subtle hover:bg-white/10"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     Create your first announcement
@@ -278,7 +265,7 @@ const AnnouncementList: React.FC = () => {
         
         <Button 
           variant="secondary"
-          className="fixed right-4 bottom-4 md:right-8 md:bottom-8 bg-crypto-green hover:bg-crypto-green/90 text-white shadow-lg"
+          className="fixed right-4 bottom-4 md:right-8 md:bottom-8 bg-crypto-green hover:bg-crypto-green/90 text-nexus-text shadow-lg"
           onClick={() => navigate('/announcements/create')}
         >
           <Plus className="mr-2 h-4 w-4" />
