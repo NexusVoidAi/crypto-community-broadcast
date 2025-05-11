@@ -49,23 +49,20 @@ export const theme = {
     
     // Tag/Badge colors
     tags: {
-      blue: { bg: 'rgba(54, 113, 233, 0.15)', text: '#3671E9', border: 'rgba(54, 113, 233, 0.25)' },
-      green: { bg: 'rgba(0, 139, 139, 0.15)', text: '#00B8B8', border: 'rgba(0, 139, 139, 0.25)' },
-      purple: { bg: 'rgba(153, 69, 255, 0.15)', text: '#A455FF', border: 'rgba(153, 69, 255, 0.25)' },
-      yellow: { bg: 'rgba(255, 184, 0, 0.15)', text: '#FFB800', border: 'rgba(255, 184, 0, 0.25)' },
-      red: { bg: 'rgba(255, 82, 82, 0.15)', text: '#FF5252', border: 'rgba(255, 82, 82, 0.25)' },
+      blue: { bg: 'rgba(54, 113, 233, 0.1)', text: '#3671E9', border: 'rgba(54, 113, 233, 0.2)' },
+      green: { bg: 'rgba(0, 139, 139, 0.1)', text: '#008B8B', border: 'rgba(0, 139, 139, 0.2)' },
+      purple: { bg: 'rgba(153, 69, 255, 0.1)', text: '#9945FF', border: 'rgba(153, 69, 255, 0.2)' },
+      yellow: { bg: 'rgba(255, 184, 0, 0.1)', text: '#FFB800', border: 'rgba(255, 184, 0, 0.2)' },
+      red: { bg: 'rgba(255, 82, 82, 0.1)', text: '#FF5252', border: 'rgba(255, 82, 82, 0.2)' },
     }
   },
   
   // Gradient definitions
   gradients: {
-    mainBackground: 'linear-gradient(to bottom, #350081, #01000E)',
+    mainBackground: 'linear-gradient(180deg, #0A0A23, #1F1143)',
     gradient1: 'linear-gradient(90deg, #FABE5C, #C97B75, #892BE1)',
     gradient2: 'linear-gradient(90deg, #341D63, #5F299B, #892BE1)',
     gradient3: 'linear-gradient(90deg, #010002, #1A113E, #4C1C6A)',
-    cardGradient: 'linear-gradient(180deg, rgba(26, 31, 44, 0.6), rgba(12, 15, 25, 0.8))',
-    buttonGradient: 'linear-gradient(90deg, #9945FF, #14F195)',
-    accentGradient: 'linear-gradient(90deg, #14F195, #3671E9)',
   },
   
   // Typography
@@ -84,13 +81,7 @@ export const theme = {
   
   // Spacing system
   spacing: {
-    xs: '0.25rem',
-    sm: '0.5rem',
-    md: '1rem',
-    lg: '1.5rem',
-    xl: '2rem',
-    '2xl': '2.5rem',
-    '3xl': '3rem',
+    // Define consistent spacing if needed
   },
   
   // Border radius
@@ -106,9 +97,6 @@ export const theme = {
     sm: '0 1px 2px rgba(0, 0, 0, 0.2)',
     md: '0 4px 6px rgba(0, 0, 0, 0.3)',
     lg: '0 10px 15px rgba(0, 0, 0, 0.4)',
-    glow: '0 0 15px rgba(20, 241, 149, 0.5), 0 0 30px rgba(20, 241, 149, 0.2)',
-    blueGlow: '0 0 15px rgba(54, 113, 233, 0.5), 0 0 30px rgba(54, 113, 233, 0.2)',
-    purpleGlow: '0 0 15px rgba(153, 69, 255, 0.5), 0 0 30px rgba(153, 69, 255, 0.2)',
   },
 };
 
