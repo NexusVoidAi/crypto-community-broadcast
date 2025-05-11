@@ -1,6 +1,7 @@
 
 import React, { ReactNode } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Logo } from '@/components/layout/navbar/Logo';
 
 type AuthCardProps = {
   title: string;
@@ -21,9 +22,7 @@ const AuthCard: React.FC<AuthCardProps> = ({ title, description, children, foote
       <Card className="w-full max-w-md border border-border/50 glassmorphism bg-crypto-darkgray/50 shadow-xl relative z-10">
         <CardHeader>
           <div className="mb-4 flex justify-center">
-            <div className="w-12 h-12 rounded-md bg-crypto-green flex items-center justify-center">
-              <span className="text-black font-bold text-lg">AA</span>
-            </div>
+            <Logo />
           </div>
           <CardTitle className="text-xl font-space text-center">{title}</CardTitle>
           {description && <CardDescription className="text-center">{description}</CardDescription>}
