@@ -56,35 +56,36 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
 
   return (
     <Table>
-      <TableCaption>A list of your recent campaigns</TableCaption>
+      <TableCaption className="text-white/70">A list of your recent campaigns</TableCaption>
       <TableHeader>
         <TableRow className="border-border/50 hover:bg-crypto-darkgray/30">
-          <TableHead className="w-[300px]">Campaign</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Communities</TableHead>
-          <TableHead>Views</TableHead>
-          <TableHead>Clicks</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead className="w-[300px] text-white">Campaign</TableHead>
+          <TableHead className="text-white">Status</TableHead>
+          <TableHead className="text-white">Communities</TableHead>
+          <TableHead className="text-white">Views</TableHead>
+          <TableHead className="text-white">Clicks</TableHead>
+          <TableHead className="text-right text-white">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {campaigns.map((campaign) => (
           <TableRow key={campaign.id} className="border-border/50 hover:bg-crypto-darkgray/30">
-            <TableCell className="font-medium">{campaign.title || campaign.name}</TableCell>
+            <TableCell className="font-medium text-white">{campaign.title || campaign.name}</TableCell>
             <TableCell>
               <Badge variant="outline" className={getStatusColor(campaign.status)}>
                 {campaign.status}
               </Badge>
             </TableCell>
-            <TableCell>{campaign.communities?.length || 0}</TableCell>
-            <TableCell>{campaign.views?.toLocaleString() || 0}</TableCell>
-            <TableCell>{campaign.clicks?.toLocaleString() || 0}</TableCell>
+            <TableCell className="text-white">{campaign.communities?.length || 0}</TableCell>
+            <TableCell className="text-white">{campaign.views?.toLocaleString() || 0}</TableCell>
+            <TableCell className="text-white">{campaign.clicks?.toLocaleString() || 0}</TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end space-x-1">
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   title="View"
+                  className="text-white hover:bg-white/10"
                   onClick={() => handleViewCampaign(campaign.id)}
                 >
                   <Eye className="h-4 w-4" />
@@ -93,6 +94,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
                   variant="ghost" 
                   size="icon" 
                   title="Edit"
+                  className="text-white hover:bg-white/10"
                   onClick={() => handleEditCampaign(campaign.id)}
                 >
                   <Edit className="h-4 w-4" />
@@ -101,6 +103,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
                   variant="ghost" 
                   size="icon" 
                   title="Analytics"
+                  className="text-white hover:bg-white/10"
                   onClick={() => handleViewAnalytics(campaign.id)}
                 >
                   <BarChart2 className="h-4 w-4" />

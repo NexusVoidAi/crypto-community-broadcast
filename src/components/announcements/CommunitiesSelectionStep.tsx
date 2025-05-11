@@ -54,8 +54,8 @@ const CommunitiesSelectionStep: React.FC<CommunitiesSelectionStepProps> = ({
   return (
     <Card className="border border-border/50 bg-crypto-darkgray/50">
       <CardHeader>
-        <CardTitle>Select Communities</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-white font-space">Select Communities</CardTitle>
+        <CardDescription className="text-white/80">
           Choose which communities you want to publish this announcement to.
         </CardDescription>
       </CardHeader>
@@ -68,10 +68,10 @@ const CommunitiesSelectionStep: React.FC<CommunitiesSelectionStepProps> = ({
             ) : (
               <AlertTriangle className="h-4 w-4" />
             )}
-            <AlertTitle>
+            <AlertTitle className="text-white">
               {validationResults.passed ? 'Validation Passed' : 'Validation Issues'}
             </AlertTitle>
-            <AlertDescription>
+            <AlertDescription className="text-white/80">
               {validationResults.passed 
                 ? 'Your announcement has passed our validation checks.' 
                 : validationResults.message || 'Please review and address the validation issues.'}
@@ -93,17 +93,17 @@ const CommunitiesSelectionStep: React.FC<CommunitiesSelectionStepProps> = ({
         {errorMessage && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
+            <AlertTitle className="text-white">Error</AlertTitle>
+            <AlertDescription className="text-white/80">{errorMessage}</AlertDescription>
           </Alert>
         )}
         
         <Tabs defaultValue="all">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="telegram">Telegram</TabsTrigger>
-            <TabsTrigger value="discord">Discord</TabsTrigger>
-            <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 text-white bg-crypto-dark/70">
+            <TabsTrigger value="all" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-white">All</TabsTrigger>
+            <TabsTrigger value="telegram" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-white">Telegram</TabsTrigger>
+            <TabsTrigger value="discord" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-white">Discord</TabsTrigger>
+            <TabsTrigger value="whatsapp" className="data-[state=active]:bg-crypto-blue data-[state=active]:text-white">WhatsApp</TabsTrigger>
           </TabsList>
           
           {['all', 'telegram', 'discord', 'whatsapp'].map(platform => (
@@ -126,8 +126,8 @@ const CommunitiesSelectionStep: React.FC<CommunitiesSelectionStepProps> = ({
                         onClick={() => toggleCommunitySelection(community.id)}
                       >
                         <div>
-                          <h3 className="font-medium">{community.name}</h3>
-                          <div className="flex items-center text-sm text-muted-foreground mt-1">
+                          <h3 className="font-medium text-white">{community.name}</h3>
+                          <div className="flex items-center text-sm text-white/70 mt-1">
                             <span className="mr-4">{community.platform}</span>
                             <span>{community.reach.toLocaleString()} members</span>
                           </div>
@@ -152,7 +152,7 @@ const CommunitiesSelectionStep: React.FC<CommunitiesSelectionStepProps> = ({
                     ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-white/70">
                   <p>No communities available.</p>
                 </div>
               )}
@@ -164,11 +164,11 @@ const CommunitiesSelectionStep: React.FC<CommunitiesSelectionStepProps> = ({
           <div className="bg-crypto-darkgray p-4 rounded-md border border-border/50">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-sm text-muted-foreground">Selected:</p>
-                <p className="font-medium">{selectedCommunities.length} communities</p>
+                <p className="text-sm text-white/70">Selected:</p>
+                <p className="font-medium text-white">{selectedCommunities.length} communities</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Price:</p>
+                <p className="text-sm text-white/70">Total Price:</p>
                 <p className="text-crypto-green font-medium">
                   ${calculateTotalPrice().toFixed(2)}
                 </p>
@@ -181,11 +181,12 @@ const CommunitiesSelectionStep: React.FC<CommunitiesSelectionStepProps> = ({
           <Button 
             variant="outline" 
             onClick={onBack}
+            className="text-white border-white/30 hover:bg-white/10 hover:text-white"
           >
             Back
           </Button>
           <Button 
-            className="bg-crypto-blue hover:bg-crypto-blue/90"
+            className="bg-crypto-blue hover:bg-crypto-blue/90 text-white"
             disabled={selectedCommunities.length === 0 || isValidating || (validationResults && !validationResults.passed)}
             onClick={onContinue}
           >

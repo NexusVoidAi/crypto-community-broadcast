@@ -12,14 +12,14 @@ type CreateAnnouncementButtonProps = {
 
 const CreateAnnouncementButton: React.FC<CreateAnnouncementButtonProps> = ({
   className,
-  variant = 'default',
+  variant = 'secondary',
   size = 'default',
 }) => {
   const navigate = useNavigate();
 
   return (
     <Button
-      className={className}
+      className={`${className} bg-crypto-green hover:bg-crypto-green/90 text-white`}
       variant={variant}
       size={size}
       onClick={() => navigate('/announcements/create')}
