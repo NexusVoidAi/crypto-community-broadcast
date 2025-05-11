@@ -2,18 +2,18 @@
 import React from 'react';
 import { RainbowKitProvider, getDefaultWallets, darkTheme } from '@rainbow-me/rainbowkit';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
-import { polygonMumbai, goerli } from 'wagmi/chains';
+import { polygon } from 'wagmi/chains';
 import { publicProvider } from 'wagmi/providers/public';
 import '@rainbow-me/rainbowkit/styles.css';
 
 const { chains, publicClient } = configureChains(
-  [polygonMumbai, goerli],
+  [polygon], // Now using Polygon mainnet
   [publicProvider()]
 );
 
 const { connectors } = getDefaultWallets({
-  appName: 'CryptoBroadcast',
-  projectId: 'crypto-broadcast-app', // Get a project ID at https://cloud.walletconnect.com
+  appName: 'Acho AI',
+  projectId: 'acho-ai-app', // Get a project ID at https://cloud.walletconnect.com
   chains
 });
 
@@ -33,8 +33,8 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
       <RainbowKitProvider 
         chains={chains} 
         theme={darkTheme({
-          accentColor: '#22c55e', // Green accent color
-          accentColorForeground: 'black',
+          accentColor: '#9945FF', // Purple accent color matching our design
+          accentColorForeground: 'white',
           borderRadius: 'medium',
           fontStack: 'system',
           overlayBlur: 'small',

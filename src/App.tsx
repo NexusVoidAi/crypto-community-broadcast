@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/NotFound";
+import WalletNotificationBanner from "./components/wallet/WalletNotificationBanner";
 
 // Dashboard
 import Dashboard from "./pages/Dashboard";
@@ -102,6 +103,7 @@ const App = () => (
       <BrowserRouter>
         <Web3Provider>
           <AuthProvider>
+            <WalletNotificationBanner />
             <AppRoutes />
             <Toaster />
             <Sonner />

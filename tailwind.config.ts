@@ -67,12 +67,15 @@ export default {
 				// NexusVoid theme integration with Tailwind
 				'nexus': {
 					'background': theme.colors.background.primary,
+					'background-secondary': theme.colors.background.secondary,
+					'background-tertiary': theme.colors.background.tertiary,
 					'card': theme.colors.background.card,
 					'text': theme.colors.text.primary,
 					'text-secondary': theme.colors.text.secondary,
 					'text-muted': theme.colors.text.muted,
 					'border': theme.colors.border.primary,
 					'border-subtle': theme.colors.border.subtle,
+					'border-accent': theme.colors.border.accent,
 				},
 				// Custom crypto theme colors
 				crypto: {
@@ -113,12 +116,34 @@ export default {
 					'50%': { 
 						boxShadow: '0 0 15px rgba(20, 241, 149, 0.6), 0 0 20px rgba(20, 241, 149, 0.4)' 
 					},
+				},
+				'fade-in': {
+					'0%': { 
+						opacity: '0',
+						transform: 'translateY(-10px)'
+					},
+					'100%': { 
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'scale-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'scale(0.95)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'scale(1)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'pulse-glow': 'pulse-glow 2s infinite',
+				'fade-in': 'fade-in 0.3s ease-out',
+				'scale-in': 'scale-in 0.2s ease-out',
 			},
 			fontFamily: {
 				'space': [theme.typography.fontFamily.primary],
@@ -131,6 +156,9 @@ export default {
 				'gradient-1': theme.gradients.gradient1,
 				'gradient-2': theme.gradients.gradient2,
 				'gradient-3': theme.gradients.gradient3,
+				'card-gradient': theme.gradients.cardGradient,
+				'button-gradient': theme.gradients.buttonGradient,
+				'accent-gradient': theme.gradients.accentGradient,
 			}
 		}
 	},

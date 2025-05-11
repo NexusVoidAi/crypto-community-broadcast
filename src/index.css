@@ -60,6 +60,7 @@
 
   body {
     @apply bg-main-gradient text-nexus-text font-inter;
+    background-image: linear-gradient(to bottom, #350081, #01000E);
     background-attachment: fixed;
     min-height: 100vh;
   }
@@ -104,7 +105,7 @@
 }
 
 .dashboard-title {
-  @apply text-2xl font-bold text-gradient;
+  @apply text-2xl font-semibold text-gradient;
 }
 
 .stats-grid {
@@ -227,4 +228,26 @@
 
 .border-nexus-gradient-1 {
   border-image: linear-gradient(90deg, #FABE5C, #C97B75, #892BE1) 1;
+}
+
+/* Enhanced UI utilities */
+.card-glass {
+  @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-lg shadow-lg;
+}
+
+.btn-gradient {
+  @apply bg-button-gradient text-white font-medium hover:opacity-90 transition-all;
+}
+
+.badge-gradient {
+  @apply bg-accent-gradient text-white font-medium;
+}
+
+/* Implement enhanced interactive states */
+.hover-glow {
+  @apply transition-all duration-300;
+}
+
+.hover-glow:hover {
+  @apply shadow-[0_0_15px_rgba(153,69,255,0.5)];
 }
