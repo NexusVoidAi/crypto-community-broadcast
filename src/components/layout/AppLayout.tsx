@@ -1,4 +1,3 @@
-
 import React, { ReactNode, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -109,9 +108,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       >
         <div className="p-5 border-b border-border/10 flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-3">
-            <div className="h-9 w-9 rounded-md bg-crypto-green flex items-center justify-center">
-              <span className="text-crypto-dark font-bold text-lg">AA</span>
-            </div>
+            <img 
+              src="/lovable-uploads/acho-ai-logo.png" 
+              alt="Acho AI Logo" 
+              className="h-9 w-auto" 
+            />
             <span className="font-bold text-xl tracking-tight">ACHO AI</span>
           </Link>
           {isMobile && (
@@ -214,9 +215,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex items-center space-x-2">
-            <div className="h-7 w-7 rounded-md bg-crypto-green flex items-center justify-center">
-              <span className="text-crypto-dark font-bold text-xs">AA</span>
-            </div>
+            <img 
+              src="/lovable-uploads/acho-ai-logo.png" 
+              alt="Acho AI Logo" 
+              className="h-7 w-auto" 
+            />
             <h1 className="text-lg font-bold">ACHO AI</h1>
           </div>
           <div className="ml-auto flex items-center">
