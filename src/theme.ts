@@ -59,7 +59,7 @@ export const theme = {
   
   // Gradient definitions
   gradients: {
-    mainBackground: 'linear-gradient(180deg, #350081, #01000E)',
+    mainBackground: 'linear-gradient(180deg, #0A0A23 0%, #1F1143 100%)',
     gradient1: 'linear-gradient(90deg, #FABE5C, #C97B75, #892BE1)',
     gradient2: 'linear-gradient(90deg, #341D63, #5F299B, #892BE1)',
     gradient3: 'linear-gradient(90deg, #010002, #1A113E, #4C1C6A)',
