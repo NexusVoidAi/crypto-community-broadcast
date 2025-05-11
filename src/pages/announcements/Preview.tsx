@@ -202,7 +202,7 @@ const Preview = () => {
         </div>
       </CardContent>
       <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={() => navigate('/announcements/create')} className="text-white">
+        <Button variant="outline" onClick={() => navigate('/announcements/create')} className="text-white bg-crypto-violet">
           <ArrowLeft className="mr-2 h-4 w-4" /> Edit Announcement
         </Button>
         {announcement.status !== 'PUBLISHED' && announcement.status !== 'ACTIVE' && <Button className="bg-crypto-green hover:bg-crypto-green/90" onClick={() => setShowPayment(true)}>
