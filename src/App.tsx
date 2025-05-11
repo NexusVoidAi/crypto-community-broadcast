@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,7 +32,6 @@ import PaymentSuccess from "./pages/payment/PaymentSuccess";
 
 // Admin Dashboard
 import AdminDashboard from "./pages/AdminDashboard";
-import { ComingSoonOverlay } from "./components/ui/coming-soon";
 
 const queryClient = new QueryClient();
 
@@ -68,8 +68,8 @@ const AppRoutes = () => (
     {/* Redirect root to communities */}
     <Route path="/" element={<Navigate to="/communities" replace />} />
     
-    {/* Dashboard Route - Now with ComingSoon overlay */}
-    <Route path="/dashboard" element={<ProtectedRoute><ComingSoonOverlay /></ProtectedRoute>} />
+    {/* Dashboard Route - Now without ComingSoon overlay */}
+    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     
     {/* Community Routes - Now the main feature */}

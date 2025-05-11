@@ -4,13 +4,11 @@ import AppLayout from '@/components/layout/AppLayout';
 import AnnouncementForm from '@/components/announcements/AnnouncementForm';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
-import { ComingSoonOverlay } from '@/components/ui/coming-soon';
 
 const CreateAnnouncement: React.FC = () => {
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-6 relative">
-        <ComingSoonOverlay />
+      <div className="container mx-auto px-4 py-6">
         <h1 className="text-3xl font-bold tracking-tight mb-6 text-white">Create Announcement</h1>
         
         <Card className="bg-crypto-darkgray/40 border-border/50 mb-6">
