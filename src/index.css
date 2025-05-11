@@ -235,8 +235,10 @@
   @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-lg shadow-lg;
 }
 
-.btn-gradient {
-  @apply bg-button-gradient text-white font-medium hover:opacity-90 transition-all;
+@layer components {
+  .btn-gradient {
+    @apply bg-button-gradient text-white font-medium hover:opacity-90 transition-all;
+  }
 }
 
 .badge-gradient {

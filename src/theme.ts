@@ -59,10 +59,13 @@ export const theme = {
   
   // Gradient definitions
   gradients: {
-    mainBackground: 'linear-gradient(180deg, #0A0A23, #1F1143)',
+    mainBackground: 'linear-gradient(180deg, #350081, #01000E)',
     gradient1: 'linear-gradient(90deg, #FABE5C, #C97B75, #892BE1)',
     gradient2: 'linear-gradient(90deg, #341D63, #5F299B, #892BE1)',
     gradient3: 'linear-gradient(90deg, #010002, #1A113E, #4C1C6A)',
+    buttonGradient: 'linear-gradient(90deg, #341D63, #5F299B, #892BE1)',
+    accentGradient: 'linear-gradient(90deg, #FABE5C, #C97B75, #892BE1)',
+    cardGradient: 'linear-gradient(135deg, rgba(26, 31, 44, 0.7), rgba(42, 42, 63, 0.5))',
   },
   
   // Typography

@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 import { theme } from "./src/theme";
 
