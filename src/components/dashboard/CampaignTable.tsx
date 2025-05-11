@@ -46,30 +46,30 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
         </TableCaption>
         <TableHeader>
           <TableRow className="border-nexus-border-subtle hover:bg-nexus-background-secondary/30">
-            <TableHead className="w-[300px] text-nexus-text-secondary font-semibold">Campaign</TableHead>
-            <TableHead className="text-nexus-text-secondary font-semibold">Status</TableHead>
-            <TableHead className="text-nexus-text-secondary font-semibold">Communities</TableHead>
-            <TableHead className="text-nexus-text-secondary font-semibold">Views</TableHead>
-            <TableHead className="text-nexus-text-secondary font-semibold">Clicks</TableHead>
-            <TableHead className="text-right text-nexus-text-secondary font-semibold">Actions</TableHead>
+            <TableHead className="w-[300px] text-white font-semibold">Campaign</TableHead>
+            <TableHead className="text-white font-semibold">Status</TableHead>
+            <TableHead className="text-white font-semibold">Communities</TableHead>
+            <TableHead className="text-white font-semibold">Views</TableHead>
+            <TableHead className="text-white font-semibold">Clicks</TableHead>
+            <TableHead className="text-right text-white font-semibold">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {campaigns.map((campaign) => (
             <TableRow key={campaign.id} className="border-nexus-border-subtle hover:bg-nexus-background-secondary/30">
-              <TableCell className="font-medium text-nexus-text">{campaign.title || campaign.name}</TableCell>
+              <TableCell className="font-medium text-white">{campaign.title || campaign.name}</TableCell>
               <TableCell>
                 <Badge variant="outline" className={getStatusBadgeClass(campaign.status)}>
                   {campaign.status}
                 </Badge>
               </TableCell>
-              <TableCell className="text-nexus-text">
+              <TableCell className="text-white">
                 {campaign.communities?.length 
                   ? <span className="font-semibold">{campaign.communities.length}</span>
-                  : <span className="text-nexus-text-muted">0</span>
+                  : <span className="text-white/70">0</span>
                 }
               </TableCell>
-              <TableCell className="text-nexus-text">
+              <TableCell className="text-white">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -81,7 +81,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
                   </Tooltip>
                 </TooltipProvider>
               </TableCell>
-              <TableCell className="text-nexus-text">
+              <TableCell className="text-white">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -101,7 +101,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="text-nexus-text hover:bg-nexus-background-secondary"
+                          className="text-white hover:bg-nexus-background-secondary"
                           onClick={() => handleViewCampaign(campaign.id)}
                         >
                           <Eye className="h-4 w-4" />
@@ -119,7 +119,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          className="text-nexus-text hover:bg-nexus-background-secondary"
+                          className="text-white hover:bg-nexus-background-secondary"
                           onClick={() => handleEditCampaign(campaign.id)}
                         >
                           <Edit className="h-4 w-4" />
@@ -137,7 +137,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          className="text-nexus-text hover:bg-nexus-background-secondary"
+                          className="text-white hover:bg-nexus-background-secondary"
                           onClick={() => handleViewAnalytics(campaign.id)}
                         >
                           <BarChart2 className="h-4 w-4" />
@@ -156,7 +156,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({ campaigns }) => {
           {campaigns.length === 0 && (
             <TableRow>
               <TableCell colSpan={6} className="h-24 text-center">
-                <p className="text-nexus-text-muted">No campaigns found</p>
+                <p className="text-white">No campaigns found</p>
                 <Button 
                   variant="outline" 
                   className="mt-2" 
