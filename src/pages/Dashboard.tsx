@@ -360,8 +360,8 @@ const Dashboard = () => {
   };
   
   const handleViewCampaignAnalytics = (campaignId: string) => {
-    toast.info(`Viewing analytics for campaign ID: ${campaignId}`);
-    // This would navigate to an analytics page in the future
+    // Navigate to the analytics tab in the preview page
+    navigate(`/announcements/preview?id=${campaignId}&tab=analytics`);
   };
 
   // Tab content rendering
