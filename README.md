@@ -1,26 +1,37 @@
-# Welcome to your Lovable project
 
-## Project info
+# CryptoConnect - Community Announcement Platform
 
-**URL**: https://lovable.dev/projects/dd3ceaec-f6ed-4f11-971d-38c12da72943
+## Project Overview
 
-## How can I edit this code?
+CryptoConnect is a platform that connects cryptocurrency projects with community managers. It allows projects to create and distribute announcements across multiple crypto communities on platforms like Telegram.
 
-There are several ways of editing your application.
+## Features
 
-**Use Lovable**
+- **User Authentication**: Secure login and registration with email/password
+- **Wallet Integration**: Connect your cryptocurrency wallet via RainbowKit
+- **Community Management**: Create, manage, and approve communities
+- **Announcement Creation**: Create announcements to be distributed across communities
+- **Payment Processing**: Handle payments for announcement distribution
+- **Admin Dashboard**: Manage platform settings and moderate content
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/dd3ceaec-f6ed-4f11-971d-38c12da72943) and start prompting.
+## Technology Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend**: React with TypeScript, Vite, Tailwind CSS, shadcn/ui
+- **Backend**: Supabase (PostgreSQL Database, Authentication, Storage)
+- **Web3**: RainbowKit, wagmi, and viem for wallet connections
+- **API Integration**: Telegram Bot API integration for community management
+- **State Management**: React Context API and TanStack Query
+- **UI Components**: shadcn/ui component library
 
-**Use your preferred IDE**
+## Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Node.js & npm - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- A Supabase account for backend services
+- A wallet for Web3 interactions
 
-Follow these steps:
+### Installation
 
 ```sh
 # Step 1: Clone the repository using the project's Git URL.
@@ -36,34 +47,60 @@ npm i
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Project Structure
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- `src/components/`: UI components organized by feature
+- `src/contexts/`: React Context providers for state management
+- `src/pages/`: Main application pages and routes
+- `src/hooks/`: Custom React hooks
+- `src/integrations/`: External service integrations (Supabase, Web3)
+- `src/utils/`: Utility functions and helpers
 
-**Use GitHub Codespaces**
+## Key Features Explained
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Web3 Integration
 
-## What technologies are used for this project?
+The platform integrates with cryptocurrency wallets through RainbowKit, allowing users to:
+- Connect their wallets to their accounts
+- Verify wallet ownership
+- Make payments using cryptocurrency
 
-This project is built with .
+### Community Management
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Community owners can:
+- Register their Telegram communities
+- Set pricing for announcements
+- Manage community details and settings
+- Receive payments for hosting announcements
 
-## How can I deploy this project?
+### Announcement Distribution
+
+Projects can:
+- Create announcements with rich text and media
+- Select target communities based on size, focus area, and region
+- Pay for announcement distribution
+- Track performance and reach
+
+## Deployment Options
+
+### Using Lovable
 
 Simply open [Lovable](https://lovable.dev/projects/dd3ceaec-f6ed-4f11-971d-38c12da72943) and click on Share -> Publish.
 
-## I want to use a custom domain - is that possible?
+### Using a Custom Domain
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+While Lovable doesn't directly support custom domains yet, you can use services like Netlify to deploy with your own domain. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+
+## Contributing
+
+To contribute to this project:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License.
