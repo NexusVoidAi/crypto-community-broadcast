@@ -468,7 +468,7 @@ const Dashboard = () => {
   );
 
   const renderCampaignsContent = () => (
-    <div className="mt-4">
+    <div className="mt-4 text-white">
       <div className="mb-4 flex justify-between flex-wrap gap-3">
         <h2 className="text-xl font-semibold">Your Campaigns</h2>
         <CreateAnnouncementButton />
